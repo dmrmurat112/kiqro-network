@@ -145,3 +145,12 @@ body { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* Printing (invoices): only the document, on white A4, without the panel chrome. */
+@media print {
+  @page { size: A4; margin: 14mm; }
+  html, body { background: #fff !important; }
+  .no-print, aside, [data-panel-chrome] { display: none !important; }
+  main { padding: 0 !important; }
+  .invoice-paper { box-shadow: none !important; border-radius: 0 !important; padding: 0 !important; }
+}

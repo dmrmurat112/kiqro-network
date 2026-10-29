@@ -1,13 +1,14 @@
 import { and, eq } from 'drizzle-orm';
+import { z } from 'zod';
 import { parseMicros } from '@kiqro/core';
 import { newId, schema, type Db } from '@kiqro/db';
 import { creditPosition } from '../billing/credit.ts';
 import { closeStripeCheckout, completeStripeCheckout, listInvoices, listPayments, MAX_CARD_TOPUP_USD, MIN_TOPUP_USD, type Payment } from '../billing/payments.ts';
 import { StripeError, type PaymentGateway } from '../billing/stripe.ts';
-import { translateMessage, type UiLocale } from '../validation.ts';
+import { localizedIssues, translateMessage, type FieldIssue, type UiLocale } from '../validation.ts';
 import type { AdvertiserSession, LinkOptions } from './auth.ts';
 
-const { invoices, payments } = schema;
+const { auditLog, invoices, organizations, payments } = schema;
 
 export type TopUpResult = { ok: true; url: string } | { ok: false; message: string };
 
@@ -92,4 +93,51 @@ export async function settleDevCheckout(db: Db, orgId: string, sessionId: string
     await closeStripeCheckout(db, sessionId, 'expired');
   }
   return payment;
+}
+
+export const billingDetailsInput = z.object({
+  legalName: z.string().trim().min(2, 'name_short').max(200),
+  billingAddress: z.string().trim().min(5, 'address_required').max(500),
+  vatId: z
+    .string()
+    .trim()
+    .toUpperCase()
+    .max(20)
+    .refine((v) => v === '' || /^[A-Z0-9][A-Z0-9 .-]{3,19}$/.test(v), 'vat_id_invalid')
+    .transform((v) => v.replace(/[\s.-]/g, '') || null),
+  billingEmail: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .refine((v) => v === '' || z.string().email().safeParse(v).success, 'email_invalid')
+    .transform((v) => v || null),
+});
+
+export type BillingDetailsResult = { ok: true } | { ok: false; issues: FieldIssue[] };
+
+/** The advertiser's invoice details (legal name, address, VAT ID, invoice e-mail). */
+export async function updateBillingDetails(db: Db, session: AdvertiserSession, input: unknown, locale: UiLocale): Promise<BillingDetailsResult> {
+  const parsed = billingDetailsInput.safeParse(input);
+  if (!parsed.success) return { ok: false, issues: localizedIssues(parsed.error, locale) };
+  const d = parsed.data;
+  await db.transaction(async (tx) => {
+    await tx.update(organizations).set(d).where(eq(organizations.id, session.org.id));
+    await tx.insert(auditLog).values({
+      id: newId('audit'),
+      adminUserId: null,
+      action: 'advertiser.billing_details',
+      entityType: 'organization',
+      entityId: session.org.id,
+      details: { ...d, advertiserUserId: session.user.id },
+    });
+  });
+  return { ok: true };
+}
+
+/** One invoice of this advertiser with what the printable document needs. */
+export async function invoiceDocument(db: Db, orgId: string, invoiceId: string) {
+  const invoice = await db.query.invoices.findFirst({ where: and(eq(invoices.id, invoiceId), eq(invoices.orgId, orgId)) });
+  if (!invoice) return null;
+  const org = (await db.query.organizations.findFirst({ where: eq(organizations.id, orgId) }))!;
+  return { invoice, org };
 }

@@ -1,4 +1,5 @@
-import { AlertTriangle, CheckCircle2, Clock, Landmark, Wallet, XCircle } from 'lucide-react';
+import Link from 'next/link';
+import { AlertTriangle, FileText, CheckCircle2, Clock, Landmark, Wallet, XCircle } from 'lucide-react';
 import { MAX_CARD_TOPUP_USD, MIN_TOPUP_USD } from '@kiqro/network';
 import { advertiserPayment, billingOverview } from '@kiqro/network/advertiser';
 import { Card, Empty, PageHeader, StatusPill } from '@/components/panel/ui';
@@ -39,6 +40,14 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
       {returned && returned.status === 'pending' && (
         <Notice tone="warn" icon={<Clock size={18} />} title={t.pendingTitle}>
           {t.pendingBody}
+        </Notice>
+      )}
+      {(hasCredit || invoices.length > 0) && !org.billingAddress && (
+        <Notice tone="warn" icon={<FileText size={18} />}>
+          {t.detailsMissing}{' '}
+          <Link href="/app/account#billing-details" className="font-medium text-violet-400 hover:text-violet-300">
+            {t.detailsLink} →
+          </Link>
         </Notice>
       )}
       {sp.canceled && <Notice tone="muted" icon={<XCircle size={18} />}>{t.canceled}</Notice>}
@@ -115,7 +124,11 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
                     const state = inv.overdue ? 'overdue' : inv.status;
                     return (
                       <tr key={inv.id} className="border-b border-line last:border-0">
-                        <td className="px-5 py-3 font-mono text-xs whitespace-nowrap">{inv.number}</td>
+                        <td className="px-5 py-3 font-mono text-xs whitespace-nowrap">
+                          <Link href={`/app/billing/invoices/${inv.id}`} className="inline-flex items-center gap-1.5 text-violet-400 hover:text-violet-300">
+                            <FileText size={13} /> {inv.number}
+                          </Link>
+                        </td>
                         <td className="px-5 py-3 capitalize">{month(inv.periodStart, lang)}</td>
                         <td className="px-5 py-3 text-right font-mono tabular-nums">{usd(inv.amount, lang)}</td>
                         <td className="px-5 py-3 text-right font-mono tabular-nums">{usd(inv.amount - inv.amountPaid, lang)}</td>

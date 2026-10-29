@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm';
 import { getAccountId, getBalance, postTransaction, schema, type Db } from '@kiqro/db';
 import { resetTestDb, setupTestDb } from '@kiqro/db/testing';
 import { createAdminUser, createAdvertiser, recordTopUp, setCreditTerms, AdminError, type AdminUser } from '../src/admin/index.ts';
-import { advertiserLogin, billingOverview, createAdvertiserUser, getAdvertiserSession, setPasswordWithToken, startTopUp, type AdvertiserSession } from '../src/advertiser/index.ts';
+import { advertiserLogin, billingOverview, updateBillingDetails, createAdvertiserUser, getAdvertiserSession, setPasswordWithToken, startTopUp, type AdvertiserSession } from '../src/advertiser/index.ts';
 import {
   applyStripeRefund,
   closeStripeCheckout,
@@ -202,5 +202,21 @@ describe('credit terms and monthly invoices', () => {
     await recordTopUp(db, actor, s.org.id, { amountUsd: '500', memo: 'wire 1' }, LINKS);
     await spend(s.org.id, 100_000_000n, new Date('2026-10-15T00:00:00Z'));
     expect(await issueMonthlyInvoices(db, LINKS, new Date('2026-11-01T00:10:00Z'))).toBe(0);
+  });
+});
+
+describe('invoice details', () => {
+  it('validates and stores invoice details, and sends invoices to the invoice e-mail too', async () => {
+    const actor = await staff();
+    const s = await advertiser(actor);
+    expect(await updateBillingDetails(db, s, { legalName: 'S', billingAddress: '', vatId: '??', billingEmail: 'nope' }, 'en')).toMatchObject({ ok: false });
+    expect(await updateBillingDetails(db, s, { legalName: 'Studio Oy', billingAddress: 'Mannerheimintie 1\n00100 Helsinki', vatId: 'fi 1234-5678', billingEmail: 'AP@Studio.test' }, 'en')).toEqual({ ok: true });
+    expect(await db.query.organizations.findFirst({ where: eq(schema.organizations.id, s.org.id) })).toMatchObject({ legalName: 'Studio Oy', vatId: 'FI12345678', billingEmail: 'ap@studio.test' });
+
+    await setCreditTerms(db, actor, s.org.id, { creditLimitUsd: '5000', paymentTermsDays: 30 });
+    await spend(s.org.id, 100_000_000n, new Date('2026-10-15T00:00:00Z'));
+    await issueMonthlyInvoices(db, LINKS, new Date('2026-11-01T00:10:00Z'));
+    const to = (await db.select().from(emailMessages).where(eq(emailMessages.template, 'invoice_issued'))).map((m) => m.to).sort();
+    expect(to).toEqual(['ap@studio.test', 'ua@studio.test']);
   });
 });

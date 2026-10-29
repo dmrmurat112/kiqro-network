@@ -82,7 +82,7 @@ export function Sidebar({ t, lang, theme, company, userName }: Props) {
   return (
     <>
       <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-line bg-elevated py-6 lg:flex">{content}</aside>
-      <div className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-line bg-bg/80 px-4 backdrop-blur-xl lg:hidden">
+      <div data-panel-chrome className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-line bg-bg/80 px-4 backdrop-blur-xl lg:hidden">
         <Logo tag="" />
         <button onClick={() => setOpen(true)} className="rounded-lg p-2 text-muted" aria-label="Menu">
           <Menu size={20} />

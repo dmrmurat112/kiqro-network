@@ -34,9 +34,14 @@ async function spendBetween(tx: DbOrTx, accountId: string, start: Date, end: Dat
   return -BigInt(row!.total);
 }
 
-async function mailOrgUsers(tx: DbOrTx, orgId: string, build: (user: typeof advertiserUsers.$inferSelect) => EmailTemplate, now: Date) {
+/** Invoice mail goes to every active panel user and to the advertiser's invoice e-mail, if set. */
+async function mailOrgUsers(tx: DbOrTx, orgId: string, build: (user: { name: string }) => EmailTemplate, now: Date) {
   const users = await tx.select().from(advertiserUsers).where(and(eq(advertiserUsers.orgId, orgId), isNull(advertiserUsers.disabledAt)));
   for (const user of users) await enqueueEmail(tx, user.email, build(user), user.locale === 'tr' ? 'tr' : 'en', now);
+  const org = await tx.query.organizations.findFirst({ where: eq(organizations.id, orgId), columns: { billingEmail: true, legalName: true, name: true } });
+  if (org?.billingEmail && !users.some((u) => u.email === org.billingEmail)) {
+    await enqueueEmail(tx, org.billingEmail, build({ name: org.legalName ?? org.name }), 'en', now);
+  }
 }
 
 /** Invoices are issued in the first days of a month; later runs leave new debt for next month. */

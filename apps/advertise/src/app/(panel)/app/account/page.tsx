@@ -1,6 +1,7 @@
 import { Card, PageHeader } from '@/components/panel/ui';
 import { PANEL } from '@/lib/i18n';
 import { panelLocale, requireAdvertiser } from '@/lib/session';
+import { BillingDetailsForm } from './BillingDetailsForm';
 import { PasswordForm } from './PasswordForm';
 
 export const dynamic = 'force-dynamic';
@@ -39,6 +40,16 @@ export default async function AccountPage() {
           <PasswordForm t={t} />
         </Card>
       </div>
+      <Card className="mt-4 p-6">
+        <div id="billing-details" className="mb-5 scroll-mt-8">
+          <h2 className="font-semibold">{t.billingTitle}</h2>
+          <p className="mt-1 text-sm text-muted">{t.billingSub}</p>
+        </div>
+        <BillingDetailsForm
+          t={t}
+          values={{ legalName: org.legalName ?? org.name, billingAddress: org.billingAddress ?? '', vatId: org.vatId ?? '', billingEmail: org.billingEmail ?? '' }}
+        />
+      </Card>
     </>
   );
 }

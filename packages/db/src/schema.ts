@@ -56,6 +56,12 @@ export const organizations = pgTable('organizations', {
    */
   creditLimit: micros('credit_limit').notNull().default(sql`0`),
   paymentTermsDays: integer('payment_terms_days').notNull().default(30),
+  /** Invoice recipient details, kept up to date by the advertiser in the panel. */
+  legalName: text('legal_name'),
+  billingAddress: text('billing_address'),
+  /** EU VAT number (needed for the reverse charge) or other tax ID. */
+  vatId: text('vat_id'),
+  billingEmail: text('billing_email'),
   createdAt: createdAt(),
 });
 

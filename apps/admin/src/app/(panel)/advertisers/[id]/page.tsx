@@ -122,6 +122,12 @@ export default async function AdvertiserPage({ params }: { params: Promise<{ id:
 
         <div className="card">
           <h2>Faturalar</h2>
+          <p className="muted" style={{ whiteSpace: 'pre-line' }}>
+            {org.billingAddress ? `${org.legalName ?? org.name}
+${org.billingAddress}${org.vatId ? `
+Vergi no: ${org.vatId}` : ''}${org.billingEmail ? `
+Fatura e-postası: ${org.billingEmail}` : ''}` : 'Reklamveren fatura bilgilerini (unvan, adres, vergi no) henüz girmedi.'}
+          </p>
           {invoices.length === 0 ? (
             <p className="muted">Fatura yok. Kredi limiti olan reklamverenlere her ayın 1–3. günü otomatik düzenlenir.</p>
           ) : (
