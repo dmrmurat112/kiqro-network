@@ -83,6 +83,12 @@ export const campaigns = pgTable(
     attributionWindowDays: integer('attribution_window_days').notNull().default(7),
     /** Installs faster than this after the click are treated as injected and rejected. */
     ctitMinSeconds: integer('ctit_min_seconds').notNull().default(10),
+    /** Who created it: an admin user id or an advertiser user id (self-serve). */
+    createdBy: text('created_by'),
+    submittedAt: timestamp('submitted_at', { withTimezone: true }),
+    /** Kiqro's note when a submitted campaign is sent back for changes. */
+    reviewNote: text('review_note'),
+    reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
     title: jsonb('title').$type<Record<string, string>>().notNull(),
     description: jsonb('description').$type<Record<string, string>>().notNull().default({}),
     createdAt: createdAt(),

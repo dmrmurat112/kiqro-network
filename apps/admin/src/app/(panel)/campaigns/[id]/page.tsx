@@ -4,15 +4,16 @@ import { getCampaignForm } from '@kiqro/network/admin';
 import { ActionForm } from '@/components/ActionForm';
 import { Badge } from '@/components/Badge';
 import { db } from '@/lib/db';
-import { usd } from '@/lib/format';
-import { duplicateCampaignAction, setStatusAction, updateCampaignAction } from '../actions';
+import { dateTime, usd } from '@/lib/format';
+import { approveCampaignAction, duplicateCampaignAction, returnCampaignAction, setStatusAction, updateCampaignAction } from '../actions';
 import { CampaignForm } from '../CampaignForm';
 
 export const dynamic = 'force-dynamic';
 
 const ACTIONS: Record<string, { to: string; label: string; danger?: boolean }[]> = {
   draft: [{ to: 'active', label: 'Aktif et' }, { to: 'archived', label: 'Arşivle', danger: true }],
-  in_review: [{ to: 'active', label: 'Aktif et' }, { to: 'draft', label: 'Taslağa al' }],
+  // Self-serve submissions are approved or returned with a note (review card below).
+  in_review: [],
   active: [{ to: 'paused', label: 'Duraklat' }, { to: 'completed', label: 'Bitir', danger: true }],
   paused: [{ to: 'active', label: 'Devam ettir' }, { to: 'completed', label: 'Bitir', danger: true }],
   completed: [{ to: 'archived', label: 'Arşivle' }],
@@ -39,6 +40,28 @@ export default async function CampaignPage({ params }: { params: Promise<{ id: s
           <ActionForm action={duplicateCampaignAction.bind(null, id)} submitLabel="Kopyala" className="row" buttonClass="secondary small" />
         </div>
       </div>
+      {campaign.status === 'in_review' && (
+        <div className="card" style={{ borderColor: '#e0b46a', background: '#fffaf0' }}>
+          <h2>Reklamveren incelemeye gönderdi</h2>
+          <p className="muted">
+            Gönderim: {dateTime(campaign.submittedAt)}. Takip linkini (test tıklaması + test postback), MMP olay adlarını, süreleri, fiyatları ve reklam politikasını kontrol edin.
+          </p>
+          <div className="grid cols-2">
+            <ActionForm action={approveCampaignAction.bind(null, id)} submitLabel="Onayla ve yayına al" confirm="Kampanya hemen yayına girecek. Emin misiniz?">
+              <p className="muted">Reklamverene "kampanyanız yayında" e-postası gider.</p>
+            </ActionForm>
+            <ActionForm action={returnCampaignAction.bind(null, id)} submitLabel="Notla geri gönder" buttonClass="secondary">
+              <label>
+                Reklamverene not (ne değişmeli?)
+                <textarea name="note" rows={3} required />
+              </label>
+            </ActionForm>
+          </div>
+        </div>
+      )}
+      {campaign.status === 'draft' && campaign.reviewNote && (
+        <p className="notice info">Son geri gönderme notu: {campaign.reviewNote}</p>
+      )}
       <div className="grid cols-4">
         <div className="card stat">
           <div className="value">{usd(spend)}</div>

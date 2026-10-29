@@ -1,0 +1,54 @@
+import type { ZodError } from 'zod';
+
+export type UiLocale = 'en' | 'tr';
+
+/**
+ * Validation messages as keys, translated per audience: the admin panel shows Turkish,
+ * the advertiser panel the user's language. A key may carry a parameter after "|",
+ * e.g. "uncovered_countries|SE, NO".
+ */
+const MESSAGES: Record<string, Record<UiLocale, (param: string) => string>> = {
+  country_code: { en: () => 'must be a two-letter country code', tr: () => 'iki harfli ülke kodu olmalı' },
+  amount: { en: () => 'must be an amount such as 12.50', tr: () => 'geçerli bir tutar olmalı (ör. 12.50)' },
+  date: { en: () => 'must be a valid date', tr: () => 'geçerli bir tarih olmalı' },
+  product_required: { en: () => 'choose an app', tr: () => 'ürün seçilmeli' },
+  name_short: { en: () => 'at least 2 characters', tr: () => 'en az 2 karakter' },
+  url_invalid: { en: () => 'must be a valid URL', tr: () => 'geçerli bir URL olmalı' },
+  url_https: { en: () => 'must start with https://', tr: () => 'https:// ile başlamalı' },
+  tracking_click_id: { en: () => 'the tracking link must contain the {click_id} macro', tr: () => 'takip linkinde {click_id} makrosu olmalı' },
+  countries_required: { en: () => 'choose at least one country', tr: () => 'en az bir ülke seçilmeli' },
+  title_en_required: { en: () => 'an English offer title is required', tr: () => 'İngilizce başlık gerekli' },
+  event_required: { en: () => 'the MMP event name is required', tr: () => 'MMP olay adı gerekli' },
+  task_name_required: { en: () => 'an English task name is required', tr: () => 'İngilizce görev adı gerekli' },
+  prices_required: { en: () => 'add at least one price', tr: () => 'en az bir fiyat gerekli' },
+  tasks_required: { en: () => 'add at least one event', tr: () => 'en az bir görev gerekli' },
+  duplicate_event: { en: () => 'the same MMP event cannot be used twice', tr: () => 'aynı MMP olayı iki kez kullanılamaz' },
+  duplicate_country: { en: () => 'a country cannot be priced twice', tr: () => 'aynı ülke iki kez fiyatlanamaz' },
+  uncovered_countries: {
+    en: (c) => `add a default (*) price or a price for: ${c}`,
+    tr: (c) => `varsayılan (*) fiyat ya da şu ülkeler için fiyat gerekli: ${c}`,
+  },
+  end_before_start: { en: () => 'the end must be after the start', tr: () => 'bitiş başlangıçtan sonra olmalı' },
+  daily_over_total: { en: () => 'the daily budget cannot exceed the total budget', tr: () => 'günlük bütçe toplam bütçeyi aşamaz' },
+  store_id_required: { en: () => 'package name, App Store ID or domain is required', tr: () => 'paket adı, App Store ID veya alan adı gerekli' },
+  not_found: { en: () => 'campaign not found', tr: () => 'kampanya bulunamadı' },
+  not_editable: { en: () => 'only draft campaigns can be edited; contact Kiqro to change a live campaign', tr: () => 'yalnızca taslak kampanyalar düzenlenebilir; yayındaki kampanya için Kiqro ile iletişime geçin' },
+  not_submittable: { en: () => 'only draft campaigns can be submitted', tr: () => 'yalnızca taslak kampanyalar gönderilebilir' },
+  not_pausable: { en: () => 'only live or paused campaigns can be paused or resumed', tr: () => 'yalnızca yayındaki veya duraklatılmış kampanyalar duraklatılıp devam ettirilebilir' },
+  budget_minimum: { en: (m) => `the total budget must be at least $${m}`, tr: (m) => `toplam bütçe en az ${m} $ olmalı` },
+};
+
+export function translateMessage(message: string, locale: UiLocale): string {
+  const [key, param = ''] = message.split('|');
+  return MESSAGES[key!]?.[locale](param) ?? message;
+}
+
+export interface FieldIssue {
+  /** Dotted path of the field, e.g. "tasks.1.prices". Empty for form-level issues. */
+  path: string;
+  message: string;
+}
+
+export function localizedIssues(error: ZodError, locale: UiLocale): FieldIssue[] {
+  return error.issues.map((i) => ({ path: i.path.join('.'), message: translateMessage(i.message, locale) }));
+}

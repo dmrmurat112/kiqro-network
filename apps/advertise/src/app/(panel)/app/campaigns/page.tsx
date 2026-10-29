@@ -1,21 +1,32 @@
 import Link from 'next/link';
+import { AlertCircle, CheckCircle2, Clock, Pause, Pencil, Play, Plus, Send } from 'lucide-react';
 import { advertiserCampaigns } from '@kiqro/network/advertiser';
 import { Card, Empty, PageHeader, StatusPill } from '@/components/panel/ui';
 import { db } from '@/lib/db';
 import { num, usd } from '@/lib/format';
 import { PANEL } from '@/lib/i18n';
 import { panelLocale, requireAdvertiser } from '@/lib/session';
+import { setPausedAction, submitCampaignAction } from './actions';
 
 export const dynamic = 'force-dynamic';
 
-export default async function CampaignsPage() {
-  const [{ org }, lang] = await Promise.all([requireAdvertiser(), panelLocale()]);
+export default async function CampaignsPage({ searchParams }: { searchParams: Promise<{ saved?: string; submitted?: string }> }) {
+  const [{ org }, lang, sp] = await Promise.all([requireAdvertiser(), panelLocale(), searchParams]);
   const t = PANEL[lang].campaigns;
   const campaigns = await advertiserCampaigns(db, org.id);
 
   return (
     <>
-      <PageHeader title={t.title} />
+      <PageHeader title={t.title}>
+        <Link href="/app/campaigns/new" className="btn-primary !py-2 text-sm">
+          <Plus size={16} /> {t.new}
+        </Link>
+      </PageHeader>
+      {(sp.saved || sp.submitted) && (
+        <div className="mb-4 flex items-center gap-2 rounded-xl border border-good/30 bg-good/8 px-4 py-3 text-sm text-good">
+          <CheckCircle2 size={16} /> {sp.submitted ? t.submitted : t.saved}
+        </div>
+      )}
       {campaigns.length === 0 ? (
         <Card>
           <Empty>{t.empty}</Empty>
@@ -40,6 +51,27 @@ export default async function CampaignsPage() {
                       <span className="text-subtle">·</span>
                       <span className="flex gap-1">{c.countries.map((code) => <span key={code} className="rounded-md border border-line px-1.5 py-px font-mono text-[0.7rem] text-muted">{code}</span>)}</span>
                     </div>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {c.status === 'draft' && (
+                        <>
+                          <Link href={`/app/campaigns/${c.id}/edit`} className="btn-ghost !py-1.5 text-sm">
+                            <Pencil size={14} /> {t.edit}
+                          </Link>
+                          <form action={submitCampaignAction.bind(null, c.id)}>
+                            <button className="btn-primary !py-1.5 text-sm">
+                              <Send size={14} /> {t.submit}
+                            </button>
+                          </form>
+                        </>
+                      )}
+                      {(c.status === 'active' || c.status === 'paused') && (
+                        <form action={setPausedAction.bind(null, c.id, c.status === 'active')}>
+                          <button className="btn-ghost !py-1.5 text-sm">
+                            {c.status === 'active' ? <Pause size={14} /> : <Play size={14} />} {c.status === 'active' ? t.pause : t.resume}
+                          </button>
+                        </form>
+                      )}
+                    </div>
                   </div>
                   <div className="min-w-56 sm:text-right">
                     <div className="text-xs text-subtle">{t.budget}</div>
@@ -52,6 +84,20 @@ export default async function CampaignsPage() {
                   </div>
                 </div>
 
+                {c.status === 'draft' && c.reviewNote && (
+                  <div className="mt-5 rounded-xl border border-warn/30 bg-warn/8 p-4 text-sm">
+                    <div className="flex items-center gap-2 font-semibold text-warn">
+                      <AlertCircle size={16} /> {t.returnedTitle}
+                    </div>
+                    <p className="mt-1.5 whitespace-pre-line">{c.reviewNote}</p>
+                  </div>
+                )}
+                {c.status === 'draft' && !c.reviewNote && <p className="mt-5 text-sm text-muted">{t.draftNote}</p>}
+                {c.status === 'in_review' && (
+                  <p className="mt-5 flex items-center gap-2 text-sm text-warn">
+                    <Clock size={15} /> {t.inReviewNote}
+                  </p>
+                )}
                 <div className="mt-6">
                   <div className="mb-3 text-xs font-medium uppercase tracking-wider text-subtle">{t.funnel}</div>
                   <div className="grid gap-2.5">

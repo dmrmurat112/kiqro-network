@@ -94,6 +94,8 @@ export interface CampaignReport {
   id: string;
   name: string;
   status: string;
+  /** Kiqro’s note when a submitted campaign was sent back for changes. */
+  reviewNote: string | null;
   productName: string;
   platform: string;
   countries: string[];
@@ -144,6 +146,7 @@ export async function advertiserCampaigns(db: Db, orgId: string): Promise<Campai
       id: campaign.id,
       name: campaign.title.en ?? campaign.name,
       status: campaign.status,
+      reviewNote: campaign.reviewNote,
       productName,
       platform,
       countries: campaign.countries,

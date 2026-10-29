@@ -9,11 +9,11 @@ import { AdminError, describeValidation, requirePermission } from './errors.ts';
 
 const { ledgerAccounts, ledgerEntries, organizations, placements, products } = schema;
 
-const country = z.string().trim().toUpperCase().regex(/^[A-Z]{2}$/, 'iki harfli ülke kodu olmalı');
+const country = z.string().trim().toUpperCase().regex(/^[A-Z]{2}$/, 'country_code');
 /** Integer from a form field (string) or code (number). */
 export const intField = (min: number, max: number) => z.union([z.number(), z.string()]).pipe(z.coerce.number().int().min(min).max(max));
 
-const usd = z.string().trim().regex(/^\d+(\.\d{1,6})?$/, 'geçerli bir tutar olmalı (ör. 12.50)');
+const usd = z.string().trim().regex(/^\d+(\.\d{1,6})?$/, 'amount');
 
 function parse<T extends z.ZodTypeAny>(schemaDef: T, input: unknown): z.infer<T> {
   const result = schemaDef.safeParse(input);
@@ -26,7 +26,7 @@ const secret = () => randomBytes(24).toString('hex');
 // ---------- Advertisers ----------
 
 export const advertiserInput = z.object({
-  name: z.string().trim().min(2, 'en az 2 karakter'),
+  name: z.string().trim().min(2, 'name_short'),
   country,
   billingEntity: z.enum(['kiqro_inc', 'kiqro_oy']),
   invoiceCurrency: z.enum(['USD', 'EUR']),
@@ -105,9 +105,9 @@ export async function recordTopUp(db: Db, actor: AdminUser, orgId: string, input
 
 export const productInput = z.object({
   platform: z.enum(['android', 'ios', 'web']),
-  storeId: z.string().trim().min(3, 'paket adı, App Store ID veya alan adı gerekli'),
+  storeId: z.string().trim().min(3, 'store_id_required'),
   name: z.string().trim().min(2),
-  iconUrl: z.string().trim().url('geçerli bir URL olmalı').optional().or(z.literal('').transform(() => undefined)),
+  iconUrl: z.string().trim().url('url_invalid').optional().or(z.literal('').transform(() => undefined)),
   mmp: z.enum(['appsflyer', 'adjust', 'singular', 'kochava', 'branch', 'tenjin', 'none']),
 });
 

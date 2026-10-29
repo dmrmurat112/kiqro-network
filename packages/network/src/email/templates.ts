@@ -10,7 +10,10 @@ export type EmailTemplate =
   | { name: 'advertiser_invite'; data: { name: string; company: string; link: string; expiresHours: number } }
   | { name: 'password_reset'; data: { name: string; link: string; expiresMinutes: number } }
   | { name: 'low_balance'; data: { name: string; company: string; balance: string; threshold: string; panelLink: string } }
-  | { name: 'lead_notification'; data: { name: string; email: string; company: string; vertical: string; budget: string; message: string; adminLink: string } };
+  | { name: 'lead_notification'; data: { name: string; email: string; company: string; vertical: string; budget: string; message: string; adminLink: string } }
+  | { name: 'campaign_submitted'; data: { company: string; campaign: string; submittedBy: string; adminLink: string } }
+  | { name: 'campaign_approved'; data: { name: string; campaign: string; panelLink: string } }
+  | { name: 'campaign_returned'; data: { name: string; campaign: string; note: string; editLink: string } };
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 
@@ -109,6 +112,42 @@ export function renderEmail(template: EmailTemplate, locale: EmailLocale): Rende
           footnote: 'advertise.kiqro.com demo formundan otomatik bildirim.',
         }),
         text: text([subject, ...rows.map(([k, v]) => `${k}: ${v}`), d.adminLink]),
+      };
+    }
+    case 'campaign_submitted': {
+      // Internal notification for the Kiqro team, always in Turkish.
+      const d = template.data;
+      const subject = `İncelemeye gönderildi: ${d.campaign} (${d.company})`;
+      const intro = `<b>${esc(d.company)}</b> reklamvereninden ${esc(d.submittedBy)}, <b>${esc(d.campaign)}</b> kampanyasını incelemeye gönderdi. Takip linkini, olay adlarını, süreleri ve fiyatları kontrol edip onaylayın ya da notla geri gönderin.`;
+      return {
+        subject,
+        html: layout({ preheader: subject, heading: subject, paragraphs: [intro], button: { label: 'Admin panelinde incele', href: d.adminLink }, footnote: 'Hedef inceleme süresi: 1 iş günü.' }),
+        text: text([subject, intro.replace(/<\/?b>/g, ''), d.adminLink]),
+      };
+    }
+    case 'campaign_approved': {
+      const d = template.data;
+      const subject = tr ? `Kampanyanız yayında: ${d.campaign}` : `Your campaign is live: ${d.campaign}`;
+      const intro = tr
+        ? `Merhaba ${esc(d.name)}, <b>${esc(d.campaign)}</b> kampanyanızı inceledik ve yayına aldık. Kullanıcılar teklifinizi şimdi görmeye başlıyor; sonuçları panelden canlı izleyebilirsiniz.`
+        : `Hi ${esc(d.name)}, we reviewed <b>${esc(d.campaign)}</b> and it is now live. Users are starting to see your offer; follow the results in the panel.`;
+      return {
+        subject,
+        html: layout({ preheader: subject, heading: subject, paragraphs: [intro], button: { label: tr ? 'Paneli aç' : 'Open the panel', href: d.panelLink }, footnote: tr ? 'İlk dönüşümler MMP’nizin postback’leri geldikçe görünür.' : 'First conversions appear as your MMP’s postbacks arrive.' }),
+        text: text([subject, intro.replace(/<\/?b>/g, ''), d.panelLink]),
+      };
+    }
+    case 'campaign_returned': {
+      const d = template.data;
+      const subject = tr ? `Kampanyanızda değişiklik gerekiyor: ${d.campaign}` : `Changes needed: ${d.campaign}`;
+      const intro = tr
+        ? `Merhaba ${esc(d.name)}, <b>${esc(d.campaign)}</b> kampanyanızı inceledik; yayına almadan önce şu düzenlemeyi rica ediyoruz:`
+        : `Hi ${esc(d.name)}, we reviewed <b>${esc(d.campaign)}</b> and need a change before it can go live:`;
+      const note = `<span style="display:block;padding:12px 14px;border-left:3px solid #6c57f0;background:#f4f3fb;border-radius:6px">${esc(d.note)}</span>`;
+      return {
+        subject,
+        html: layout({ preheader: subject, heading: subject, paragraphs: [intro, note], button: { label: tr ? 'Kampanyayı düzenle' : 'Edit the campaign', href: d.editLink }, footnote: tr ? 'Düzenledikten sonra tekrar incelemeye gönderin.' : 'Submit it for review again once updated.' }),
+        text: text([subject, intro.replace(/<\/?b>/g, ''), d.note, d.editLink]),
       };
     }
   }

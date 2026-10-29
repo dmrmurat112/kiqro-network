@@ -43,6 +43,13 @@
       "when": 1793304713640,
       "tag": "0005_terms_acceptance",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793306343237,
+      "tag": "0006_campaign_review",
+      "breakpoints": true
     }
   ]
 }

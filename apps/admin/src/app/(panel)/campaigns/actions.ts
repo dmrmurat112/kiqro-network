@@ -1,7 +1,7 @@
 'use server';
 
 import { redirect } from 'next/navigation';
-import { AdminError, createCampaign, getCampaignForm, setCampaignStatus, updateCampaign, type CampaignInput } from '@kiqro/network/admin';
+import { AdminError, approveCampaign, createCampaign, getCampaignForm, returnCampaign, setCampaignStatus, updateCampaign, type CampaignInput } from '@kiqro/network/admin';
 import { field, runAction, type ActionState } from '@/lib/action';
 import { db } from '@/lib/db';
 
@@ -63,5 +63,21 @@ export async function setStatusAction(campaignId: string, _: ActionState, form: 
   return runAction(async (actor) => {
     await setCampaignStatus(db, actor, campaignId, field(form, 'status') as 'active');
     return 'Durum güncellendi.';
+  }, `/campaigns/${campaignId}`);
+}
+
+const reviewLinks = () => ({ advertiseBaseUrl: process.env.ADVERTISE_BASE_URL ?? 'http://localhost:4200' });
+
+export async function approveCampaignAction(campaignId: string, _: ActionState): Promise<ActionState> {
+  return runAction(async (actor) => {
+    await approveCampaign(db, actor, campaignId, reviewLinks());
+    return 'Onaylandı; kampanya yayında ve reklamverene e-posta gönderiliyor.';
+  }, `/campaigns/${campaignId}`);
+}
+
+export async function returnCampaignAction(campaignId: string, _: ActionState, form: FormData): Promise<ActionState> {
+  return runAction(async (actor) => {
+    await returnCampaign(db, actor, campaignId, field(form, 'note'), reviewLinks());
+    return 'Reklamverene notla geri gönderildi.';
   }, `/campaigns/${campaignId}`);
 }
