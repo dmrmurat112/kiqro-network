@@ -36,6 +36,13 @@
       "when": 1793303895698,
       "tag": "0004_email",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793304713640,
+      "tag": "0005_terms_acceptance",
+      "breakpoints": true
     }
   ]
 }

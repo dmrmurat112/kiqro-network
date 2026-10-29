@@ -50,6 +50,12 @@ E-mail goes through SendGrid's v3 API. Messages are written to `email_messages` 
 
 Templates are in `packages/network/src/email/templates.ts` (English and Turkish, by the user's panel language).
 
+## Legal documents
+
+Drafts of the Advertiser Terms, Advertising Content Policy, Privacy Notice, Data Protection Addendum, Sub-processors and Cookie Notice live in `apps/advertise/src/content/legal/` and are published at `/{en,tr}/legal`. They are **drafts pending legal review**: each page shows a banner, is excluded from search engines, and highlights open items as `[● …]`. Company details used across documents are in `entity.ts`.
+
+When the lawyer approves a document: update its text, set `status: 'final'` and bump `version`. Panel users accept the Terms once per version (stored with time and IP, and in the audit log); set `TERMS_REQUIRED=true` to make acceptance mandatory before using the panel.
+
 ## Fraud controls
 
 Clicks are refused for VPN/proxy/Tor and datacenter IPs, provider risk score ≥ 90, a Cloudflare/provider country mismatch, more than 60 clicks per IP per hour, or a publisher user risk ≥ 90. Conversions are held for review (not billed, not rewarded) for IP risk ≥ 75, publisher user risk ≥ 70, a fourth distinct user installing from one IP within 24 h (device farm), or more than 20 conversions per user per hour. Thresholds live in `packages/network/src/fraud/rules.ts`.

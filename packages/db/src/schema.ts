@@ -271,6 +271,10 @@ export const advertiserUsers = pgTable('advertiser_users', {
   name: text('name').notNull(),
   passwordHash: text('password_hash').notNull(),
   locale: text('locale').notNull().default('en'),
+  /** Version of the Advertiser Terms this user accepted, with time and IP (proof of acceptance). */
+  termsAcceptedVersion: text('terms_accepted_version'),
+  termsAcceptedAt: timestamp('terms_accepted_at', { withTimezone: true }),
+  termsAcceptedIp: text('terms_accepted_ip'),
   disabledAt: timestamp('disabled_at', { withTimezone: true }),
   lastLoginAt: timestamp('last_login_at', { withTimezone: true }),
   createdAt: createdAt(),

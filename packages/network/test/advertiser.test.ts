@@ -10,6 +10,7 @@ import {
   advertiserConversions,
   advertiserCountries,
   advertiserDailySeries,
+  acceptAdvertiserTerms,
   advertiserLogin,
   advertiserOverview,
   checkLowBalances,
@@ -219,5 +220,19 @@ describe('leads', () => {
     expect(await submitLead(db, { ...lead, email: 'nope' }, '203.0.113.5', undefined, NOW)).toMatchObject({ ok: false, error: 'invalid', fields: ['email'] });
     for (let i = 0; i < 5; i++) expect((await submitLead(db, lead, '203.0.113.5', undefined, NOW)).ok).toBe(true);
     expect(await submitLead(db, lead, '203.0.113.5', undefined, NOW)).toEqual({ ok: false, error: 'rate_limited' });
+  });
+});
+
+describe('terms acceptance', () => {
+  it('records the accepted version with time and IP, and audits it', async () => {
+    const s = await createDemoSetup(db);
+    const { id } = await createAdvertiserUser(db, await staff(), s.advertiserId, { email: 'legal@studio.test', name: 'Legal' }, LINKS);
+    const user = (await db.query.advertiserUsers.findFirst({ where: eq(schema.advertiserUsers.id, id) }))!;
+    expect(user.termsAcceptedVersion).toBeNull();
+    await acceptAdvertiserTerms(db, user, '1.0', '203.0.113.9', NOW);
+    const after = (await db.query.advertiserUsers.findFirst({ where: eq(schema.advertiserUsers.id, id) }))!;
+    expect(after).toMatchObject({ termsAcceptedVersion: '1.0', termsAcceptedIp: '203.0.113.9', termsAcceptedAt: NOW });
+    const [entry] = await db.select().from(schema.auditLog).where(eq(schema.auditLog.action, 'advertiser_user.accept_terms'));
+    expect(entry).toMatchObject({ entityId: id, details: { version: '1.0', ip: '203.0.113.9' } });
   });
 });

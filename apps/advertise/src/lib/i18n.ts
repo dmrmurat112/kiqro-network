@@ -114,14 +114,25 @@ const en = {
     invalid: 'Please check the highlighted fields.',
     rateLimited: 'Too many requests from your network. Please try again later.',
     privacy: 'We use these details only to reply to your request.',
+    privacyLink: 'Privacy notice',
   },
   footer: {
     tagline: 'Performance offerwall network by Kiqro.',
     product: 'Product',
     company: 'Company',
+    legal: 'Legal',
     users: 'For users: kiqro.com',
     contact: 'Contact',
     rights: '© 2026 Kiqro. All rights reserved.',
+  },
+  legal: {
+    title: 'Legal',
+    sub: 'The documents that govern advertising on Kiqro Network.',
+    draft: 'Draft — pending legal review. This document is not yet binding.',
+    version: 'Version',
+    onThisPage: 'On this page',
+    translation: null as string | null,
+    all: 'All legal documents',
   },
 };
 
@@ -235,14 +246,25 @@ const tr: Dict = {
     invalid: 'Lütfen işaretli alanları kontrol edin.',
     rateLimited: 'Ağınızdan çok fazla talep geldi. Lütfen daha sonra tekrar deneyin.',
     privacy: 'Bu bilgileri yalnızca talebinize yanıt vermek için kullanırız.',
+    privacyLink: 'Gizlilik bildirimi',
   },
   footer: {
     tagline: 'Kiqro’nun performans offerwall ağı.',
     product: 'Ürün',
     company: 'Şirket',
+    legal: 'Hukuki',
     users: 'Kullanıcılar için: kiqro.com',
     contact: 'İletişim',
     rights: '© 2026 Kiqro. Tüm hakları saklıdır.',
+  },
+  legal: {
+    title: 'Hukuki belgeler',
+    sub: 'Kiqro Network’te reklam vermeye ilişkin belgeler.',
+    draft: 'Taslak — hukuki inceleme bekliyor. Bu belge henüz bağlayıcı değildir.',
+    version: 'Sürüm',
+    onThisPage: 'Bu sayfada',
+    translation: 'Sözleşme dili İngilizcedir. Türkçe çeviri, hukuki inceleme tamamlandıktan sonra yayınlanacaktır.',
+    all: 'Tüm hukuki belgeler',
   },
 };
 
@@ -313,6 +335,15 @@ const panelEn = {
     copy: 'Copy',
     copied: 'Copied',
   },
+  terms: {
+    title: 'Review and accept the terms',
+    sub: 'Before using the panel, please read and accept the documents that govern advertising on Kiqro Network.',
+    docs: 'Documents',
+    checkbox: 'I have read and accept the Advertiser Terms of Service, the Data Protection Addendum and the Advertising Content Policy on behalf of my company.',
+    submit: 'Accept and continue',
+    required: 'Please tick the box to continue.',
+    accepted: 'Accepted terms',
+  },
   account: { title: 'Account', company: 'Company', you: 'Signed in as', password: 'Change password', current: 'Current password', next: 'New password (12+ characters)', save: 'Update password', saved: 'Password updated.', invoice: 'Invoicing', theme: 'Theme', dark: 'Dark', light: 'Light' },
 };
 type PanelDict = typeof panelEn;
@@ -379,6 +410,15 @@ const panelTr: PanelDict = {
     days: 'gün',
     copy: 'Kopyala',
     copied: 'Kopyalandı',
+  },
+  terms: {
+    title: 'Şartları inceleyin ve kabul edin',
+    sub: 'Paneli kullanmadan önce Kiqro Network’te reklam vermeye ilişkin belgeleri okuyup kabul etmeniz gerekiyor.',
+    docs: 'Belgeler',
+    checkbox: 'Şirketim adına Reklamveren Hizmet Şartları’nı, Veri Koruma Ekini ve Reklam İçerik Politikası’nı okudum ve kabul ediyorum.',
+    submit: 'Kabul et ve devam et',
+    required: 'Devam etmek için kutuyu işaretleyin.',
+    accepted: 'Kabul edilen şartlar',
   },
   account: { title: 'Hesap', company: 'Şirket', you: 'Giriş yapan', password: 'Parola değiştir', current: 'Mevcut parola', next: 'Yeni parola (12+ karakter)', save: 'Parolayı güncelle', saved: 'Parola güncellendi.', invoice: 'Faturalama', theme: 'Tema', dark: 'Koyu', light: 'Açık' },
 };

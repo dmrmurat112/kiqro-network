@@ -74,6 +74,7 @@ export default async function AdvertiserPage({ params }: { params: Promise<{ id:
                 <th>Ad</th>
                 <th>E-posta</th>
                 <th>Son giriş</th>
+                <th>Şartlar</th>
                 <th></th>
               </tr>
             </thead>
@@ -83,6 +84,7 @@ export default async function AdvertiserPage({ params }: { params: Promise<{ id:
                   <td>{u.name}</td>
                   <td>{u.email}</td>
                   <td>{u.lastLoginAt ? dateTime(u.lastLoginAt) : 'Henüz giriş yapmadı'}</td>
+                  <td>{u.termsAcceptedVersion ? `${u.termsAcceptedVersion} · ${dateTime(u.termsAcceptedAt)}` : 'Kabul edilmedi'}</td>
                   <td>
                     <ActionForm action={resendInviteAction.bind(null, id, u.id)} submitLabel="Daveti yeniden gönder" className="row" buttonClass="secondary small" />
                   </td>

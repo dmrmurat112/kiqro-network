@@ -65,7 +65,12 @@ export function DemoForm({ lang, t }: { lang: Locale; t: SiteDict['demo'] }) {
         <textarea name="message" rows={3} className="field resize-none" />
       </label>
       <div className="flex flex-col gap-3 sm:col-span-2 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-xs text-subtle">{t.privacy}</p>
+        <p className="text-xs text-subtle">
+          {t.privacy}{' '}
+          <a href={`/${lang}/legal/privacy`} className="underline underline-offset-2 hover:text-fg">
+            {t.privacyLink}
+          </a>
+        </p>
         <button type="submit" className="btn-primary justify-center" disabled={pending}>
           {pending ? t.sending : t.submit}
           {!pending && <ArrowRight size={16} />}

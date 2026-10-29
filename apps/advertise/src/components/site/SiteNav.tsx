@@ -6,7 +6,8 @@ import { Menu, X } from 'lucide-react';
 import type { Locale, SiteDict } from '@/lib/i18n';
 import { Logo } from '../Logo';
 
-export function SiteNav({ lang, t }: { lang: Locale; t: SiteDict['nav'] }) {
+/** altHref: the same page in the other language (defaults to its home page). */
+export function SiteNav({ lang, t, altHref }: { lang: Locale; t: SiteDict['nav']; altHref?: string }) {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
 
@@ -18,13 +19,14 @@ export function SiteNav({ lang, t }: { lang: Locale; t: SiteDict['nav'] }) {
   }, []);
 
   const links = [
-    { href: '#how', label: t.how },
-    { href: '#why', label: t.why },
-    { href: '#fraud', label: t.fraud },
-    { href: '#pricing', label: t.pricing },
-    { href: '#faq', label: t.faq },
+    { href: `/${lang}#how`, label: t.how },
+    { href: `/${lang}#why`, label: t.why },
+    { href: `/${lang}#fraud`, label: t.fraud },
+    { href: `/${lang}#pricing`, label: t.pricing },
+    { href: `/${lang}#faq`, label: t.faq },
   ];
   const other = lang === 'en' ? 'tr' : 'en';
+  const otherHref = altHref ?? `/${other}`;
 
   return (
     <header className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${scrolled || open ? 'border-b border-line bg-bg/75 backdrop-blur-xl' : 'border-b border-transparent'}`}>
@@ -40,13 +42,13 @@ export function SiteNav({ lang, t }: { lang: Locale; t: SiteDict['nav'] }) {
           ))}
         </div>
         <div className="hidden items-center gap-2 lg:flex">
-          <Link href={`/${other}`} className="rounded-lg px-2.5 py-2 text-xs font-semibold uppercase tracking-wider text-subtle hover:text-fg">
+          <Link href={otherHref} className="rounded-lg px-2.5 py-2 text-xs font-semibold uppercase tracking-wider text-subtle hover:text-fg">
             {other}
           </Link>
           <Link href="/login" className="rounded-lg px-3 py-2 text-sm font-medium text-muted hover:text-fg">
             {t.login}
           </Link>
-          <a href="#demo" className="btn-primary !py-2 text-sm">
+          <a href={`/${lang}#demo`} className="btn-primary !py-2 text-sm">
             {t.demo}
           </a>
         </div>
@@ -64,13 +66,13 @@ export function SiteNav({ lang, t }: { lang: Locale; t: SiteDict['nav'] }) {
             ))}
           </div>
           <div className="flex items-center gap-3">
-            <a href="#demo" onClick={() => setOpen(false)} className="btn-primary flex-1 justify-center">
+            <a href={`/${lang}#demo`} onClick={() => setOpen(false)} className="btn-primary flex-1 justify-center">
               {t.demo}
             </a>
             <Link href="/login" className="btn-ghost">
               {t.login}
             </Link>
-            <Link href={`/${other}`} className="btn-ghost uppercase">
+            <Link href={otherHref} className="btn-ghost uppercase">
               {other}
             </Link>
           </div>

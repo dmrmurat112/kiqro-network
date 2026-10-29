@@ -139,9 +139,36 @@ export async function setPasswordWithToken(db: Db, token: string, password: stri
   });
 }
 
+/**
+ * Records that a panel user accepted a version of the Advertiser Terms (with time and IP),
+ * and writes it to the audit log as evidence.
+ */
+export async function acceptAdvertiserTerms(db: Db, user: AdvertiserUser, version: string, ip: string | null, now = new Date()): Promise<void> {
+  await db.transaction(async (tx) => {
+    await tx.update(advertiserUsers).set({ termsAcceptedVersion: version, termsAcceptedAt: now, termsAcceptedIp: ip }).where(eq(advertiserUsers.id, user.id));
+    await tx.insert(schema.auditLog).values({
+      id: newId('audit'),
+      adminUserId: null,
+      action: 'advertiser_user.accept_terms',
+      entityType: 'advertiser_user',
+      entityId: user.id,
+      details: { version, ip, orgId: user.orgId },
+      createdAt: now,
+    });
+  });
+}
+
 export async function listAdvertiserUsers(db: Db, orgId: string) {
   return db
-    .select({ id: advertiserUsers.id, email: advertiserUsers.email, name: advertiserUsers.name, lastLoginAt: advertiserUsers.lastLoginAt, disabledAt: advertiserUsers.disabledAt })
+    .select({
+      id: advertiserUsers.id,
+      email: advertiserUsers.email,
+      name: advertiserUsers.name,
+      lastLoginAt: advertiserUsers.lastLoginAt,
+      disabledAt: advertiserUsers.disabledAt,
+      termsAcceptedVersion: advertiserUsers.termsAcceptedVersion,
+      termsAcceptedAt: advertiserUsers.termsAcceptedAt,
+    })
     .from(advertiserUsers)
     .where(eq(advertiserUsers.orgId, orgId));
 }
