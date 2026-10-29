@@ -1,12 +1,13 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { creditPosition, listInvoices, listPayments } from '@kiqro/network';
 import { getOrganization, listCampaigns, listProducts } from '@kiqro/network/admin';
 import { listAdvertiserUsers } from '@kiqro/network/advertiser';
 import { ActionForm } from '@/components/ActionForm';
 import { Badge } from '@/components/Badge';
 import { db } from '@/lib/db';
-import { dateTime, usd } from '@/lib/format';
-import { createAdvertiserUserAction, createProductAction, resendInviteAction, topUpAction } from '../actions';
+import { dateTime, PAYMENT_METHOD_LABELS, usd } from '@/lib/format';
+import { createAdvertiserUserAction, createProductAction, creditTermsAction, resendInviteAction, topUpAction } from '../actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,7 +15,15 @@ export default async function AdvertiserPage({ params }: { params: Promise<{ id:
   const { id } = await params;
   const org = await getOrganization(db, id);
   if (!org || org.type !== 'advertiser') notFound();
-  const [products, campaigns, users] = await Promise.all([listProducts(db, id), listCampaigns(db, { orgId: id }), listAdvertiserUsers(db, id)]);
+  const [products, campaigns, users, credit, payments, invoices] = await Promise.all([
+    listProducts(db, id),
+    listCampaigns(db, { orgId: id }),
+    listAdvertiserUsers(db, id),
+    creditPosition(db, id),
+    listPayments(db, id),
+    listInvoices(db, id),
+  ]);
+  const now = new Date();
   const trackingBase = process.env.TRACKING_BASE_URL ?? 'https://track.kiqro.com';
 
   return (
@@ -49,20 +58,133 @@ export default async function AdvertiserPage({ params }: { params: Promise<{ id:
 
         <div className="card">
           <h2>Bakiye: {usd(org.balance)}</h2>
-          <ActionForm action={topUpAction.bind(null, id)} submitLabel="Bakiye yükle" resetOnSuccess confirm="Bu ödeme gerçekten alındı mı? Bakiye kaydı geri alınamaz.">
+          <p className="muted">
+            Harcanabilir: <b>{usd(credit.spendable)}</b>
+            {credit.creditLimit > 0n && (
+              <>
+                {' '}
+                · Kredi limiti {usd(credit.creditLimit)} · vade {org.paymentTermsDays} gün
+                {credit.creditSuspended && (
+                  <span className="badge overdue" style={{ marginLeft: 6 }}>
+                    Kredi askıda (vadesi geçmiş fatura)
+                  </span>
+                )}
+              </>
+            )}
+          </p>
+          <h2 style={{ marginTop: 16 }}>Havale / manuel ödeme kaydı</h2>
+          <ActionForm action={topUpAction.bind(null, id)} submitLabel="Ödemeyi kaydet" resetOnSuccess confirm="Bu ödeme gerçekten hesaba geçti mi? Bakiye kaydı geri alınamaz.">
             <div className="fields">
               <label>
                 Tutar (USD)
                 <input name="amountUsd" placeholder="500.00" required />
               </label>
               <label>
+                Yöntem
+                <select name="method" defaultValue="bank_transfer">
+                  <option value="bank_transfer">Havale</option>
+                  <option value="other">Diğer</option>
+                </select>
+              </label>
+              <label>
                 Referans
-                <input name="memo" placeholder="Stripe pi_… / havale ref." required />
+                <input name="memo" placeholder="havale ref. / fatura no" required />
               </label>
             </div>
           </ActionForm>
-          <p className="muted">Yalnızca tahsil edilmiş ödemeleri kaydedin. Kayıt denetim günlüğüne yazılır.</p>
+          <p className="muted">
+            Kart ödemeleri Stripe'tan otomatik gelir; buraya yalnızca hesaba geçmiş havaleleri girin. Ödeme açık faturalara en eskisinden başlayarak uygulanır ve reklamverene makbuz
+            e-postası gider.
+          </p>
         </div>
+      </div>
+
+      <div className="grid cols-2">
+        <div className="card">
+          <h2>Kredi koşulları (net vade)</h2>
+          <p className="muted">
+            0 = yalnızca ön ödeme. Limit verilirse bakiye bu tutara kadar eksiye düşebilir; borç her ayın başında faturalanır, vadesinde ödenmezse limit otomatik askıya alınır.
+            Yalnızca kredi değerlendirmesi yapılmış reklamverenlere açın.
+          </p>
+          <ActionForm action={creditTermsAction.bind(null, id)} submitLabel="Kaydet" confirm="Kredi koşulları değişsin mi?">
+            <div className="fields">
+              <label>
+                Kredi limiti (USD)
+                <input name="creditLimitUsd" defaultValue={(Number(org.creditLimit) / 1e6).toString()} required />
+              </label>
+              <label>
+                Vade (gün)
+                <input name="paymentTermsDays" type="number" min={7} max={90} defaultValue={org.paymentTermsDays} required />
+              </label>
+            </div>
+          </ActionForm>
+        </div>
+
+        <div className="card">
+          <h2>Faturalar</h2>
+          {invoices.length === 0 ? (
+            <p className="muted">Fatura yok. Kredi limiti olan reklamverenlere her ayın 1–3. günü otomatik düzenlenir.</p>
+          ) : (
+            <table>
+              <thead>
+                <tr>
+                  <th>No</th>
+                  <th>Dönem</th>
+                  <th className="num">Tutar</th>
+                  <th className="num">Ödenen</th>
+                  <th>Vade</th>
+                  <th>Durum</th>
+                </tr>
+              </thead>
+              <tbody>
+                {invoices.map((inv) => (
+                  <tr key={inv.id}>
+                    <td className="mono">{inv.number}</td>
+                    <td>{inv.periodStart.toISOString().slice(0, 7)}</td>
+                    <td className="num">{usd(inv.amount)}</td>
+                    <td className="num">{usd(inv.amountPaid)}</td>
+                    <td>{dateTime(inv.dueAt)}</td>
+                    <td>
+                      <Badge status={inv.status === 'open' && inv.dueAt < now ? 'overdue' : inv.status} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+
+      <div className="card">
+        <h2>Ödemeler</h2>
+        {payments.length === 0 ? (
+          <p className="muted">Henüz ödeme yok.</p>
+        ) : (
+          <table>
+            <thead>
+              <tr>
+                <th>Tarih</th>
+                <th>Yöntem</th>
+                <th className="num">Tutar</th>
+                <th>Durum</th>
+                <th>Referans</th>
+              </tr>
+            </thead>
+            <tbody>
+              {payments.map((p) => (
+                <tr key={p.id}>
+                  <td>{dateTime(p.completedAt ?? p.createdAt)}</td>
+                  <td>{PAYMENT_METHOD_LABELS[p.method] ?? p.method}</td>
+                  <td className="num">{usd(p.amount)}</td>
+                  <td>
+                    <Badge status={p.status} />
+                  </td>
+                  <td className="mono">{p.reference ?? p.stripePaymentIntentId ?? p.id}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
 
       <div className="card">

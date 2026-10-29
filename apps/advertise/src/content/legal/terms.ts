@@ -66,9 +66,10 @@ export const terms: LegalDoc = {
       id: 'billing',
       title: '6. Prices, prepayment and billing',
       blocks: [
-        'Campaigns are prepaid. The minimum top-up is USD 500 unless agreed otherwise. Each Verified Conversion is charged at the price you set for that Event and country, by debiting your Balance at the time it is verified.',
+        'Campaigns are prepaid. The minimum top-up is USD 500 unless agreed otherwise. Top-ups are made by card through Stripe in the panel or by bank transfer. Each Verified Conversion is charged at the price you set for that Event and country, by debiting your Balance at the time it is verified.',
+        `Kiqro may, at its discretion and after a credit review, grant you a credit line shown in the panel. Your Balance may then go below zero down to that limit. Amounts owed are invoiced at the start of each calendar month and are payable within the payment term shown in the panel (30 days unless agreed otherwise). If an invoice is not paid when due, the credit line is suspended until it is paid, and Kiqro may charge late-payment interest of ${TBD('rate')}. Kiqro may change or withdraw a credit line with notice; amounts already owed remain payable on their terms.`,
         'Held Conversions are not charged unless they are approved after review. Rejected conversions are never charged.',
-        'When a campaign’s budget or your Balance is exhausted, the campaign stops accepting new users. Users who already started the offer may still complete later Events; those Events remain billable for up to the longest Event time limit of the campaign. Kiqro will not charge Events for which there is no Balance to cover them.',
+        'When a campaign’s budget or your Balance is exhausted, the campaign stops accepting new users. Users who already started the offer may still complete later Events; those Events remain billable for up to the longest Event time limit of the campaign. Kiqro will not charge Events for which there is no Balance or available credit to cover them.',
         `Prices are in USD. Invoices are issued in USD or EUR as agreed, by ${ENTITY.name} during the transition period and by its successor afterwards. Prices exclude VAT and other taxes, which are added where applicable (for EU business customers, the reverse-charge mechanism applies where the conditions are met).`,
         `On termination, any unused Balance is refunded within ${TBD('number')} days to the account it was paid from, less bank or payment-provider fees and any amounts owed to Kiqro.`,
       ],

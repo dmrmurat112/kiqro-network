@@ -11,7 +11,7 @@ Kiqro's own offerwall / performance ad network. Product and technical spec: [doc
 | `packages/network` | Business rules shared by both apps: offers, clicks, postbacks, reversals, outbox; `./admin` holds admin auth, audit log and admin operations |
 | `apps/tracking` | Fastify service: Offers API, click redirects, MMP/S2S postbacks, reversals, publisher postback worker |
 | `apps/admin` | Next.js admin panel (Turkish UI): advertisers, top-ups, products, campaigns, publishers/placements, held-conversion review, postback logs, demo requests, advertiser logins |
-| `apps/advertise` | advertise.kiqro.com — marketing site (EN/TR, demo request form) and the advertiser panel (`/app`: overview, campaign funnels, conversion log with CSV export, integration URLs; light/dark, EN/TR). Tailwind 4 + Geist |
+| `apps/advertise` | advertise.kiqro.com — marketing site (EN/TR, demo request form) and the advertiser panel (`/app`: overview, campaign funnels, conversion log with CSV export, integration URLs, billing with Stripe top-ups and invoices; light/dark, EN/TR). Tailwind 4 + Geist |
 
 ## Local setup
 
@@ -33,7 +33,7 @@ npm test
 npm run typecheck
 ```
 
-Admin roles: `admin` (everything), `operator` (advertisers, campaigns, conversion review), `finance` (top-ups), `viewer` (read only). Every change made in the panel is written to `audit_log`.
+Admin roles: `admin` (everything), `operator` (advertisers, campaigns, conversion review), `finance` (bank transfers, credit terms), `viewer` (read only). Every change made in the panel is written to `audit_log`.
 
 Admin security: two-factor authentication (TOTP, any authenticator app) is mandatory — a new admin is sent to `/security` to enroll on first login. Five wrong attempts lock an e-mail for 15 minutes. If an admin loses their phone: `npm run reset-2fa -w @kiqro/admin -- email`. For local test accounts, `npm run dev-totp-code -w @kiqro/admin -- email` prints the current code (refuses to run against a non-local database).
 
@@ -47,8 +47,21 @@ E-mail goes through SendGrid's v3 API. Messages are written to `email_messages` 
 | `password_reset` | "Forgot password" on the advertiser login page (60 min, single use, max 3 per hour, silent for unknown addresses) |
 | `low_balance` | Worker check every 10 min: balance under the advertiser's threshold (default $100), at most once a day |
 | `lead_notification` | Demo request from the site, to `LEADS_NOTIFY_EMAIL` |
+| `payment_received` | A card payment or recorded bank transfer was credited |
+| `invoice_issued` | Monthly invoice for an advertiser on credit terms |
+| `invoice_overdue` | Once per invoice when it passes its due date (credit line is then suspended) |
 
 Templates are in `packages/network/src/email/templates.ts` (English and Turkish, by the user's panel language).
+
+## Payments and credit terms
+
+Advertisers are **prepaid** by default: campaigns spend the balance and stop taking new users when it runs out.
+
+- **Card top-ups** (advertiser panel → Billing, `/app/billing`): minimum $500, maximum $50,000 per payment, through Stripe Checkout under the billing entity's Stripe account. The panel records a pending payment; the balance changes only when Stripe's webhook (`POST /api/stripe/webhook` on the advertise app, events `checkout.session.completed`, `…async_payment_succeeded`, `…async_payment_failed`, `…expired`) confirms it, after checking the signature and that the charged amount matches. Webhooks are idempotent per Checkout Session. Without `STRIPE_SECRET_KEY`, development uses a stand-in checkout page; production shows card payments as unavailable.
+- **Bank transfers**: finance records them in the admin panel (advertiser page → "Havale / manuel ödeme kaydı").
+- **Credit terms (net-30)**: finance can give a credit-checked advertiser a credit line and payment term (admin → advertiser → "Kredi koşulları"). The balance may then go down to `-creditLimit`. In the first three days of each month the worker invoices the debt not covered by open invoices (numbers `KI-YYYY-NNNNN` for Kiqro Inc., `KO-…` for Kiqro Oy), due after the payment term. Any payment is applied to open invoices oldest first. When an invoice is overdue, the credit line is suspended automatically (only prepaid balance can be spent) until it is paid.
+
+These invoices are internal statements of what is owed; the formal tax invoice format is to be confirmed with the accountant.
 
 ## Legal documents
 

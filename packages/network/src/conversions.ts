@@ -1,6 +1,7 @@
 import { and, eq, inArray, ne } from 'drizzle-orm';
 import { applyBps, verify, toPoints } from '@kiqro/core';
-import { getAccountId, getBalance, lockAccount, newId, postTransaction, schema, type Db, type Tx } from '@kiqro/db';
+import { getAccountId, lockAccount, newId, postTransaction, schema, type Db, type Tx } from '@kiqro/db';
+import { creditPosition } from './billing/credit.ts';
 import { priceFor } from './campaigns.ts';
 import { conversionHoldReasons, defaultFraudContext, type FraudContext } from './fraud/rules.ts';
 import { enqueuePublisherPostback } from './outbox.ts';
@@ -128,7 +129,7 @@ async function evaluatePostback(db: Db, input: PostbackInput, rawId: string, now
     const advertiserAccount = await getAccountId(tx, 'advertiser_balance', advertiser.id);
     if (rejectReasons.length === 0 && holdReasons.length === 0) {
       await lockAccount(tx, advertiserAccount);
-      if ((await getBalance(tx, advertiserAccount)) < price!) holdReasons.push('insufficient_balance');
+      if ((await creditPosition(tx, advertiser.id, now)).spendable < price!) holdReasons.push('insufficient_balance');
     }
 
     const status = rejectReasons.length > 0 ? 'rejected' : holdReasons.length > 0 ? 'held' : 'approved';

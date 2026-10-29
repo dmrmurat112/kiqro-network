@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { AlertTriangle, MousePointerClick, ShieldCheck, Wallet } from 'lucide-react';
+import { creditPosition } from '@kiqro/network';
 import { advertiserCountries, advertiserDailySeries, advertiserOverview } from '@kiqro/network/advertiser';
 import { Card, Delta, Empty, PageHeader, Segmented } from '@/components/panel/ui';
 import { TrendChart } from '@/components/panel/TrendChart';
@@ -18,10 +19,11 @@ export default async function OverviewPage({ searchParams }: { searchParams: Pro
   const t = PANEL[lang];
   const days = PERIODS.find((p) => String(p) === sp.days) ?? 30;
 
-  const [overview, series, countries] = await Promise.all([
+  const [overview, series, countries, credit] = await Promise.all([
     advertiserOverview(db, org.id, days),
     advertiserDailySeries(db, org.id, days),
     advertiserCountries(db, org.id, days),
+    creditPosition(db, org.id),
   ]);
   const { current: c, previous: p } = overview;
   const ecpi = c.installs > 0 ? c.spend / BigInt(c.installs) : 0n;
@@ -42,10 +44,13 @@ export default async function OverviewPage({ searchParams }: { searchParams: Pro
         <Segmented value={String(days)} options={PERIODS.map((d) => ({ value: String(d), label: t.periods[d]!, href: `/app?days=${d}` }))} />
       </PageHeader>
 
-      {overview.balance < LOW_BALANCE_MICROS && (
-        <div className="mb-6 flex items-center gap-3 rounded-xl border border-warn/30 bg-warn/8 px-4 py-3 text-sm">
-          <AlertTriangle size={18} className="shrink-0 text-warn" />
-          {t.overview.lowBalance}
+      {(credit.creditSuspended || credit.spendable < LOW_BALANCE_MICROS) && (
+        <div className={`mb-6 flex items-center gap-3 rounded-xl border px-4 py-3 text-sm ${credit.creditSuspended ? 'border-bad/30 bg-bad/8' : 'border-warn/30 bg-warn/8'}`}>
+          <AlertTriangle size={18} className={`shrink-0 ${credit.creditSuspended ? 'text-bad' : 'text-warn'}`} />
+          <span className="flex-1">{credit.creditSuspended ? t.overview.creditSuspended : t.overview.lowBalance}</span>
+          <Link href="/app/billing" className="shrink-0 rounded-lg bg-violet-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-400">
+            {t.overview.topUp}
+          </Link>
         </div>
       )}
 
@@ -77,10 +82,16 @@ export default async function OverviewPage({ searchParams }: { searchParams: Pro
         <div className="grid gap-4">
           <Card className="relative overflow-hidden p-5">
             <div className="absolute -top-16 -right-16 h-40 w-40 rounded-full bg-violet-500/20 blur-3xl" />
-            <div className="relative flex items-center gap-2 text-sm text-muted">
-              <Wallet size={16} className="text-violet-400" /> {t.overview.balance}
+            <div className="relative flex items-center justify-between gap-2 text-sm text-muted">
+              <span className="flex items-center gap-2">
+                <Wallet size={16} className="text-violet-400" /> {credit.creditLimit > 0n ? t.overview.available : t.overview.balance}
+              </span>
+              <Link href="/app/billing" className="text-xs font-medium text-violet-400 hover:text-violet-300">
+                {t.overview.topUp} →
+              </Link>
             </div>
-            <div className="relative mt-2 font-mono text-3xl font-semibold tracking-tight tabular-nums">{usd(overview.balance, lang)}</div>
+            <div className="relative mt-2 font-mono text-3xl font-semibold tracking-tight tabular-nums">{usd(credit.creditLimit > 0n ? (credit.spendable > 0n ? credit.spendable : 0n) : overview.balance, lang)}</div>
+            {credit.creditLimit > 0n && <div className="relative mt-1 text-xs text-subtle">{t.overview.creditIncluded}</div>}
             <div className="relative mt-4 grid grid-cols-2 gap-3 text-sm">
               <div>
                 <div className="text-subtle">{t.overview.activeCampaigns}</div>

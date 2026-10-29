@@ -1,6 +1,7 @@
 import { and, desc, eq, gte, sql, type SQL } from 'drizzle-orm';
 import { z } from 'zod';
-import { getAccountId, getBalance, lockAccount, schema, type Db } from '@kiqro/db';
+import { getAccountId, lockAccount, schema, type Db } from '@kiqro/db';
+import { creditPosition } from '../billing/credit.ts';
 import { creditConversion } from '../conversions.ts';
 import { enqueuePublisherPostback, retryFailedPostback } from '../outbox.ts';
 import { audit } from './audit.ts';
@@ -34,8 +35,8 @@ export async function approveHeldConversion(db: Db, actor: AdminUser, conversion
     if (conversion.advertiserPrice <= 0n) throw new AdminError('Bu dönüşümün fiyatı yok; onaylanamaz.');
     const advertiserAccount = await getAccountId(tx, 'advertiser_balance', campaign.orgId);
     await lockAccount(tx, advertiserAccount);
-    if ((await getBalance(tx, advertiserAccount)) < conversion.advertiserPrice) {
-      throw new AdminError('Reklamveren bakiyesi bu dönüşümü karşılamıyor. Önce bakiye yüklenmeli.');
+    if ((await creditPosition(tx, campaign.orgId, now)).spendable < conversion.advertiserPrice) {
+      throw new AdminError('Reklamveren bakiyesi (ve kredi limiti) bu dönüşümü karşılamıyor. Önce bakiye yüklenmeli.');
     }
     await creditConversion(tx, {
       conversionId,

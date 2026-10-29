@@ -27,7 +27,15 @@ export const STATUS_LABELS: Record<string, string> = {
   sent: 'Gönderildi',
   failed: 'Başarısız',
   suspended: 'Askıda',
+  succeeded: 'Ödendi',
+  expired: 'Yarım kaldı',
+  open: 'Açık',
+  paid: 'Ödendi',
+  void: 'İptal',
+  overdue: 'Vadesi geçti',
 };
+
+export const PAYMENT_METHOD_LABELS: Record<string, string> = { stripe: 'Kart (Stripe)', bank_transfer: 'Havale', other: 'Diğer' };
 
 export const REASON_LABELS: Record<string, string> = {
   ctit_too_short: 'Yükleme tıklamadan çok hızlı',

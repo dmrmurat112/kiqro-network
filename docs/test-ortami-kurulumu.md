@@ -37,6 +37,7 @@ Hepsi Render **Frankfurt** bölgesinde çalışır. Tahmini maliyet ayda yaklaş
 3. Gizli değerler sorulacak:
    - `SENDGRID_API_KEY`: SendGrid'den yalnızca **Mail Send** yetkili yeni bir anahtar (bölüm 7). Hazır değilse boş bırakın; o durumda e-postalar gönderilmez, worker günlüğüne yazılır.
    - `IPQS_API_KEY`: IPQualityScore anahtarı. Yoksa boş bırakın; o durumda VPN/veri merkezi tespiti kapalı kalır.
+   - `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`: bölüm 8. Hazır değilse boş bırakın; panelde kartla ödeme "kullanılamıyor" görünür.
 4. **Apply** deyin. Render veritabanını oluşturur, imajları derler, veritabanı geçişlerini (migration) çalıştırır ve servisleri başlatır. İlk derleme 10–15 dakika sürebilir.
 5. `ORIGIN_SECRET` değeri Render tarafından otomatik üretilir. **Env Groups → kiqro-staging** bölümünden değeri kopyalayın; 4. adımda Cloudflare'e girilecek.
 
@@ -102,7 +103,21 @@ Diğer ekip üyeleri için aynı komutu kendi e-postalarıyla çalıştırın. R
 3. **Settings → API Keys** bölümünden yalnızca **Mail Send** yetkili bir anahtar oluşturup Render'da `SENDGRID_API_KEY` olarak girin.
 4. Staging'de `SENDGRID_SANDBOX=true` ayarlı. Bu modda SendGrid isteği doğrular ama e-postayı **teslim etmez**. Test için gerçek gönderim isterseniz Render'da bu değeri `false` yapın.
 
-## 8. Kiqro uygulaması (yazılım firması) için hazırlık
+## 8. Stripe (kartla bakiye yükleme)
+
+Staging'de Stripe **test modu** kullanılır; gerçek para çekilmez.
+
+1. Stripe Dashboard'da (Kiqro Inc. hesabı) sağ üstten **Test mode**'u açın.
+2. **Developers → API keys** → *Secret key* (`sk_test_…`) değerini Render'da `STRIPE_SECRET_KEY` olarak girin.
+3. **Developers → Webhooks → Add endpoint**:
+   - URL: `https://advertise-staging.kiqro.com/api/stripe/webhook`
+   - Olaylar: `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`, `checkout.session.expired`
+4. Endpoint'in **Signing secret** değerini (`whsec_…`) Render'da `STRIPE_WEBHOOK_SECRET` olarak girin.
+5. Test: reklamveren panelinde **Ödemeler → Bakiye yükle**, kart `4242 4242 4242 4242`, ileri bir tarih ve herhangi bir CVC. Birkaç saniye içinde bakiye artar ve ödeme geçmişinde "Ödendi" görünür.
+
+Canlı ortamda aynı adımlar **live** anahtarlarla ve `https://advertise.kiqro.com/api/stripe/webhook` adresiyle yapılır. Stripe **Settings → Customer emails** bölümünden "Successful payments" makbuzlarını açabilirsiniz.
+
+## 9. Kiqro uygulaması (yazılım firması) için hazırlık
 
 1. Admin panelinde **Yayıncılar → Yeni yayıncı**: "Kiqro App (staging)".
 2. **Yeni placement** oluşturun:
@@ -116,7 +131,7 @@ Diğer ekip üyeleri için aynı komutu kendi e-postalarıyla çalıştırın. R
    - Entegrasyon kılavuzu (`docs/kiqro-direct-entegrasyon.pdf`)
 4. Test reklamvereni ve test kampanyası oluşturun. Firma, kılavuzdaki test planını bu kampanyayla yürütür.
 
-## 9. Günlük işletim
+## 10. Günlük işletim
 
 - **Günlükler:** Render → servis → **Logs**.
 - **Geri dönüş:** Render → servis → **Events → Rollback**. Veritabanı geçişleri yalnızca ileri gider; şema değiştiren bir dağıtımı geri almadan önce geçişin eski kodla uyumlu olduğundan emin olun.
@@ -127,7 +142,7 @@ Diğer ekip üyeleri için aynı komutu kendi e-postalarıyla çalıştırın. R
   ```
   Render Shell'den çalıştırılır.
 
-## 10. Canlı ortam (sonra)
+## 11. Canlı ortam (sonra)
 
 Canlı ortam aynı yapıyla, ayrı bir Blueprint ve ayrı bir veritabanıyla kurulacak:
 - Adresler: `track.kiqro.com`, `advertise.kiqro.com`, `admin.kiqro.com`.

@@ -1,6 +1,7 @@
 import { and, desc, eq, gte } from 'drizzle-orm';
 import { fillMacros, verify } from '@kiqro/core';
-import { getAccountId, getBalance, newId, schema, type Db } from '@kiqro/db';
+import { newId, schema, type Db } from '@kiqro/db';
+import { creditPosition } from './billing/credit.ts';
 import { acceptsNewUsers } from './campaigns.ts';
 import { defaultFraudContext, screenClick, type FraudContext } from './fraud/rules.ts';
 
@@ -63,8 +64,7 @@ export async function handleClick(db: Db, input: ClickInput): Promise<ClickResul
   const blocked = await acceptsNewUsers(db, campaign, input.country, now);
   if (blocked) return { ok: false, status: 409, reason: blocked };
 
-  const advertiserBalance = await getBalance(db, await getAccountId(db, 'advertiser_balance', campaign.orgId));
-  if (advertiserBalance <= 0n) return { ok: false, status: 409, reason: 'advertiser_balance_empty' };
+  if ((await creditPosition(db, campaign.orgId, now)).spendable <= 0n) return { ok: false, status: 409, reason: 'advertiser_balance_empty' };
 
   const screening = await screenClick(db, input.fraud ?? defaultFraudContext, { ip: input.ip, country: input.country, publisherRisk }, now);
   if (screening.block) return { ok: false, status: screening.block === 'ip_click_velocity' ? 429 : 403, reason: screening.block };

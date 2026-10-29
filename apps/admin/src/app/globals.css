@@ -80,7 +80,9 @@ button:disabled { opacity: .6; cursor: progress; }
 .badge { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 12px; font-weight: 600; background: #eef1f5; color: var(--muted); }
 .badge.active, .badge.approved, .badge.sent { background: var(--ok-soft); color: var(--ok); }
 .badge.held, .badge.pending, .badge.paused, .badge.draft, .badge.in_review { background: var(--warn-soft); color: var(--warn); }
-.badge.rejected, .badge.reversed, .badge.failed { background: var(--danger-soft); color: var(--danger); }
+.badge.succeeded, .badge.paid { background: var(--ok-soft); color: var(--ok); }
+.badge.open { background: var(--warn-soft); color: var(--warn); }
+.badge.rejected, .badge.reversed, .badge.failed, .badge.overdue { background: var(--danger-soft); color: var(--danger); }
 
 .notice { padding: 8px 12px; border-radius: 6px; font-size: 13px; }
 .notice.error { background: var(--danger-soft); color: var(--danger); }

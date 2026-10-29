@@ -35,6 +35,11 @@ const MESSAGES: Record<string, Record<UiLocale, (param: string) => string>> = {
   not_editable: { en: () => 'only draft campaigns can be edited; contact Kiqro to change a live campaign', tr: () => 'yalnızca taslak kampanyalar düzenlenebilir; yayındaki kampanya için Kiqro ile iletişime geçin' },
   not_submittable: { en: () => 'only draft campaigns can be submitted', tr: () => 'yalnızca taslak kampanyalar gönderilebilir' },
   not_pausable: { en: () => 'only live or paused campaigns can be paused or resumed', tr: () => 'yalnızca yayındaki veya duraklatılmış kampanyalar duraklatılıp devam ettirilebilir' },
+  amount_cents: { en: () => 'enter an amount in dollars, such as 750 or 750.50', tr: () => 'dolar cinsinden bir tutar girin (ör. 750 veya 750.50)' },
+  topup_minimum: { en: (m) => `the minimum top-up is $${m}`, tr: (m) => `en az ${m} $ yüklenebilir` },
+  topup_maximum: { en: (m) => `card payments are limited to $${m}; contact Kiqro for a bank transfer`, tr: (m) => `kartla en fazla ${m} $ ödenebilir; daha yüksek tutarlar için havale bilgisi isteyin` },
+  invoice_not_payable: { en: () => 'this invoice is already paid', tr: () => 'bu fatura zaten ödenmiş' },
+  payments_unavailable: { en: () => 'card payments are not available right now; please try again later', tr: () => 'kartla ödeme şu anda kullanılamıyor; lütfen daha sonra tekrar deneyin' },
   budget_minimum: { en: (m) => `the total budget must be at least $${m}`, tr: (m) => `toplam bütçe en az ${m} $ olmalı` },
 };
 

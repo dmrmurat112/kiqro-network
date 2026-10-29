@@ -50,6 +50,12 @@ export const organizations = pgTable('organizations', {
   /** Advertisers get an e-mail when their balance falls below this (micro-USD). */
   lowBalanceThreshold: micros('low_balance_threshold').notNull().default(sql`100000000`), // $100
   lowBalanceAlertedAt: timestamp('low_balance_alerted_at', { withTimezone: true }),
+  /**
+   * Credit line (micro-USD) granted by Kiqro finance: the balance may go this far below zero.
+   * 0 = prepaid only. Debt is invoiced monthly and due paymentTermsDays after the invoice.
+   */
+  creditLimit: micros('credit_limit').notNull().default(sql`0`),
+  paymentTermsDays: integer('payment_terms_days').notNull().default(30),
   createdAt: createdAt(),
 });
 
@@ -409,4 +415,61 @@ export const publisherPostbacks = pgTable(
     createdAt: createdAt(),
   },
   (t) => [index('publisher_postbacks_due_idx').on(t.status, t.nextAttemptAt), uniqueIndex('publisher_postbacks_uq').on(t.conversionId, t.kind)],
+);
+
+export const invoiceStatus = pgEnum('invoice_status', ['open', 'paid', 'void']);
+
+/**
+ * Monthly invoices for advertisers on credit terms: the debt (negative balance) not covered by
+ * earlier open invoices. Payments are applied to open invoices oldest first.
+ */
+export const invoices = pgTable(
+  'invoices',
+  {
+    id: text('id').primaryKey(),
+    number: text('number').notNull().unique(),
+    orgId: text('org_id').notNull().references(() => organizations.id),
+    billingEntity: text('billing_entity').notNull(),
+    periodStart: timestamp('period_start', { withTimezone: true }).notNull(),
+    periodEnd: timestamp('period_end', { withTimezone: true }).notNull(),
+    /** Net campaign spend in the period, for information. */
+    periodSpend: micros('period_spend').notNull(),
+    amount: micros('amount').notNull(),
+    amountPaid: micros('amount_paid').notNull().default(sql`0`),
+    status: invoiceStatus('status').notNull().default('open'),
+    issuedAt: timestamp('issued_at', { withTimezone: true }).notNull(),
+    dueAt: timestamp('due_at', { withTimezone: true }).notNull(),
+    paidAt: timestamp('paid_at', { withTimezone: true }),
+    overdueNotifiedAt: timestamp('overdue_notified_at', { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex('invoices_org_period_uq').on(t.orgId, t.periodStart), index('invoices_open_idx').on(t.status, t.dueAt)],
+);
+
+export const paymentMethod = pgEnum('payment_method', ['stripe', 'bank_transfer', 'other']);
+export const paymentStatus = pgEnum('payment_status', ['pending', 'succeeded', 'failed', 'expired']);
+
+/** Money paid in by advertisers: Stripe Checkout (self-serve) or bank transfers recorded by finance. */
+export const payments = pgTable(
+  'payments',
+  {
+    id: text('id').primaryKey(),
+    orgId: text('org_id').notNull().references(() => organizations.id),
+    method: paymentMethod('method').notNull(),
+    status: paymentStatus('status').notNull().default('pending'),
+    amount: micros('amount').notNull(),
+    currency: text('currency').notNull().default('USD'),
+    /** Invoice the payer meant to pay, if any (payments are still applied oldest invoice first). */
+    invoiceId: text('invoice_id').references(() => invoices.id),
+    stripeSessionId: text('stripe_session_id').unique(),
+    stripePaymentIntentId: text('stripe_payment_intent_id'),
+    /** Bank transfer reference or note. */
+    reference: text('reference'),
+    ledgerTransactionId: text('ledger_transaction_id').references(() => ledgerTransactions.id),
+    advertiserUserId: text('advertiser_user_id').references(() => advertiserUsers.id),
+    adminUserId: text('admin_user_id').references(() => adminUsers.id),
+    completedAt: timestamp('completed_at', { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [index('payments_org_idx').on(t.orgId, t.createdAt)],
 );

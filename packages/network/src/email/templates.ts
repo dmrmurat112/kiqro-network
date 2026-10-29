@@ -13,7 +13,10 @@ export type EmailTemplate =
   | { name: 'lead_notification'; data: { name: string; email: string; company: string; vertical: string; budget: string; message: string; adminLink: string } }
   | { name: 'campaign_submitted'; data: { company: string; campaign: string; submittedBy: string; adminLink: string } }
   | { name: 'campaign_approved'; data: { name: string; campaign: string; panelLink: string } }
-  | { name: 'campaign_returned'; data: { name: string; campaign: string; note: string; editLink: string } };
+  | { name: 'campaign_returned'; data: { name: string; campaign: string; note: string; editLink: string } }
+  | { name: 'payment_received'; data: { name: string; company: string; amount: string; method: 'stripe' | 'bank_transfer' | 'other'; paymentId: string; billingLink: string } }
+  | { name: 'invoice_issued'; data: { name: string; company: string; number: string; amount: string; period: string; dueDate: string; payLink: string } }
+  | { name: 'invoice_overdue'; data: { name: string; company: string; number: string; amount: string; dueDate: string; payLink: string } };
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 
@@ -85,10 +88,12 @@ export function renderEmail(template: EmailTemplate, locale: EmailLocale): Rende
       const intro = tr
         ? `Merhaba ${esc(d.name)}, <b>${esc(d.company)}</b> hesabının bakiyesi ${esc(d.threshold)} eşiğinin altına düştü (şu an ${esc(d.balance)}). Bakiye bittiğinde kampanyalarınız yeni kullanıcı almayı durdurur.`
         : `Hi ${esc(d.name)}, the balance of <b>${esc(d.company)}</b> fell below ${esc(d.threshold)} (now ${esc(d.balance)}). When it runs out, your campaigns stop acquiring new users.`;
-      const next = tr ? 'Bakiye yüklemek için Kiqro temsilcinizle iletişime geçin.' : 'Contact your Kiqro representative to top up.';
+      const next = tr
+        ? 'Paneldeki Ödemeler sayfasından kartla bakiye yükleyebilir, havale bilgisi için Kiqro ile iletişime geçebilirsiniz.'
+        : 'Top up by card on the Billing page of the panel, or contact Kiqro for bank transfer details.';
       return {
         subject,
-        html: layout({ preheader: subject, heading: subject, paragraphs: [intro, next], button: { label: tr ? 'Paneli aç' : 'Open the panel', href: d.panelLink }, footnote: tr ? 'Bu uyarı en fazla günde bir kez gönderilir.' : 'This alert is sent at most once a day.' }),
+        html: layout({ preheader: subject, heading: subject, paragraphs: [intro, next], button: { label: tr ? 'Bakiye yükle' : 'Top up', href: d.panelLink }, footnote: tr ? 'Bu uyarı en fazla günde bir kez gönderilir.' : 'This alert is sent at most once a day.' }),
         text: text([subject, intro.replace(/<\/?b>/g, ''), next, d.panelLink]),
       };
     }
@@ -148,6 +153,45 @@ export function renderEmail(template: EmailTemplate, locale: EmailLocale): Rende
         subject,
         html: layout({ preheader: subject, heading: subject, paragraphs: [intro, note], button: { label: tr ? 'Kampanyayı düzenle' : 'Edit the campaign', href: d.editLink }, footnote: tr ? 'Düzenledikten sonra tekrar incelemeye gönderin.' : 'Submit it for review again once updated.' }),
         text: text([subject, intro.replace(/<\/?b>/g, ''), d.note, d.editLink]),
+      };
+    }
+    case 'payment_received': {
+      const d = template.data;
+      const methods = { stripe: tr ? 'kart (Stripe)' : 'card (Stripe)', bank_transfer: tr ? 'banka havalesi' : 'bank transfer', other: tr ? 'diğer' : 'other' };
+      const subject = tr ? `Ödemeniz alındı: ${d.amount}` : `Payment received: ${d.amount}`;
+      const intro = tr
+        ? `Merhaba ${esc(d.name)}, <b>${esc(d.company)}</b> hesabına ${esc(d.amount)} tutarındaki ödeme (${methods[d.method]}) bakiyenize eklendi. Varsa açık faturalarınıza en eskisinden başlayarak uygulandı.`
+        : `Hi ${esc(d.name)}, the payment of ${esc(d.amount)} (${methods[d.method]}) for <b>${esc(d.company)}</b> has been added to your balance and applied to any open invoices, oldest first.`;
+      const ref = `${tr ? 'Ödeme no' : 'Payment ID'}: ${esc(d.paymentId)}`;
+      return {
+        subject,
+        html: layout({ preheader: subject, heading: subject, paragraphs: [intro, ref], button: { label: tr ? 'Ödemeleri görüntüle' : 'View billing', href: d.billingLink }, footnote: tr ? 'Bu e-posta ödeme bildirimidir; resmi fatura ayrıca düzenlenir.' : 'This e-mail confirms your payment; the formal invoice is issued separately.' }),
+        text: text([subject, intro.replace(/<\/?b>/g, ''), ref, d.billingLink]),
+      };
+    }
+    case 'invoice_issued': {
+      const d = template.data;
+      const subject = tr ? `Fatura ${d.number}: ${d.amount}, son ödeme ${d.dueDate}` : `Invoice ${d.number}: ${d.amount}, due ${d.dueDate}`;
+      const intro = tr
+        ? `Merhaba ${esc(d.name)}, <b>${esc(d.company)}</b> için ${esc(d.period)} dönemi faturası düzenlendi. Tutar <b>${esc(d.amount)}</b>, son ödeme tarihi <b>${esc(d.dueDate)}</b>.`
+        : `Hi ${esc(d.name)}, the ${esc(d.period)} invoice for <b>${esc(d.company)}</b> is ready. Amount <b>${esc(d.amount)}</b>, due <b>${esc(d.dueDate)}</b>.`;
+      const how = tr ? 'Panelden kartla ödeyebilir ya da havale yapabilirsiniz (açıklamaya fatura numarasını yazın).' : 'Pay by card in the panel or by bank transfer (put the invoice number in the reference).';
+      return {
+        subject,
+        html: layout({ preheader: subject, heading: subject, paragraphs: [intro, how], button: { label: tr ? 'Faturayı öde' : 'Pay invoice', href: d.payLink }, footnote: tr ? 'Vadesi geçen faturalarda kredi limitiniz ödeme yapılana kadar askıya alınır.' : 'If an invoice becomes overdue, your credit line is paused until it is paid.' }),
+        text: text([subject, intro.replace(/<\/?b>/g, ''), how, d.payLink]),
+      };
+    }
+    case 'invoice_overdue': {
+      const d = template.data;
+      const subject = tr ? `Vadesi geçmiş fatura: ${d.number}` : `Overdue invoice: ${d.number}`;
+      const intro = tr
+        ? `Merhaba ${esc(d.name)}, <b>${esc(d.company)}</b> hesabının ${esc(d.number)} numaralı faturası ${esc(d.dueDate)} tarihinde vadesini doldurdu; ${esc(d.amount)} ödenmedi. Kredi limitiniz askıya alındı: kampanyalarınız yalnızca ön ödemeli bakiyeyle çalışır.`
+        : `Hi ${esc(d.name)}, invoice ${esc(d.number)} for <b>${esc(d.company)}</b> was due on ${esc(d.dueDate)} and ${esc(d.amount)} is unpaid. Your credit line is paused: campaigns run on prepaid balance only until it is paid.`;
+      return {
+        subject,
+        html: layout({ preheader: subject, heading: subject, paragraphs: [intro], button: { label: tr ? 'Şimdi öde' : 'Pay now', href: d.payLink }, footnote: tr ? 'Ödemeyi yaptıysanız bu e-postayı yok sayabilirsiniz.' : 'If you have already paid, you can ignore this e-mail.' }),
+        text: text([subject, intro.replace(/<\/?b>/g, ''), d.payLink]),
       };
     }
   }

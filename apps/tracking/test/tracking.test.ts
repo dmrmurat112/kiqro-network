@@ -219,6 +219,42 @@ describe('conversions', () => {
     expect(await postback(rich, other, 'install', at(60), { country: 'DE' })).toMatchObject({ outcome: 'held', reasons: ['country_mismatch'] });
   });
 
+  it('lets advertisers on credit terms spend below zero, but not past the limit or with an overdue invoice', async () => {
+    const s = await setup({ topUpUsd: '0.10' });
+    await db.update(schema.organizations).set({ creditLimit: 1_000_000n }).where(eq(schema.organizations.id, s.advertiserId)); // $1 credit line
+    const first = await click(s);
+    expect((await postback(s, first, 'install', at(60))).outcome).toBe('approved');
+    expect(await balanceOf(db, 'advertiser_balance', s.advertiserId)).toBeLessThan(0n);
+
+    // An overdue invoice suspends the credit line: no new clicks, conversions are held.
+    await db.insert(schema.invoices).values({
+      id: 'inv_test',
+      number: 'KI-2026-99999',
+      orgId: s.advertiserId,
+      billingEntity: 'kiqro_inc',
+      periodStart: new Date('2026-01-01T00:00:00Z'),
+      periodEnd: new Date('2026-02-01T00:00:00Z'),
+      periodSpend: 0n,
+      amount: 1n,
+      issuedAt: new Date('2026-02-01T00:00:00Z'),
+      dueAt: new Date('2026-03-01T00:00:00Z'),
+    });
+    const user = 'user-2';
+    const blocked = await handleClick(db, {
+      campaignId: s.campaignId,
+      appKey: s.appKey,
+      publisherUserId: user,
+      signature: sign(s.placementSecret, [s.campaignId, user]),
+      country: 'TR',
+      ip: '203.0.113.7',
+      userAgent: 'test',
+      query: {},
+      now: T0,
+    });
+    expect(blocked).toMatchObject({ ok: false, reason: 'advertiser_balance_empty' });
+    expect(await postback(s, first, 'af_level_achieved_10', at(120))).toMatchObject({ outcome: 'held', reasons: ['insufficient_balance'] });
+  });
+
   it('records unknown clicks, unknown events and foreign advertisers without paying', async () => {
     const s = await setup();
     const other = await setup();

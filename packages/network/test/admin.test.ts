@@ -44,6 +44,7 @@ afterAll(async () => close());
 beforeEach(async () => resetTestDb(db));
 
 const PASSWORD = 'correct horse battery';
+const LINKS = { advertiseBaseUrl: 'https://advertise.test' };
 
 async function admin(role: AdminUser['role'] = 'admin'): Promise<AdminUser> {
   const id = await createAdminUser(db, { email: `${role}-${Math.random()}@kiqro.test`, name: role, role, password: PASSWORD });
@@ -133,7 +134,7 @@ describe('advertisers and top-ups', () => {
     expect(org.postbackKey).toMatch(/^adv_/);
     expect(org.postbackSecret).toBeTruthy();
 
-    await recordTopUp(db, actor, id, { amountUsd: '250.75', memo: 'Stripe pi_123' });
+    await recordTopUp(db, actor, id, { amountUsd: '250.75', memo: 'Stripe pi_123' }, LINKS);
     expect(await getBalance(db, await getAccountId(db, 'advertiser_balance', id))).toBe(250_750_000n);
     const actions = (await db.select().from(auditLog)).map((a) => a.action);
     expect(actions).toEqual(expect.arrayContaining(['advertiser.create', 'advertiser.topup']));
@@ -147,7 +148,7 @@ describe('advertisers and top-ups', () => {
   it('enforces roles: operators cannot move money, finance cannot create campaigns', async () => {
     const owner = await admin();
     const id = await createAdvertiser(db, owner, advertiserForm);
-    await expect(recordTopUp(db, await admin('operator'), id, { amountUsd: '10', memo: 'x123' })).rejects.toBeInstanceOf(AdminError);
+    await expect(recordTopUp(db, await admin('operator'), id, { amountUsd: '10', memo: 'x123' }, LINKS)).rejects.toBeInstanceOf(AdminError);
     await expect(createAdvertiser(db, await admin('finance'), advertiserForm)).rejects.toBeInstanceOf(AdminError);
     await expect(createAdvertiser(db, await admin('viewer'), advertiserForm)).rejects.toBeInstanceOf(AdminError);
   });
@@ -156,7 +157,7 @@ describe('advertisers and top-ups', () => {
     const actor = await admin();
     await expect(createAdvertiser(db, actor, { ...advertiserForm, country: 'Finland' })).rejects.toThrow('iki harfli ülke kodu');
     const id = await createAdvertiser(db, actor, advertiserForm);
-    await expect(recordTopUp(db, actor, id, { amountUsd: '-5', memo: 'refund' })).rejects.toThrow('geçerli bir tutar');
+    await expect(recordTopUp(db, actor, id, { amountUsd: '-5', memo: 'refund' }, LINKS)).rejects.toThrow('geçerli bir tutar');
   });
 });
 
@@ -252,7 +253,7 @@ describe('held conversion review', () => {
     const { s, conversionId } = await heldConversion();
     await expect(approveHeldConversion(db, actor, conversionId, 'checked with advertiser')).rejects.toThrow('bakiyesi');
 
-    await recordTopUp(db, actor, s.advertiserId, { amountUsd: '10', memo: 'wire 42' });
+    await recordTopUp(db, actor, s.advertiserId, { amountUsd: '10', memo: 'wire 42' }, LINKS);
     await approveHeldConversion(db, actor, conversionId, 'checked with advertiser');
     const conversion = (await db.query.conversions.findFirst({ where: eq(conversions.id, conversionId) }))!;
     expect(conversion.status).toBe('approved');

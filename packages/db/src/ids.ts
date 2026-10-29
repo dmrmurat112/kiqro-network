@@ -20,6 +20,8 @@ const prefixes = {
   advertiserUser: 'adu',
   lead: 'led',
   email: 'eml',
+  payment: 'pay',
+  invoice: 'inv',
 } as const;
 
 /** Prefixed, time-sortable ids, e.g. "cnv_01JBX…". The prefix makes ids self-describing in logs. */

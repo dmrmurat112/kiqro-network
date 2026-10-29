@@ -1,6 +1,6 @@
 'use server';
 
-import { createAdvertiser, createProduct, recordTopUp } from '@kiqro/network/admin';
+import { createAdvertiser, createProduct, recordTopUp, setCreditTerms } from '@kiqro/network/admin';
 import { createAdvertiserUser, resendAdvertiserInvite } from '@kiqro/network/advertiser';
 import { field, runAction, type ActionState } from '@/lib/action';
 import { db } from '@/lib/db';
@@ -38,8 +38,15 @@ export async function resendInviteAction(orgId: string, userId: string, _: Actio
 
 export async function topUpAction(orgId: string, _: ActionState, form: FormData): Promise<ActionState> {
   return runAction(async (actor) => {
-    await recordTopUp(db, actor, orgId, { amountUsd: field(form, 'amountUsd'), memo: field(form, 'memo') });
-    return 'Bakiye yüklendi.';
+    await recordTopUp(db, actor, orgId, { amountUsd: field(form, 'amountUsd'), memo: field(form, 'memo'), method: field(form, 'method') as 'bank_transfer' }, links());
+    return 'Ödeme kaydedildi; bakiyeye eklendi ve açık faturalara uygulandı.';
+  }, `/advertisers/${orgId}`);
+}
+
+export async function creditTermsAction(orgId: string, _: ActionState, form: FormData): Promise<ActionState> {
+  return runAction(async (actor) => {
+    await setCreditTerms(db, actor, orgId, { creditLimitUsd: field(form, 'creditLimitUsd'), paymentTermsDays: field(form, 'paymentTermsDays') });
+    return 'Kredi koşulları güncellendi.';
   }, `/advertisers/${orgId}`);
 }
 

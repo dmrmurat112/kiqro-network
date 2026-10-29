@@ -26,7 +26,8 @@ export async function checkLowBalances(db: Db, opts: LinkOptions, now = new Date
 
   let alerted = 0;
   for (const org of orgs) {
-    const balance = byOrg.get(org.id) ?? 0n;
+    // What campaigns can still spend: prepaid balance plus any credit line.
+    const balance = (byOrg.get(org.id) ?? 0n) + org.creditLimit;
     if (balance >= org.lowBalanceThreshold) {
       if (org.lowBalanceAlertedAt) await db.update(organizations).set({ lowBalanceAlertedAt: null }).where(eq(organizations.id, org.id));
       continue;
@@ -41,7 +42,7 @@ export async function checkLowBalances(db: Db, opts: LinkOptions, now = new Date
           user.email,
           {
             name: 'low_balance',
-            data: { name: user.name, company: org.name, balance: money(balance), threshold: money(org.lowBalanceThreshold), panelLink: `${opts.advertiseBaseUrl.replace(/\/$/, '')}/app` },
+            data: { name: user.name, company: org.name, balance: money(balance), threshold: money(org.lowBalanceThreshold), panelLink: `${opts.advertiseBaseUrl.replace(/\/$/, '')}/app/billing` },
           },
           user.locale === 'tr' ? 'tr' : 'en',
           now,

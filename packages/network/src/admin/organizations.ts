@@ -2,7 +2,8 @@ import { randomBytes } from 'node:crypto';
 import { desc, eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { formatMicros, parseMicros } from '@kiqro/core';
-import { getAccountId, newId, schema, topUpAdvertiser, type Db } from '@kiqro/db';
+import { getAccountId, newId, schema, type Db } from '@kiqro/db';
+import { recordReceivedPayment } from '../billing/payments.ts';
 import { audit } from './audit.ts';
 import type { AdminUser } from './auth.ts';
 import { AdminError, describeValidation, requirePermission } from './errors.ts';
@@ -84,11 +85,15 @@ export async function getOrganization(db: Db, id: string) {
 
 export const topUpInput = z.object({
   amountUsd: usd,
-  memo: z.string().trim().min(3, 'açıklama gerekli (ör. Stripe ödeme no / havale referansı)').max(200),
+  memo: z.string().trim().min(3, 'açıklama gerekli (ör. havale referansı)').max(200),
+  method: z.enum(['bank_transfer', 'other']).default('bank_transfer'),
 });
 
-/** Records an advertiser payment (Stripe or bank transfer) as prepaid balance. */
-export async function recordTopUp(db: Db, actor: AdminUser, orgId: string, input: z.input<typeof topUpInput>): Promise<void> {
+/**
+ * Records money received outside Stripe (bank transfer): balance, payment history, applied to
+ * open invoices, receipt e-mail. Card payments are credited by the Stripe webhook instead.
+ */
+export async function recordTopUp(db: Db, actor: AdminUser, orgId: string, input: z.input<typeof topUpInput>, links: { advertiseBaseUrl: string }): Promise<void> {
   requirePermission(actor, 'move_money');
   const data = parse(topUpInput, input);
   const amount = parseMicros(data.amountUsd);
@@ -96,8 +101,32 @@ export async function recordTopUp(db: Db, actor: AdminUser, orgId: string, input
   await db.transaction(async (tx) => {
     const org = await tx.query.organizations.findFirst({ where: eq(organizations.id, orgId) });
     if (org?.type !== 'advertiser') throw new AdminError('Reklamveren bulunamadı.');
-    await topUpAdvertiser(tx, orgId, amount, data.memo);
-    await audit(tx, actor.id, 'advertiser.topup', 'organization', orgId, { amountUsd: formatMicros(amount), memo: data.memo });
+    const paymentId = await recordReceivedPayment(tx, { orgId, amount, method: data.method, reference: data.memo, adminUserId: actor.id }, links.advertiseBaseUrl);
+    await audit(tx, actor.id, 'advertiser.topup', 'organization', orgId, { amountUsd: formatMicros(amount), memo: data.memo, method: data.method, paymentId });
+  });
+}
+
+export const creditTermsInput = z.object({
+  creditLimitUsd: usd,
+  paymentTermsDays: intField(7, 90),
+});
+
+/**
+ * Sets an advertiser's credit line (0 = prepaid only) and invoice payment terms. Only for
+ * advertisers Kiqro has credit-checked; debt above the prepaid balance is invoiced monthly.
+ */
+export async function setCreditTerms(db: Db, actor: AdminUser, orgId: string, input: z.input<typeof creditTermsInput>): Promise<void> {
+  requirePermission(actor, 'move_money');
+  const data = parse(creditTermsInput, input);
+  const creditLimit = parseMicros(data.creditLimitUsd);
+  await db.transaction(async (tx) => {
+    const org = await tx.query.organizations.findFirst({ where: eq(organizations.id, orgId) });
+    if (org?.type !== 'advertiser') throw new AdminError('Reklamveren bulunamadı.');
+    await tx.update(organizations).set({ creditLimit, paymentTermsDays: data.paymentTermsDays }).where(eq(organizations.id, orgId));
+    await audit(tx, actor.id, 'advertiser.credit_terms', 'organization', orgId, {
+      before: { creditLimitUsd: formatMicros(org.creditLimit), paymentTermsDays: org.paymentTermsDays },
+      after: { creditLimitUsd: formatMicros(creditLimit), paymentTermsDays: data.paymentTermsDays },
+    });
   });
 }
 
