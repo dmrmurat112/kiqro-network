@@ -11,10 +11,14 @@ export async function currentAdmin(): Promise<AdminUser | null> {
   return getSessionUser(db, token);
 }
 
-/** For pages and server actions: the signed-in admin, or a redirect to the login page. */
-export async function requireAdmin(): Promise<AdminUser> {
+/**
+ * For pages and server actions: the signed-in admin, or a redirect. 2FA is mandatory, so a
+ * session without enrolled 2FA can only reach the /security page (allowWithoutTotp).
+ */
+export async function requireAdmin(opts: { allowWithoutTotp?: boolean } = {}): Promise<AdminUser> {
   const user = await currentAdmin();
   if (!user) redirect('/login');
+  if (!user.totpEnabledAt && !opts.allowWithoutTotp) redirect('/security');
   return user;
 }
 

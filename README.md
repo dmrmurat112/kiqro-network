@@ -32,6 +32,14 @@ npm run typecheck
 
 Admin roles: `admin` (everything), `operator` (advertisers, campaigns, conversion review), `finance` (top-ups), `viewer` (read only). Every change made in the panel is written to `audit_log`.
 
+Admin security: two-factor authentication (TOTP, any authenticator app) is mandatory — a new admin is sent to `/security` to enroll on first login. Five wrong attempts lock an e-mail for 15 minutes. If an admin loses their phone: `npm run reset-2fa -w @kiqro/admin -- email`. For local test accounts, `npm run dev-totp-code -w @kiqro/admin -- email` prints the current code (refuses to run against a non-local database).
+
+## Fraud controls
+
+Clicks are refused for VPN/proxy/Tor and datacenter IPs, provider risk score ≥ 90, a Cloudflare/provider country mismatch, more than 60 clicks per IP per hour, or a publisher user risk ≥ 90. Conversions are held for review (not billed, not rewarded) for IP risk ≥ 75, publisher user risk ≥ 70, a fourth distinct user installing from one IP within 24 h (device farm), or more than 20 conversions per user per hour. Thresholds live in `packages/network/src/fraud/rules.ts`.
+
+IP checks use IPQualityScore when `IPQS_API_KEY` is set (results cached for 6 h; lookups fail open). Publishers may pass their own user risk score as `risk=0..100` on the Offers API and click URLs; it is covered by the signature (`HMAC(secret, app_key|user_id|risk)` and `HMAC(secret, campaign_id|uid|risk)`), so users cannot alter it. The Kiqro app should send its existing fraud score this way.
+
 After changing `packages/db/src/schema.ts`, run `npm run db:generate` and commit the new migration.
 
 ## Endpoints (tracking service)

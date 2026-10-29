@@ -1,10 +1,11 @@
 import Fastify, { type FastifyInstance, type FastifyRequest } from 'fastify';
 import type { Db } from '@kiqro/db';
-import { handleClick, handlePostback, listOffers, reverseConversion } from '@kiqro/network';
+import { defaultFraudContext, handleClick, handlePostback, listOffers, reverseConversion, type FraudContext } from '@kiqro/network';
 
 export interface ServerOptions {
   db: Db;
   trackingBaseUrl: string;
+  fraud?: FraudContext;
   logger?: boolean;
 }
 
@@ -22,6 +23,7 @@ function requestCountry(req: FastifyRequest): string | null {
 
 export function buildServer(opts: ServerOptions): FastifyInstance {
   const app = Fastify({ logger: opts.logger ?? false, trustProxy: true });
+  const fraud = opts.fraud ?? defaultFraudContext;
 
   app.get('/health', async () => ({ ok: true }));
 
@@ -35,6 +37,8 @@ export function buildServer(opts: ServerOptions): FastifyInstance {
       ip: req.ip,
       userAgent: req.headers['user-agent'] ?? null,
       query: req.query,
+      publisherRisk: req.query.risk,
+      fraud,
     });
     if (!result.ok) return reply.code(result.status).send({ error: result.reason });
     return reply.redirect(result.redirectUrl, 302);
@@ -49,6 +53,7 @@ export function buildServer(opts: ServerOptions): FastifyInstance {
       country: country && /^[A-Z]{2}$/.test(country) ? country : null,
       lang: req.query.lang ?? 'en',
       trackingBaseUrl: opts.trackingBaseUrl,
+      publisherRisk: req.query.risk,
     });
     if (!result.ok) return reply.code(result.status).send({ error: result.reason });
     return { offers: result.offers };
@@ -57,7 +62,7 @@ export function buildServer(opts: ServerOptions): FastifyInstance {
   // MMPs call this with GET; S2S integrations may POST a form or JSON body instead.
   const postback = async (req: FastifyRequest<{ Params: { key: string }; Querystring: Query; Body: Query | undefined }>) => {
     const body = req.body && typeof req.body === 'object' ? req.body : {};
-    return handlePostback(opts.db, { advertiserKey: req.params.key, query: { ...body, ...req.query }, url: req.url, ip: req.ip });
+    return handlePostback(opts.db, { advertiserKey: req.params.key, query: { ...body, ...req.query }, url: req.url, ip: req.ip, fraud });
   };
   app.route<{ Params: { key: string }; Querystring: Query; Body: Query | undefined }>({
     method: ['GET', 'POST'],

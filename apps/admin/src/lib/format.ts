@@ -39,4 +39,8 @@ export const REASON_LABELS: Record<string, string> = {
   no_price: 'Bu ülke için fiyat yok',
   insufficient_balance: 'Reklamveren bakiyesi yetersiz',
   manual_review: 'Manuel inceleme ile reddedildi',
+  ip_risky: 'IP risk skoru yüksek',
+  publisher_user_risk: 'Kiqro kullanıcı risk skoru yüksek',
+  ip_install_cluster: 'Aynı IP’den çok sayıda kullanıcı yüklemesi (cihaz çiftliği şüphesi)',
+  user_velocity: 'Kullanıcı çok hızlı dönüşüm yapıyor',
 };

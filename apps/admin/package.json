@@ -8,18 +8,22 @@
     "build": "next build",
     "start": "next start -p 4100",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "create-admin": "tsx --env-file-if-exists=../../.env scripts/create-admin.ts"
+    "create-admin": "tsx --env-file-if-exists=../../.env scripts/create-admin.ts",
+    "reset-2fa": "tsx --env-file-if-exists=../../.env scripts/reset-2fa.ts",
+    "dev-totp-code": "tsx --env-file-if-exists=../../.env scripts/dev-totp-code.ts"
   },
   "dependencies": {
     "@kiqro/core": "*",
     "@kiqro/db": "*",
     "@kiqro/network": "*",
     "next": "^15.5.28",
+    "qrcode": "^1.5.4",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "server-only": "^0.0.1"
   },
   "devDependencies": {
+    "@types/qrcode": "^1.5.6",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0"
   }

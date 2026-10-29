@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm';
 import {
   bigint,
+  boolean,
   check,
   index,
   integer,
@@ -141,10 +142,25 @@ export const clicks = pgTable(
     ip: text('ip'),
     userAgent: text('user_agent'),
     subIds: jsonb('sub_ids').$type<Record<string, string>>().notNull().default({}),
+    /** IP intelligence verdict at click time (VPN/proxy/datacenter flags, provider risk score). */
+    ipRisk: jsonb('ip_risk').$type<IpRisk>(),
+    /** Optional 0–100 risk score the publisher passes for its user (Kiqro's own fraud score). */
+    publisherRisk: integer('publisher_risk'),
     createdAt: createdAt(),
   },
-  (t) => [index('clicks_user_idx').on(t.placementId, t.publisherUserId, t.campaignId)],
+  (t) => [index('clicks_user_idx').on(t.placementId, t.publisherUserId, t.campaignId), index('clicks_ip_idx').on(t.ip, t.createdAt)],
 );
+
+export interface IpRisk {
+  source: string;
+  country: string | null;
+  vpn: boolean;
+  proxy: boolean;
+  tor: boolean;
+  datacenter: boolean;
+  /** 0 (clean) – 100 (certainly abusive), as reported by the provider. */
+  score: number;
+}
 
 /** Every postback exactly as received, written before any processing; evidence for disputes. */
 export const postbacksRaw = pgTable('postbacks_raw', {
@@ -227,6 +243,9 @@ export const adminUsers = pgTable('admin_users', {
   name: text('name').notNull(),
   role: adminRole('role').notNull().default('operator'),
   passwordHash: text('password_hash').notNull(),
+  /** Base32 TOTP secret; set during enrollment, active once totpEnabledAt is set. */
+  totpSecret: text('totp_secret'),
+  totpEnabledAt: timestamp('totp_enabled_at', { withTimezone: true }),
   disabledAt: timestamp('disabled_at', { withTimezone: true }),
   lastLoginAt: timestamp('last_login_at', { withTimezone: true }),
   createdAt: createdAt(),
@@ -240,6 +259,19 @@ export const adminSessions = pgTable('admin_sessions', {
   ip: text('ip'),
   createdAt: createdAt(),
 });
+
+/** Admin login attempts, used to lock out password guessing. */
+export const adminLoginAttempts = pgTable(
+  'admin_login_attempts',
+  {
+    id: text('id').primaryKey(),
+    email: text('email').notNull(),
+    ip: text('ip'),
+    success: boolean('success').notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [index('admin_login_attempts_email_idx').on(t.email, t.createdAt), index('admin_login_attempts_ip_idx').on(t.ip, t.createdAt)],
+);
 
 /** Every admin action that changes data. Append-only. */
 export const auditLog = pgTable(

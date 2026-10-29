@@ -3,16 +3,28 @@
 import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { login, logout } from '@kiqro/network/admin';
-import type { ActionState } from '@/lib/action';
 import { db } from '@/lib/db';
 import { SESSION_COOKIE, setSessionCookie } from '@/lib/session';
 
-export async function loginAction(_: ActionState, form: FormData): Promise<ActionState> {
+export type LoginState = { error?: string; needCode?: boolean; email?: string } | undefined;
+
+export async function loginAction(_: LoginState, form: FormData): Promise<LoginState> {
   const ip = (await headers()).get('x-forwarded-for')?.split(',')[0]?.trim() ?? null;
-  const token = await login(db, String(form.get('email') ?? ''), String(form.get('password') ?? ''), ip);
-  if (!token) return { error: 'E-posta veya parola hatalı.' };
-  await setSessionCookie(token);
-  redirect('/');
+  const email = String(form.get('email') ?? '');
+  const totpCode = String(form.get('code') ?? '').trim() || undefined;
+  const result = await login(db, { email, password: String(form.get('password') ?? ''), totpCode, ip });
+
+  switch (result.status) {
+    case 'locked':
+      return { error: 'Çok fazla hatalı deneme. 15 dakika sonra tekrar deneyin.', email };
+    case 'invalid':
+      return { error: totpCode ? 'E-posta, parola veya doğrulama kodu hatalı.' : 'E-posta veya parola hatalı.', email, needCode: Boolean(totpCode) };
+    case 'totp_required':
+      return { needCode: true, email };
+    case 'ok':
+      await setSessionCookie(result.token);
+      redirect(result.needsTotpSetup ? '/security' : '/');
+  }
 }
 
 export async function logoutAction(): Promise<void> {

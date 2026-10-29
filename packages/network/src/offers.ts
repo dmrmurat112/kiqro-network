@@ -2,6 +2,7 @@ import { asc, eq, inArray } from 'drizzle-orm';
 import { applyBps, formatMicros, sign, toPoints, verify } from '@kiqro/core';
 import { schema, type Db } from '@kiqro/db';
 import { acceptsNewUsers, priceFor } from './campaigns.ts';
+import { parseRisk, signedParts } from './clicks.ts';
 
 const { campaignTasks, campaigns, placements, products } = schema;
 
@@ -12,6 +13,8 @@ export interface OffersInput {
   country: string | null;
   lang: string;
   trackingBaseUrl: string;
+  /** Optional publisher risk score for the user; signed and carried into every click URL. */
+  publisherRisk?: string;
   now?: Date;
 }
 
@@ -45,9 +48,10 @@ export async function listOffers(db: Db, input: OffersInput): Promise<{ ok: true
   const now = input.now ?? new Date();
   const placement = await db.query.placements.findFirst({ where: eq(placements.appKey, input.appKey) });
   if (!placement || placement.status !== 'active') return { ok: false, status: 404, reason: 'unknown_placement' };
-  if (!verify(placement.secret, [input.appKey, input.publisherUserId], input.signature)) {
+  if (!verify(placement.secret, signedParts(input.appKey, input.publisherUserId, input.publisherRisk), input.signature)) {
     return { ok: false, status: 403, reason: 'invalid_signature' };
   }
+  if (Number.isNaN(parseRisk(input.publisherRisk))) return { ok: false, status: 403, reason: 'invalid_risk' };
 
   const active = await db.select().from(campaigns).where(eq(campaigns.status, 'active'));
   const available = [];
@@ -78,11 +82,9 @@ export async function listOffers(db: Db, input: OffersInput): Promise<{ ok: true
     }
     if (tasks.length === 0) continue;
 
-    const clickParams = new URLSearchParams({
-      app_key: placement.appKey,
-      uid: input.publisherUserId,
-      sig: sign(placement.secret, [campaign.id, input.publisherUserId]),
-    });
+    const clickParams = new URLSearchParams({ app_key: placement.appKey, uid: input.publisherUserId });
+    if (input.publisherRisk !== undefined) clickParams.set('risk', input.publisherRisk);
+    clickParams.set('sig', sign(placement.secret, signedParts(campaign.id, input.publisherUserId, input.publisherRisk)));
     offers.push({
       offerId: campaign.id,
       title: pick(campaign.title, input.lang),

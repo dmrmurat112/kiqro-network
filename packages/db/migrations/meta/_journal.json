@@ -15,6 +15,13 @@
       "when": 1793300510136,
       "tag": "0001_admin",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793301820071,
+      "tag": "0002_fraud_2fa",
+      "breakpoints": true
     }
   ]
 }

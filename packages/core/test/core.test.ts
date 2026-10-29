@@ -48,3 +48,24 @@ describe('macros', () => {
     expect(macrosIn('a={click_id}&b={country}')).toEqual(['click_id', 'country']);
   });
 });
+
+describe('totp', () => {
+  it('matches the RFC 6238 SHA-1 test vectors', async () => {
+    const { base32Encode, totp } = await import('../src/index.ts');
+    const secret = base32Encode(Buffer.from('12345678901234567890'));
+    expect(totp(secret, new Date(59_000), 8)).toBe('94287082');
+    expect(totp(secret, new Date(1_111_111_109_000), 8)).toBe('07081804');
+    expect(totp(secret, new Date(2_000_000_000_000), 8)).toBe('69279037');
+  });
+
+  it('round-trips base32 and verifies with one step of drift', async () => {
+    const { base32Decode, base32Encode, newTotpSecret, totp, verifyTotp } = await import('../src/index.ts');
+    const bytes = Buffer.from([0, 1, 2, 250, 255]);
+    expect(base32Decode(base32Encode(bytes))).toEqual(bytes);
+    const secret = newTotpSecret();
+    const now = new Date('2026-11-03T10:00:15Z');
+    expect(verifyTotp(secret, totp(secret, new Date(now.getTime() - 30_000)), now)).toBe(true);
+    expect(verifyTotp(secret, totp(secret, new Date(now.getTime() - 90_000)), now)).toBe(false);
+    expect(verifyTotp(secret, '12345', now)).toBe(false);
+  });
+});

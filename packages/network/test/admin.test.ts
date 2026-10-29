@@ -1,13 +1,16 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { eq } from 'drizzle-orm';
-import { sign } from '@kiqro/core';
+import { sign, totp } from '@kiqro/core';
 import { getAccountId, getBalance, schema, type Db } from '@kiqro/db';
 import { resetTestDb, setupTestDb } from '@kiqro/db/testing';
 import { createDemoSetup, handleClick, handlePostback } from '../src/index.ts';
 import {
   AdminError,
   approveHeldConversion,
+  confirmTotpEnrollment,
   createAdminUser,
+  resetTotp,
+  startTotpEnrollment,
   createAdvertiser,
   createCampaign,
   createPlacement,
@@ -74,22 +77,51 @@ function campaignForm(productId: string, overrides: Partial<CampaignInput> = {})
 }
 
 describe('admin auth', () => {
+  const tokenOf = (r: Awaited<ReturnType<typeof login>>) => (r.status === 'ok' ? r.token : null);
+
   it('logs in with the right password, resolves the session and logs out', async () => {
     const user = await admin();
-    expect(await login(db, user.email, 'wrong password!!', null)).toBeNull();
-    const token = await login(db, user.email.toUpperCase(), PASSWORD, '127.0.0.1');
-    expect(token).toBeTruthy();
-    expect((await getSessionUser(db, token!))?.id).toBe(user.id);
-    expect(await getSessionUser(db, token!, new Date(Date.now() + 13 * 3_600_000))).toBeNull();
-    await logout(db, token!);
-    expect(await getSessionUser(db, token!)).toBeNull();
+    expect(await login(db, { email: user.email, password: 'wrong password!!', ip: null })).toEqual({ status: 'invalid' });
+    const result = await login(db, { email: user.email.toUpperCase(), password: PASSWORD, ip: '127.0.0.1' });
+    expect(result).toMatchObject({ status: 'ok', needsTotpSetup: true });
+    const token = tokenOf(result)!;
+    expect((await getSessionUser(db, token))?.id).toBe(user.id);
+    expect(await getSessionUser(db, token, new Date(Date.now() + 13 * 3_600_000))).toBeNull();
+    await logout(db, token);
+    expect(await getSessionUser(db, token)).toBeNull();
   });
 
   it('rejects disabled users and short passwords', async () => {
     const user = await admin();
     await db.update(adminUsers).set({ disabledAt: new Date() }).where(eq(adminUsers.id, user.id));
-    expect(await login(db, user.email, PASSWORD, null)).toBeNull();
+    expect((await login(db, { email: user.email, password: PASSWORD, ip: null })).status).toBe('invalid');
     await expect(createAdminUser(db, { email: 'x@kiqro.test', name: 'x', role: 'viewer', password: 'short' })).rejects.toThrow();
+  });
+
+  it('locks an e-mail after repeated failures, even for the right password', async () => {
+    const user = await admin();
+    const now = new Date('2026-11-03T12:00:00Z');
+    for (let i = 0; i < 5; i++) await login(db, { email: user.email, password: 'nope nope nope', ip: '192.0.2.1' }, now);
+    expect(await login(db, { email: user.email, password: PASSWORD, ip: '192.0.2.2' }, now)).toEqual({ status: 'locked' });
+    expect((await login(db, { email: user.email, password: PASSWORD, ip: '192.0.2.2' }, new Date(now.getTime() + 16 * 60_000))).status).toBe('ok');
+  });
+
+  it('enrolls in 2FA and then requires a valid code', async () => {
+    const user = await admin();
+    const now = new Date('2026-11-03T12:00:00Z');
+    const secret = await startTotpEnrollment(db, user);
+    await expect(confirmTotpEnrollment(db, user, '000000', now)).rejects.toThrow('Kod hatalı');
+    await confirmTotpEnrollment(db, user, totp(secret, now), now);
+
+    expect(await login(db, { email: user.email, password: PASSWORD, ip: null }, now)).toEqual({ status: 'totp_required' });
+    expect(await login(db, { email: user.email, password: PASSWORD, totpCode: '123456', ip: null }, now)).toEqual({ status: 'invalid' });
+    expect(await login(db, { email: user.email, password: PASSWORD, totpCode: totp(secret, now), ip: null }, now)).toMatchObject({ status: 'ok', needsTotpSetup: false });
+
+    const enrolled = (await db.query.adminUsers.findFirst({ where: eq(adminUsers.id, user.id) }))!;
+    await expect(startTotpEnrollment(db, enrolled)).rejects.toThrow('zaten etkin');
+    await expect(resetTotp(db, await admin('operator'), user.id)).rejects.toThrow('yetkiniz');
+    await resetTotp(db, await admin('admin'), user.id);
+    expect((await login(db, { email: user.email, password: PASSWORD, ip: null }, new Date(now.getTime() + 60_000))).status).toBe('ok');
   });
 });
 

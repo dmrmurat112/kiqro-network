@@ -12,6 +12,8 @@ const config: NextConfig = {
   transpilePackages: ['@kiqro/core', '@kiqro/db', '@kiqro/network'],
   serverExternalPackages: ['pg'],
   poweredByHeader: false,
+  // The dev badge defaults to bottom-left, where it covers the sidebar's logout button.
+  devIndicators: { position: 'bottom-right' },
 };
 
 export default config;

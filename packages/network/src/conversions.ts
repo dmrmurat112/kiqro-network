@@ -2,6 +2,7 @@ import { and, eq, inArray, ne } from 'drizzle-orm';
 import { applyBps, verify, toPoints } from '@kiqro/core';
 import { getAccountId, getBalance, lockAccount, newId, postTransaction, schema, type Db, type Tx } from '@kiqro/db';
 import { priceFor } from './campaigns.ts';
+import { conversionHoldReasons, defaultFraudContext, type FraudContext } from './fraud/rules.ts';
 import { enqueuePublisherPostback } from './outbox.ts';
 
 const { campaignTasks, campaigns, clicks, conversions, organizations, placements, postbacksRaw } = schema;
@@ -14,6 +15,7 @@ export interface PostbackInput {
   query: Record<string, string | undefined>;
   url: string;
   ip: string | null;
+  fraud?: FraudContext;
   now?: Date;
 }
 
@@ -116,6 +118,9 @@ async function evaluatePostback(db: Db, input: PostbackInput, rawId: string, now
 
     const reportedCountry = input.query.country?.toUpperCase();
     if (reportedCountry && click.country && reportedCountry !== click.country) holdReasons.push('country_mismatch');
+    if (rejectReasons.length === 0) {
+      holdReasons.push(...(await conversionHoldReasons(tx, input.fraud ?? defaultFraudContext, { click, isInstall: task.mmpEventName === INSTALL_EVENT, now })));
+    }
 
     const price = await priceFor(tx, task.id, click.country);
     if (price === null) rejectReasons.push('no_price');
