@@ -5,7 +5,7 @@ import { Card, Empty, PageHeader, StatusPill } from '@/components/panel/ui';
 import { db } from '@/lib/db';
 import { dateTime } from '@/lib/format';
 import { PANEL } from '@/lib/i18n';
-import { panelLocale, requireAdvertiser } from '@/lib/session';
+import { panelLocale, requireAdvertiserOrg } from '@/lib/session';
 import { AddEndpointForm, CreateKeyForm, ItemButton, SecretReveal } from './DevClient';
 
 export const dynamic = 'force-dynamic';
@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic';
 const PILL: Record<string, string> = { sent: 'active', pending: 'in_review', failed: 'refunded' };
 
 export default async function DevelopersPage() {
-  const [{ org, user }, lang] = await Promise.all([requireAdvertiser(), panelLocale()]);
+  const [{ org, user }, lang] = await Promise.all([requireAdvertiserOrg(), panelLocale()]);
   const t = PANEL[lang].developers;
   const c = PANEL[lang].integration;
   const copy = { copy: c.copy, copied: c.copied };
@@ -36,7 +36,7 @@ export default async function DevelopersPage() {
         <p className="mt-1 text-sm text-subtle">{t.docs}</p>
       </Card>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card className="p-6">
           <div className="mb-1 flex items-center gap-2">
             <KeyRound size={17} className="text-violet-400" />

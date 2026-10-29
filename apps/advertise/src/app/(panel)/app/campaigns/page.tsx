@@ -5,13 +5,13 @@ import { Card, Empty, PageHeader, StatusPill } from '@/components/panel/ui';
 import { db } from '@/lib/db';
 import { num, usd } from '@/lib/format';
 import { PANEL } from '@/lib/i18n';
-import { panelLocale, requireAdvertiser } from '@/lib/session';
+import { panelLocale, requireAdvertiserOrg } from '@/lib/session';
 import { setPausedAction, submitCampaignAction } from './actions';
 
 export const dynamic = 'force-dynamic';
 
 export default async function CampaignsPage({ searchParams }: { searchParams: Promise<{ saved?: string; submitted?: string }> }) {
-  const [{ org }, lang, sp] = await Promise.all([requireAdvertiser(), panelLocale(), searchParams]);
+  const [{ org }, lang, sp] = await Promise.all([requireAdvertiserOrg(), panelLocale(), searchParams]);
   const t = PANEL[lang].campaigns;
   const campaigns = await advertiserCampaigns(db, org.id);
 

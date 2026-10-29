@@ -1,6 +1,7 @@
 'use server';
 
 import { createPlacement, createPublisher, updatePlacement } from '@kiqro/network/admin';
+import { createAdvertiserUser, resendAdvertiserInvite } from '@kiqro/network/advertiser';
 import { field, runAction, type ActionState } from '@/lib/action';
 import { db } from '@/lib/db';
 
@@ -12,6 +13,24 @@ const placementFields = (form: FormData) => ({
   postbackUrl: field(form, 'postbackUrl'),
   status: field(form, 'status') as 'active',
 });
+
+const links = () => ({ advertiseBaseUrl: process.env.ADVERTISE_BASE_URL ?? 'http://localhost:4200' });
+
+/** Publisher panel logins (same panel and invite flow as advertisers). */
+export async function createPublisherUserAction(orgId: string, _: ActionState, form: FormData): Promise<ActionState> {
+  return runAction(async (actor) => {
+    const email = field(form, 'email');
+    await createAdvertiserUser(db, actor, orgId, { email, name: field(form, 'name'), locale: field(form, 'locale') as 'en' }, links());
+    return `Hesap oluşturuldu; ${email} adresine parola belirleme bağlantısı gönderiliyor (72 saat geçerli).`;
+  }, `/publishers/${orgId}`);
+}
+
+export async function resendPublisherInviteAction(orgId: string, userId: string, _: ActionState): Promise<ActionState> {
+  return runAction(async (actor) => {
+    await resendAdvertiserInvite(db, actor, userId, links());
+    return 'Yeni davet bağlantısı gönderiliyor.';
+  }, `/publishers/${orgId}`);
+}
 
 export async function createPublisherAction(_: ActionState, form: FormData): Promise<ActionState> {
   return runAction(async (actor) => {

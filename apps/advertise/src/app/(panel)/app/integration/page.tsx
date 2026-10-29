@@ -2,12 +2,12 @@ import { KeyRound, Link2, RotateCcw, Timer } from 'lucide-react';
 import { CopyField } from '@/components/panel/CopyField';
 import { Card, PageHeader } from '@/components/panel/ui';
 import { PANEL } from '@/lib/i18n';
-import { panelLocale, requireAdvertiser } from '@/lib/session';
+import { panelLocale, requireAdvertiserOrg } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
 
 export default async function IntegrationPage() {
-  const [{ org }, lang] = await Promise.all([requireAdvertiser(), panelLocale()]);
+  const [{ org }, lang] = await Promise.all([requireAdvertiserOrg(), panelLocale()]);
   const t = PANEL[lang].integration;
   const base = process.env.TRACKING_BASE_URL ?? 'https://track.kiqro.com';
   const events = `${base}/v1/mmp/${org.postbackKey}?click_id={clickid}&event={event_name}&event_ts={timestamp}`;
@@ -16,7 +16,7 @@ export default async function IntegrationPage() {
   return (
     <>
       <PageHeader title={t.title} sub={t.sub} />
-      <div className="grid gap-4">
+      <div className="grid grid-cols-1 gap-4">
         <Card className="p-6">
           <h2 className="mb-3 flex items-center gap-2 font-semibold">
             <Link2 size={17} className="text-violet-400" /> {t.events}
@@ -29,7 +29,7 @@ export default async function IntegrationPage() {
           </h2>
           <CopyField value={reversal} copyLabel={t.copy} copiedLabel={t.copied} />
         </Card>
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <Card className="p-6">
             <h2 className="mb-2 flex items-center gap-2 font-semibold">
               <Timer size={17} className="text-violet-400" /> {t.window}

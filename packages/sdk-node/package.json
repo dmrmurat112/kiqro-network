@@ -1,0 +1,14 @@
+{
+  "name": "@kiqro/direct-sdk",
+  "version": "0.1.0",
+  "description": "Kiqro Direct server SDK for publishers: offers, hosted offerwall links, postback verification, missing-reward claims.",
+  "type": "module",
+  "license": "UNLICENSED",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

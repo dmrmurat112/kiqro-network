@@ -3,6 +3,7 @@ import Fastify, { type FastifyInstance, type FastifyRequest } from 'fastify';
 import type { Db } from '@kiqro/db';
 import { defaultFraudContext, fileClaim, handleClick, handlePostback, listOffers, listUserClaims, reverseConversion, type FraudContext } from '@kiqro/network';
 import { registerAdvertiserApi } from './advertiser-api.ts';
+import { registerWall } from './wall.ts';
 
 export interface ServerOptions {
   db: Db;
@@ -176,6 +177,7 @@ export function buildServer(opts: ServerOptions): FastifyInstance {
   });
 
   registerAdvertiserApi(app, opts.db);
+  registerWall(app, opts.db, opts.trackingBaseUrl, requestCountry);
 
   return app;
 }

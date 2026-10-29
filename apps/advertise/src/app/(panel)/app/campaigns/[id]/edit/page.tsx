@@ -5,12 +5,12 @@ import { CampaignWizard } from '@/components/panel/CampaignWizard';
 import { PageHeader } from '@/components/panel/ui';
 import { db } from '@/lib/db';
 import { PANEL } from '@/lib/i18n';
-import { panelLocale, requireAdvertiser } from '@/lib/session';
+import { panelLocale, requireAdvertiserOrg } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
 
 export default async function EditCampaignPage({ params }: { params: Promise<{ id: string }> }) {
-  const [session, lang, { id }] = await Promise.all([requireAdvertiser(), panelLocale(), params]);
+  const [session, lang, { id }] = await Promise.all([requireAdvertiserOrg(), panelLocale(), params]);
   const data = await advertiserCampaignForm(db, session, id);
   if (!data) notFound();
   // Only drafts are editable; anything else goes back to the list.

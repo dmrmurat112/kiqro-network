@@ -7,7 +7,7 @@ export function CopyField({ value, copyLabel, copiedLabel }: { value: string; co
   const [copied, setCopied] = useState(false);
   return (
     <div className="flex items-stretch overflow-hidden rounded-xl border border-line-strong bg-bg">
-      <code className="flex-1 overflow-x-auto px-4 py-3 font-mono text-[0.8rem] whitespace-nowrap text-fg/90">{value}</code>
+      <code className="min-w-0 flex-1 overflow-x-auto px-4 py-3 font-mono text-[0.8rem] whitespace-nowrap text-fg/90">{value}</code>
       <button
         type="button"
         onClick={async () => {

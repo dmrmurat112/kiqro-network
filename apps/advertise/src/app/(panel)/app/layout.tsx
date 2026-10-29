@@ -10,7 +10,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (process.env.TERMS_REQUIRED === 'true' && user.termsAcceptedVersion !== CURRENT_TERMS_VERSION) redirect('/accept-terms');
   return (
     <div className="lg:flex">
-      <Sidebar t={PANEL[lang].nav} lang={lang} theme={theme} company={org.name} userName={user.name} />
+      <Sidebar t={PANEL[lang].nav} lang={lang} theme={theme} company={org.name} userName={user.name} kind={org.type === 'publisher' ? 'publisher' : 'advertiser'} />
       <main className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-10 lg:py-9">
         <div className="mx-auto max-w-6xl">{children}</div>
       </main>

@@ -6,7 +6,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./admin": "./src/admin/index.ts",
-    "./advertiser": "./src/advertiser/index.ts"
+    "./advertiser": "./src/advertiser/index.ts",
+    "./publisher": "./src/publisher/index.ts"
   },
   "dependencies": {
     "@kiqro/core": "*",

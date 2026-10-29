@@ -7,7 +7,7 @@ import { TrendChart } from '@/components/panel/TrendChart';
 import { db } from '@/lib/db';
 import { change, countryName, flag, num, shortDate, usd } from '@/lib/format';
 import { PANEL } from '@/lib/i18n';
-import { panelLocale, requireAdvertiser } from '@/lib/session';
+import { panelLocale, requireAdvertiserOrg } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,7 +15,7 @@ const PERIODS = [7, 30, 90] as const;
 const LOW_BALANCE_MICROS = 100_000_000n; // $100
 
 export default async function OverviewPage({ searchParams }: { searchParams: Promise<{ days?: string }> }) {
-  const [{ org }, lang, sp] = await Promise.all([requireAdvertiser(), panelLocale(), searchParams]);
+  const [{ org }, lang, sp] = await Promise.all([requireAdvertiserOrg(), panelLocale(), searchParams]);
   const t = PANEL[lang];
   const days = PERIODS.find((p) => String(p) === sp.days) ?? 30;
 

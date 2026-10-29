@@ -10,6 +10,7 @@ COPY package.json package-lock.json ./
 COPY packages/core/package.json packages/core/
 COPY packages/db/package.json packages/db/
 COPY packages/network/package.json packages/network/
+COPY packages/sdk-node/package.json packages/sdk-node/
 COPY apps/tracking/package.json apps/tracking/
 COPY apps/admin/package.json apps/admin/
 COPY apps/advertise/package.json apps/advertise/

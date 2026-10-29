@@ -8,6 +8,7 @@ Kiqro's own offerwall / performance ad network. Product and technical spec: [doc
 |---|---|
 | `packages/core` | Pure helpers: money in integer micros, HMAC signatures, URL macros |
 | `packages/db` | Drizzle schema, migrations, ids, double-entry ledger |
+| `packages/sdk-node` | `@kiqro/direct-sdk`: dependency-free Node.js SDK for publishers (offers, hosted-wall links, postback verification, claims) |
 | `packages/network` | Business rules shared by both apps: offers, clicks, postbacks, reversals, outbox; `./admin` holds admin auth, audit log and admin operations |
 | `apps/tracking` | Fastify service: Offers API, click redirects, MMP/S2S postbacks, reversals, publisher postback worker |
 | `apps/admin` | Next.js admin panel (Turkish UI): advertisers, top-ups, products, campaigns, publishers/placements, held-conversion review, postback logs, demo requests, advertiser logins |
@@ -40,6 +41,10 @@ Admin security: two-factor authentication (TOTP, any authenticator app) is manda
 ## Advertiser team and 2FA
 
 Kiqro staff create the first login of an advertiser (role `admin`). Advertiser admins invite teammates themselves on **Team** (`/app/team`) as `admin` (also manages the team) or `member`, change roles and remove people (removal disables the login and ends its sessions; a team always keeps one admin). Every user can turn on two-factor authentication (TOTP) in **Account**; turning it off needs the password and a current code. If a user loses their phone, staff reset it on the advertiser page in the admin panel.
+
+## Publishers
+
+Publisher organizations sign in to the same panel (`/app/publisher`): earnings, placements (they set currency name, points per USD and postback URL, and can send a signed test postback; the revenue share stays with Kiqro), rewards log and integration help. Staff create their logins on the publisher page in the admin panel. Publishers can show offers three ways: the **hosted offerwall** `/wall?app_key&user_id&sig[&lang][&country]` on the tracking service (server-rendered, no JavaScript, strict CSP, includes the missing-reward form), the Offers API, or the Node SDK. Guide for external publishers: [docs/publisher-integration.md](docs/publisher-integration.md).
 
 ## Advertiser API and webhooks
 

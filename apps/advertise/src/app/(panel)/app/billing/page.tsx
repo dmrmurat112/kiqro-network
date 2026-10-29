@@ -6,7 +6,7 @@ import { Card, Empty, PageHeader, StatusPill } from '@/components/panel/ui';
 import { db } from '@/lib/db';
 import { dateTime, usd } from '@/lib/format';
 import { PANEL } from '@/lib/i18n';
-import { panelLocale, requireAdvertiser } from '@/lib/session';
+import { panelLocale, requireAdvertiserOrg } from '@/lib/session';
 import { PayInvoiceButton, TopUpForm } from './TopUpForm';
 
 export const dynamic = 'force-dynamic';
@@ -19,7 +19,7 @@ const month = (d: Date, lang: string) => new Intl.DateTimeFormat(lang === 'tr' ?
 const PAYMENT_PILL: Record<string, string> = { succeeded: 'active', pending: 'in_review', failed: 'refunded', expired: 'draft', paid: 'active', open: 'in_review', void: 'draft', overdue: 'refunded' };
 
 export default async function BillingPage({ searchParams }: { searchParams: Promise<{ paid?: string; canceled?: string }> }) {
-  const [{ org }, lang, sp] = await Promise.all([requireAdvertiser(), panelLocale(), searchParams]);
+  const [{ org }, lang, sp] = await Promise.all([requireAdvertiserOrg(), panelLocale(), searchParams]);
   const t = PANEL[lang].billing;
   const { position: pos, payments, invoices } = await billingOverview(db, org.id);
   const returned = sp.paid ? await advertiserPayment(db, org.id, sp.paid) : undefined;

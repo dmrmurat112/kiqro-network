@@ -66,7 +66,8 @@ export async function createAdvertiserUser(db: Db, actor: AdminUser, orgId: stri
   const id = newId('advertiserUser');
   await db.transaction(async (tx) => {
     const org = await tx.query.organizations.findFirst({ where: eq(organizations.id, orgId) });
-    if (org?.type !== 'advertiser') throw new AdminError('Reklamveren bulunamadı.');
+    // Advertisers and publishers both sign in to the panel at advertise.kiqro.com.
+    if (org?.type !== 'advertiser' && org?.type !== 'publisher') throw new AdminError('Kuruluş bulunamadı.');
     const taken = await tx.query.advertiserUsers.findFirst({ where: eq(advertiserUsers.email, data.email) });
     if (taken) throw new AdminError('Bu e-posta zaten kullanılıyor.');
     // Unusable random password until the invitation is accepted.

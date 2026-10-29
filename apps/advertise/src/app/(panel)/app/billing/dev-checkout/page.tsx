@@ -5,7 +5,7 @@ import { Card, PageHeader } from '@/components/panel/ui';
 import { db } from '@/lib/db';
 import { usd } from '@/lib/format';
 import { PANEL } from '@/lib/i18n';
-import { panelLocale, requireAdvertiser } from '@/lib/session';
+import { panelLocale, requireAdvertiserOrg } from '@/lib/session';
 import { devCheckoutAction } from '../actions';
 
 export const dynamic = 'force-dynamic';
@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic';
 /** Stand-in for Stripe Checkout in local development (no Stripe keys). 404 everywhere else. */
 export default async function DevCheckoutPage({ searchParams }: { searchParams: Promise<{ session?: string }> }) {
   if (paymentGatewayFromEnv()?.kind !== 'dev') notFound();
-  const [{ org }, lang, { session = '' }] = await Promise.all([requireAdvertiser(), panelLocale(), searchParams]);
+  const [{ org }, lang, { session = '' }] = await Promise.all([requireAdvertiserOrg(), panelLocale(), searchParams]);
   const payment = await db.query.payments.findFirst({ where: (p, { and, eq }) => and(eq(p.stripeSessionId, session), eq(p.orgId, org.id)) });
   if (!payment || payment.status !== 'pending') notFound();
   const t = PANEL[lang].billing;

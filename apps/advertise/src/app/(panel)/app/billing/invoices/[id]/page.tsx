@@ -6,7 +6,7 @@ import { ENTITY } from '@/content/legal/entity';
 import { db } from '@/lib/db';
 import { countryName } from '@/lib/format';
 import { PANEL } from '@/lib/i18n';
-import { panelLocale, requireAdvertiser } from '@/lib/session';
+import { panelLocale, requireAdvertiserOrg } from '@/lib/session';
 import { PrintButton } from './PrintButton';
 
 export const dynamic = 'force-dynamic';
@@ -21,7 +21,7 @@ const month = (d: Date, lang: string) => new Intl.DateTimeFormat(lang === 'tr' ?
  * same on screen and on paper; the panel chrome is hidden when printing (globals.css).
  */
 export default async function InvoicePage({ params }: { params: Promise<{ id: string }> }) {
-  const [{ org: sessionOrg }, lang, { id }] = await Promise.all([requireAdvertiser(), panelLocale(), params]);
+  const [{ org: sessionOrg }, lang, { id }] = await Promise.all([requireAdvertiserOrg(), panelLocale(), params]);
   const doc = await invoiceDocument(db, sessionOrg.id, id);
   if (!doc) notFound();
   const { invoice, org } = doc;

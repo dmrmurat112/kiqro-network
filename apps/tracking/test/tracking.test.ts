@@ -17,7 +17,8 @@ import {
   type DemoOptions,
   type DemoSetup,
 } from '@kiqro/network';
-import { balanceOf, resetDb, server, setupDb } from './helpers.ts';
+import { KiqroDirect } from '@kiqro/direct-sdk';
+import { balanceOf, resetDb, server, setupDb, TRACKING_BASE } from './helpers.ts';
 import { buildServer } from '../src/server.ts';
 import { createAdminUser } from '@kiqro/network/admin';
 import { advertiserLogin, createAdvertiserUser, createApiKey, createWebhookEndpoint, getAdvertiserSession, listApiKeys, revokeApiKey, setPasswordWithToken } from '@kiqro/network/advertiser';
@@ -495,5 +496,69 @@ describe('advertiser API and webhooks', () => {
     for (const bad of ['http://api.studio.com', 'https://localhost/x', 'https://127.0.0.1/x', 'https://192.168.1.4/x', 'https://[::1]/x', 'https://user:pw@api.studio.com', 'https://metadata.internal/']) {
       expect(isAllowedWebhookUrl(bad)).toBe(false);
     }
+  });
+});
+
+describe('hosted offerwall', () => {
+  it('renders the signed wall with a strict CSP, escapes content and files claims from its form', async () => {
+    const s = await setup();
+    await db.update(schema.campaigns).set({ description: { en: '<script>alert(1)</script>' } }).where(eq(schema.campaigns.id, s.campaignId));
+    const app = server(db);
+    const sig = sign(s.placementSecret, [s.appKey, 'user-1']);
+    const wall = await app.inject({ url: `/wall?app_key=${s.appKey}&user_id=user-1&sig=${sig}&lang=tr`, headers: { 'cf-ipcountry': 'TR' } });
+    expect(wall.statusCode).toBe(200);
+    expect(wall.headers['content-security-policy']).toContain("default-src 'none'");
+    expect(wall.body).toContain('Ödül kazan');
+    expect(wall.body).toContain('&lt;script&gt;');
+    expect(wall.body).not.toContain('<script>');
+    expect(wall.body).toContain(`/c/${s.campaignId}?app_key=${s.appKey}`);
+    expect((await app.inject({ url: `/wall?app_key=${s.appKey}&user_id=user-1&sig=bad` })).statusCode).toBe(403);
+
+    // After a click the offer moves to "in progress" and offers the missing-reward form.
+    const clickId = await click(s);
+    await postback(s, clickId, 'install', at(60));
+    const started = await app.inject({ url: `/wall?app_key=${s.appKey}&user_id=user-1&sig=${sig}&tab=started`, headers: { 'cf-ipcountry': 'TR' } });
+    expect(started.body).toContain('Report missing reward');
+    const levelTask = (await db.select().from(schema.campaignTasks).where(eq(schema.campaignTasks.mmpEventName, 'af_level_achieved_10')))[0]!;
+    const posted = await app.inject({
+      method: 'POST',
+      url: '/wall/claim',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      payload: new URLSearchParams({ app_key: s.appKey, user_id: 'user-1', sig, offer_id: s.campaignId, task_id: levelTask.id, note: 'level 10 done' }).toString(),
+    });
+    expect(posted.statusCode).toBe(303);
+    expect(posted.headers.location).toContain('claimed=1');
+    expect(await db.select().from(schema.claims)).toMatchObject([{ publisherUserId: 'user-1', taskId: levelTask.id, userNote: 'level 10 done' }]);
+
+    const forged = await app.inject({ method: 'POST', url: '/wall/claim', payload: { app_key: s.appKey, user_id: 'user-2', sig, offer_id: s.campaignId, task_id: levelTask.id } });
+    expect(forged.headers.location).toContain('claimed=0');
+  });
+});
+
+describe('publisher SDK against the tracking service', () => {
+  it('lists offers, verifies the reward postback and files a claim', async () => {
+    const s = await setup();
+    const app = server(db);
+    // Route the SDK's fetch calls into the in-process server.
+    const fetcher = (async (input: string | URL, init?: RequestInit) => {
+      const url = new URL(String(input));
+      const res = await app.inject({ method: (init?.method ?? 'GET') as 'GET', url: url.pathname + url.search, payload: init?.body as string | undefined, headers: { ...(init?.headers as Record<string, string>), 'cf-ipcountry': 'TR' } });
+      return new Response(res.body, { status: res.statusCode, headers: { 'content-type': 'application/json' } });
+    }) as typeof fetch;
+    const kiqro = new KiqroDirect({ appKey: s.appKey, secret: s.placementSecret, baseUrl: TRACKING_BASE, fetch: fetcher });
+
+    const offers = await kiqro.getOffers('user-1', { lang: 'tr', country: 'TR' });
+    expect(offers[0]).toMatchObject({ offerId: s.campaignId, started: false });
+    await expect(new KiqroDirect({ appKey: s.appKey, secret: 'wrong', baseUrl: TRACKING_BASE, fetch: fetcher }).getOffers('user-1')).rejects.toMatchObject({ status: 403, code: 'invalid_signature' });
+
+    // The reward postback Kiqro would send is accepted by verifyPostback.
+    await db.update(schema.placements).set({ postbackUrl: 'https://pub.test/cb?user_id={user_id}&amount={amount}&transaction_id={transaction_id}&status={status}&signature={signature}' }).where(eq(schema.placements.appKey, s.appKey));
+    await postback(s, await click(s), 'install', at(60));
+    const [outbox] = await db.select().from(publisherPostbacks);
+    expect(kiqro.verifyPostback(Object.fromEntries(new URL(outbox!.url).searchParams))).toBe(true);
+
+    const filed = await kiqro.fileClaim({ userId: 'user-1', offerId: s.campaignId, taskId: offers[0]!.tasks[1]!.taskId, note: 'done' });
+    expect(filed.status).toBe('open');
+    expect(await kiqro.listClaims('user-1')).toMatchObject([{ claim_id: filed.claim_id, status: 'open' }]);
   });
 });

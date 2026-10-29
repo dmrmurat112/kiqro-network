@@ -1,10 +1,11 @@
 import { notFound } from 'next/navigation';
 import { getOrganization, listPlacements } from '@kiqro/network/admin';
+import { listAdvertiserUsers } from '@kiqro/network/advertiser';
 import { ActionForm } from '@/components/ActionForm';
 import { Badge } from '@/components/Badge';
 import { db } from '@/lib/db';
-import { usd } from '@/lib/format';
-import { createPlacementAction, updatePlacementAction } from '../actions';
+import { dateTime, usd } from '@/lib/format';
+import { createPlacementAction, createPublisherUserAction, resendPublisherInviteAction, updatePlacementAction } from '../actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -48,7 +49,7 @@ export default async function PublisherPage({ params }: { params: Promise<{ id: 
   const { id } = await params;
   const org = await getOrganization(db, id);
   if (!org || org.type !== 'publisher') notFound();
-  const placements = await listPlacements(db, id);
+  const [placements, users] = await Promise.all([listPlacements(db, id), listAdvertiserUsers(db, id)]);
   const trackingBase = process.env.TRACKING_BASE_URL ?? 'https://track.kiqro.com';
 
   return (
@@ -86,6 +87,52 @@ export default async function PublisherPage({ params }: { params: Promise<{ id: 
           </ActionForm>
         </div>
       ))}
+
+      <div className="card">
+        <h2>Yayıncı paneli kullanıcıları</h2>
+        <p className="muted">Yayıncı advertise.kiqro.com/login adresinden girer: kazançlarını, placement ayarlarını (para birimi, puan kuru, postback adresi) ve barındırılan offerwall linkini görür. Gelir payı yalnızca buradan değişir.</p>
+        {users.length > 0 && (
+          <table>
+            <thead>
+              <tr>
+                <th>Ad</th>
+                <th>E-posta</th>
+                <th>Son giriş</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {users.map((u) => (
+                <tr key={u.id}>
+                  <td>{u.name}</td>
+                  <td>{u.email}</td>
+                  <td>{u.lastLoginAt ? dateTime(u.lastLoginAt) : 'Henüz giriş yapmadı'}</td>
+                  <td>{!u.lastLoginAt && !u.disabledAt && <ActionForm action={resendPublisherInviteAction.bind(null, id, u.id)} submitLabel="Daveti yeniden gönder" className="row" buttonClass="secondary small" />}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+        <ActionForm action={createPublisherUserAction.bind(null, id)} submitLabel="Kullanıcı oluştur" resetOnSuccess>
+          <div className="fields">
+            <label>
+              Ad soyad
+              <input name="name" required />
+            </label>
+            <label>
+              E-posta
+              <input name="email" type="email" required />
+            </label>
+            <label>
+              Panel dili
+              <select name="locale" defaultValue="en">
+                <option value="en">English</option>
+                <option value="tr">Türkçe</option>
+              </select>
+            </label>
+          </div>
+        </ActionForm>
+      </div>
 
       <div className="card">
         <h2>Yeni placement</h2>

@@ -4,7 +4,7 @@ import { Card, Empty, PageHeader, Segmented, StatusPill } from '@/components/pan
 import { db } from '@/lib/db';
 import { countryName, dateTime } from '@/lib/format';
 import { PANEL } from '@/lib/i18n';
-import { panelLocale, requireAdvertiser } from '@/lib/session';
+import { panelLocale, requireAdvertiserOrg } from '@/lib/session';
 import { CopyField } from '@/components/panel/CopyField';
 import { ClaimDecision } from './ClaimDecision';
 
@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic';
 const PILL: Record<string, string> = { open: 'in_review', approved: 'active', rejected: 'refunded' };
 
 export default async function ClaimsPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
-  const [{ org }, lang, sp] = await Promise.all([requireAdvertiser(), panelLocale(), searchParams]);
+  const [{ org }, lang, sp] = await Promise.all([requireAdvertiserOrg(), panelLocale(), searchParams]);
   const t = PANEL[lang].claims;
   const tab = sp.tab === 'decided' ? 'decided' : 'open';
   const all = await listClaims(db, { orgId: org.id });
@@ -37,7 +37,7 @@ export default async function ClaimsPage({ searchParams }: { searchParams: Promi
           <Empty>{tab === 'open' ? t.empty : t.emptyDecided}</Empty>
         </Card>
       ) : (
-        <div className="grid gap-3">
+        <div className="grid grid-cols-1 gap-3">
           {rows.map((c) => (
             <Card key={c.id} className="p-5">
               <div className="flex flex-wrap items-start justify-between gap-3">
@@ -56,8 +56,8 @@ export default async function ClaimsPage({ searchParams }: { searchParams: Promi
                   </dl>
                 </div>
               </div>
-              <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
-                <div className="grid gap-3">
+              <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+                <div className="grid grid-cols-1 gap-3">
                   <div>
                     <div className="mb-1 text-xs text-subtle">{t.clickId}</div>
                     <CopyField value={c.clickId} copyLabel={PANEL[lang].integration.copy} copiedLabel={PANEL[lang].integration.copied} />

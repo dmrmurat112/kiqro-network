@@ -4,12 +4,12 @@ import { CampaignWizard } from '@/components/panel/CampaignWizard';
 import { PageHeader } from '@/components/panel/ui';
 import { db } from '@/lib/db';
 import { PANEL } from '@/lib/i18n';
-import { panelLocale, requireAdvertiser } from '@/lib/session';
+import { panelLocale, requireAdvertiserOrg } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
 
 export default async function NewCampaignPage() {
-  const [session, lang] = await Promise.all([requireAdvertiser(), panelLocale()]);
+  const [session, lang] = await Promise.all([requireAdvertiserOrg(), panelLocale()]);
   const t = PANEL[lang];
   const products = await advertiserProducts(db, session);
   return (

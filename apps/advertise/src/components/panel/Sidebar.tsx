@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
-import { Code2, CreditCard, LayoutDashboard, LifeBuoy, LogOut, Users, Megaphone, Menu, Moon, Plug, Sun, UserRound, X, ListChecks } from 'lucide-react';
+import { AppWindow, Code2, CreditCard, LayoutDashboard, LifeBuoy, LogOut, Users, Megaphone, Menu, Moon, Plug, Sun, UserRound, X, ListChecks } from 'lucide-react';
 import type { Locale, PanelDictT } from '@/lib/i18n';
 import { logoutAction, setPreferenceAction } from '@/app/(panel)/actions';
 import { Logo } from '../Logo';
@@ -14,6 +14,7 @@ interface Props {
   theme: 'dark' | 'light';
   company: string;
   userName: string;
+  kind: 'advertiser' | 'publisher';
 }
 
 const ITEMS = [
@@ -28,15 +29,27 @@ const ITEMS = [
   { href: '/app/account', key: 'account', icon: UserRound },
 ] as const;
 
-export function Sidebar({ t, lang, theme, company, userName }: Props) {
+/** Publishers (apps that show Kiqro offers) see their own pages and share Team and Account. */
+const PUBLISHER_ITEMS = [
+  { href: '/app/publisher', key: 'pubOverview', icon: LayoutDashboard },
+  { href: '/app/publisher/placements', key: 'placements', icon: AppWindow },
+  { href: '/app/publisher/conversions', key: 'pubConversions', icon: ListChecks },
+  { href: '/app/publisher/integration', key: 'pubIntegration', icon: Plug },
+  { href: '/app/team', key: 'team', icon: Users },
+  { href: '/app/account', key: 'account', icon: UserRound },
+] as const;
+
+export function Sidebar({ t, lang, theme, company, userName, kind }: Props) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
-  const active = (href: string) => (href === '/app' ? pathname === '/app' : pathname.startsWith(href));
+  const home = kind === 'publisher' ? '/app/publisher' : '/app';
+  const active = (href: string) => (href === home ? pathname === home : pathname.startsWith(href));
+  const items = kind === 'publisher' ? PUBLISHER_ITEMS : ITEMS;
 
   const content = (
     <>
       <div className="px-3 pb-6">
-        <Link href="/app" onClick={() => setOpen(false)}>
+        <Link href={home} onClick={() => setOpen(false)}>
           <Logo />
         </Link>
       </div>
@@ -45,7 +58,7 @@ export function Sidebar({ t, lang, theme, company, userName }: Props) {
         <div className="truncate text-xs text-subtle">{userName}</div>
       </div>
       <nav className="flex flex-col gap-1 px-2">
-        {ITEMS.map(({ href, key, icon: Icon }) => (
+        {items.map(({ href, key, icon: Icon }) => (
           <Link
             key={href}
             href={href}

@@ -4,14 +4,14 @@ import { Card, Empty, PageHeader, Segmented, StatusPill } from '@/components/pan
 import { db } from '@/lib/db';
 import { dateTime, usd } from '@/lib/format';
 import { PANEL } from '@/lib/i18n';
-import { panelLocale, requireAdvertiser } from '@/lib/session';
+import { panelLocale, requireAdvertiserOrg } from '@/lib/session';
 
 export const dynamic = 'force-dynamic';
 
 const STATUSES: PublicStatus[] = ['billed', 'not_billed', 'in_review', 'refunded'];
 
 export default async function ConversionsPage({ searchParams }: { searchParams: Promise<{ status?: string; campaign?: string }> }) {
-  const [{ org }, lang, sp] = await Promise.all([requireAdvertiser(), panelLocale(), searchParams]);
+  const [{ org }, lang, sp] = await Promise.all([requireAdvertiserOrg(), panelLocale(), searchParams]);
   const t = PANEL[lang].conversions;
   const status = STATUSES.find((s) => s === sp.status);
   const campaigns = await advertiserCampaigns(db, org.id);

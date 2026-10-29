@@ -34,6 +34,12 @@ export interface OfferTask {
   state: TaskState;
 }
 
+/** Placement details the hosted offerwall shows. */
+export interface PlacementInfo {
+  currencyName: string;
+  publisherName: string;
+}
+
 export interface Offer {
   offerId: string;
   title: string;
@@ -60,7 +66,7 @@ const STATE: Record<string, TaskState> = { approved: 'credited', held: 'in_revie
  * until the last step's time limit has passed, priced for the country of their first click.
  * This is how the Kiqro app (and later other publishers) list Kiqro Direct offers.
  */
-export async function listOffers(db: Db, input: OffersInput): Promise<{ ok: true; offers: Offer[] } | { ok: false; status: 403 | 404; reason: string }> {
+export async function listOffers(db: Db, input: OffersInput): Promise<{ ok: true; offers: Offer[]; placement: PlacementInfo } | { ok: false; status: 403 | 404; reason: string }> {
   const now = input.now ?? new Date();
   const placement = await db.query.placements.findFirst({ where: eq(placements.appKey, input.appKey) });
   if (!placement || placement.status !== 'active') return { ok: false, status: 404, reason: 'unknown_placement' };
@@ -95,7 +101,8 @@ export async function listOffers(db: Db, input: OffersInput): Promise<{ ok: true
     if (stillRunning) available.push({ campaign, started: true, country: start.country });
     else if ((await acceptsNewUsers(db, campaign, input.country, now)) === null) available.push({ campaign, started: false, country: input.country });
   }
-  if (available.length === 0) return { ok: true, offers: [] };
+  const info: PlacementInfo = { currencyName: placement.currencyName, publisherName: (await db.query.organizations.findFirst({ where: eq(schema.organizations.id, placement.publisherOrgId), columns: { name: true } }))?.name ?? '' };
+  if (available.length === 0) return { ok: true, offers: [], placement: info };
 
   const productRows = await db.select().from(products).where(inArray(products.id, available.map((a) => a.campaign.productId)));
 
@@ -141,5 +148,5 @@ export async function listOffers(db: Db, input: OffersInput): Promise<{ ok: true
   }
   // Offers in progress first, then the most rewarding.
   offers.sort((a, b) => Number(b.started) - Number(a.started) || Number(BigInt(b.totalRewardPoints) - BigInt(a.totalRewardPoints)));
-  return { ok: true, offers };
+  return { ok: true, offers, placement: info };
 }

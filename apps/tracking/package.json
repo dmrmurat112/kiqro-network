@@ -15,5 +15,8 @@
     "@kiqro/network": "*",
     "fastify": "^5.12.7",
     "ulid": "^3.0.2"
+  },
+  "devDependencies": {
+    "@kiqro/direct-sdk": "*"
   }
 }
