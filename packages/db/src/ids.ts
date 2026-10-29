@@ -26,6 +26,7 @@ const prefixes = {
   apiKey: 'key',
   webhook: 'whe',
   delivery: 'whd',
+  revenue: 'rev',
 } as const;
 
 /** Prefixed, time-sortable ids, e.g. "cnv_01JBX…". The prefix makes ids self-describing in logs. */

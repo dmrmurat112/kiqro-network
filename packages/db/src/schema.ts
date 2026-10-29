@@ -576,3 +576,24 @@ export const webhookDeliveries = pgTable(
   },
   (t) => [index('webhook_deliveries_due_idx').on(t.status, t.nextAttemptAt), index('webhook_deliveries_endpoint_idx').on(t.endpointId, t.createdAt)],
 );
+
+/**
+ * In-app revenue the advertiser's MMP reports for users Kiqro brought (purchases, ad revenue),
+ * in USD. Not billed: it is what ROAS reports are built from.
+ */
+export const revenueEvents = pgTable(
+  'revenue_events',
+  {
+    id: text('id').primaryKey(),
+    clickId: text('click_id').notNull().references(() => clicks.id),
+    campaignId: text('campaign_id').notNull().references(() => campaigns.id),
+    event: text('event').notNull(),
+    revenue: micros('revenue').notNull(),
+    /** The MMP's own event id, when sent, so a retried postback is not counted twice. */
+    externalId: text('external_id'),
+    eventAt: timestamp('event_at', { withTimezone: true }).notNull(),
+    postbackRawId: text('postback_raw_id').references(() => postbacksRaw.id),
+    createdAt: createdAt(),
+  },
+  (t) => [index('revenue_events_campaign_idx').on(t.campaignId, t.eventAt), uniqueIndex('revenue_events_external_uq').on(t.clickId, t.externalId)],
+);

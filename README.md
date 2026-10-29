@@ -46,6 +46,10 @@ Kiqro staff create the first login of an advertiser (role `admin`). Advertiser a
 
 Publisher organizations sign in to the same panel (`/app/publisher`): earnings, placements (they set currency name, points per USD and postback URL, and can send a signed test postback; the revenue share stays with Kiqro), rewards log and integration help. Staff create their logins on the publisher page in the admin panel. Publishers can show offers three ways: the **hosted offerwall** `/wall?app_key&user_id&sig[&lang][&country]` on the tracking service (server-rendered, no JavaScript, strict CSP, includes the missing-reward form), the Offers API, or the Node SDK. Guide for external publishers: [docs/publisher-integration.md](docs/publisher-integration.md).
 
+## ROAS and offer ranking
+
+MMP postbacks may carry `revenue_usd` (or `revenue` + `currency=USD`, optional `event_id` for de-duplication) for any event; it is stored in `revenue_events`, never billed, and reported per campaign as D7 / D30 / total ROAS against approved spend (panel Campaigns page, advertiser API). Offers are ordered for each user: started offers first, then by expected earnings per click over the last 14 days across all placements, smoothed towards a prior of 5% of the offer's total price with the weight of 50 clicks (`packages/network/src/offers.ts`), then by reward.
+
 ## Advertiser API and webhooks
 
 REST API at `/v1/advertiser/*` on the tracking service (Bearer keys created by team admins on **API & webhooks**; only a hash is stored) and signed webhooks (`Kiqro-Signature`, Stripe-style HMAC) for conversions, refunds, claims, payments, invoices and low balance, delivered with retries by the worker. Reference for advertisers: [docs/advertiser-api.md](docs/advertiser-api.md).

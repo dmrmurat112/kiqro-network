@@ -1,10 +1,47 @@
-import { and, asc, eq, inArray } from 'drizzle-orm';
+import { and, asc, eq, gte, inArray, sql } from 'drizzle-orm';
 import { applyBps, formatMicros, sign, toPoints, verify } from '@kiqro/core';
 import { schema, type Db } from '@kiqro/db';
 import { acceptsNewUsers, priceFor } from './campaigns.ts';
 import { parseRisk, signedParts } from './clicks.ts';
 
 const { campaignTasks, campaigns, clicks, conversions, placements, products } = schema;
+
+/** Ranking looks at the last two weeks of clicks and billed conversions, across all placements. */
+const RANK_WINDOW_MS = 14 * 86_400_000;
+/** Clicks' worth of weight given to the prior, so new campaigns get a fair first chance. */
+const PRIOR_CLICKS = 50;
+/** Prior completion assumption: 5% of an offer's total price is earned per click. */
+const PRIOR_EPC_SHARE = 0.05;
+
+/**
+ * Expected earnings per click (micro-USD, advertiser price) per campaign: observed billed
+ * revenue per click, smoothed towards a prior from the offer's own prices so a campaign with
+ * few clicks is neither buried nor promoted on noise.
+ */
+async function earningsPerClick(db: Db, campaignIds: string[], offerPrice: Map<string, bigint>, now: Date): Promise<Map<string, number>> {
+  if (!campaignIds.length) return new Map();
+  const since = new Date(now.getTime() - RANK_WINDOW_MS);
+  const [clickRows, revenueRows] = await Promise.all([
+    db
+      .select({ campaignId: clicks.campaignId, n: sql<string>`count(*)` })
+      .from(clicks)
+      .where(and(inArray(clicks.campaignId, campaignIds), gte(clicks.createdAt, since)))
+      .groupBy(clicks.campaignId),
+    db
+      .select({ campaignId: conversions.campaignId, total: sql<string>`coalesce(sum(${conversions.advertiserPrice}), 0)` })
+      .from(conversions)
+      .where(and(inArray(conversions.campaignId, campaignIds), eq(conversions.status, 'approved'), gte(conversions.createdAt, since)))
+      .groupBy(conversions.campaignId),
+  ]);
+  const scores = new Map<string, number>();
+  for (const id of campaignIds) {
+    const n = Number(clickRows.find((r) => r.campaignId === id)?.n ?? 0);
+    const earned = Number(revenueRows.find((r) => r.campaignId === id)?.total ?? 0);
+    const prior = Number(offerPrice.get(id) ?? 0n) * PRIOR_EPC_SHARE;
+    scores.set(id, (earned + PRIOR_CLICKS * prior) / (n + PRIOR_CLICKS));
+  }
+  return scores;
+}
 
 export interface OffersInput {
   appKey: string;
@@ -107,6 +144,7 @@ export async function listOffers(db: Db, input: OffersInput): Promise<{ ok: true
   const productRows = await db.select().from(products).where(inArray(products.id, available.map((a) => a.campaign.productId)));
 
   const offers: Offer[] = [];
+  const offerPrice = new Map<string, bigint>();
   for (const { campaign, started, country } of available) {
     const product = productRows.find((p) => p.id === campaign.productId)!;
     const tasks: OfferTask[] = [];
@@ -117,6 +155,7 @@ export async function listOffers(db: Db, input: OffersInput): Promise<{ ok: true
       const payout = applyBps(price, placement.revshareBps);
       const points = toPoints(payout, placement.pointsPerUsd);
       total += points;
+      offerPrice.set(campaign.id, (offerPrice.get(campaign.id) ?? 0n) + price);
       const done = userConversions.find((c) => c.taskId === task.id);
       tasks.push({
         taskId: task.id,
@@ -146,7 +185,14 @@ export async function listOffers(db: Db, input: OffersInput): Promise<{ ok: true
       tasks,
     });
   }
-  // Offers in progress first, then the most rewarding.
-  offers.sort((a, b) => Number(b.started) - Number(a.started) || Number(BigInt(b.totalRewardPoints) - BigInt(a.totalRewardPoints)));
+  // Offers in progress first, then those expected to earn the most per click (best for the
+  // publisher and its users), then the most rewarding.
+  const epc = await earningsPerClick(db, offers.map((o) => o.offerId), offerPrice, now);
+  offers.sort(
+    (a, b) =>
+      Number(b.started) - Number(a.started) ||
+      (epc.get(b.offerId) ?? 0) - (epc.get(a.offerId) ?? 0) ||
+      Number(BigInt(b.totalRewardPoints) - BigInt(a.totalRewardPoints)),
+  );
   return { ok: true, offers, placement: info };
 }

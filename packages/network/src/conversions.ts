@@ -3,6 +3,7 @@ import { applyBps, verify, toPoints } from '@kiqro/core';
 import { getAccountId, lockAccount, newId, postTransaction, schema, type Db, type Tx } from '@kiqro/db';
 import { creditPosition } from './billing/credit.ts';
 import { priceFor } from './campaigns.ts';
+import { parseRevenue, recordRevenue } from './revenue.ts';
 import { conversionHoldReasons, defaultFraudContext, type FraudContext } from './fraud/rules.ts';
 import { enqueuePublisherPostback } from './outbox.ts';
 import { conversionEventData, emitWebhook } from './webhooks.ts';
@@ -28,6 +29,7 @@ export type PostbackOutcome =
   | 'duplicate'
   | 'orphan'
   | 'unknown_event'
+  | 'revenue_recorded'
   | 'invalid_signature'
   | 'unknown_advertiser'
   | 'bad_request';
@@ -81,12 +83,18 @@ async function evaluatePostback(db: Db, input: PostbackInput, rawId: string, now
   const campaign = click && (await db.query.campaigns.findFirst({ where: eq(campaigns.id, click.campaignId) }));
   if (!click || !campaign || campaign.orgId !== advertiser.id) return { httpStatus: 200, outcome: 'orphan' };
 
+  const eventAt = parseEventTime(input.query.event_ts ?? input.query.install_ts, now);
+
+  // Purchases and other revenue events feed ROAS reports; they are never billed by themselves.
+  const revenue = parseRevenue(input.query);
+  if (revenue !== null) {
+    await recordRevenue(db, { clickId: click.id, campaignId: campaign.id, event: eventName, revenue, externalId: input.query.event_id, eventAt, postbackRawId: rawId });
+  }
+
   const task = await db.query.campaignTasks.findFirst({
     where: and(eq(campaignTasks.campaignId, campaign.id), eq(campaignTasks.mmpEventName, eventName)),
   });
-  if (!task) return { httpStatus: 200, outcome: 'unknown_event' };
-
-  const eventAt = parseEventTime(input.query.event_ts ?? input.query.install_ts, now);
+  if (!task) return { httpStatus: 200, outcome: revenue !== null ? 'revenue_recorded' : 'unknown_event' };
 
   return db.transaction(async (tx) => {
     const existing = await tx.query.conversions.findFirst({ where: and(eq(conversions.clickId, click.id), eq(conversions.taskId, task.id)) });

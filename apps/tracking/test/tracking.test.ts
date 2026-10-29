@@ -4,7 +4,9 @@ import { sign } from '@kiqro/core';
 import { postTransaction, getAccountId, schema, type Db } from '@kiqro/db';
 import {
   createDemoSetup,
+  campaignRoas,
   decideClaim,
+  listOffers,
   deliverDueWebhooks,
   isAllowedWebhookUrl,
   verifyWebhookSignature,
@@ -560,5 +562,40 @@ describe('publisher SDK against the tracking service', () => {
     const filed = await kiqro.fileClaim({ userId: 'user-1', offerId: s.campaignId, taskId: offers[0]!.tasks[1]!.taskId, note: 'done' });
     expect(filed.status).toBe('open');
     expect(await kiqro.listClaims('user-1')).toMatchObject([{ claim_id: filed.claim_id, status: 'open' }]);
+  });
+});
+
+describe('ROAS and offer ranking', () => {
+  it('records MMP revenue for clicked users and reports ROAS by days since the click', async () => {
+    const s = await setup();
+    const clickId = await click(s);
+    await postback(s, clickId, 'install', at(60)); // $0.40 billed
+
+    // A purchase that is also a billed step, a plain revenue event, a retry, a late one, and junk.
+    expect((await postback(s, clickId, 'af_purchase', at(2 * DAY), { revenue_usd: '4.99', event_id: 'p1' })).outcome).toBe('approved');
+    expect((await postback(s, clickId, 'af_ad_revenue', at(3 * DAY), { revenue: '0.25', currency: 'usd' })).outcome).toBe('revenue_recorded');
+    await postback(s, clickId, 'af_ad_revenue', at(3 * DAY), { revenue_usd: '4.99', event_id: 'p1' }); // same MMP event id: ignored
+    await postback(s, clickId, 'af_ad_revenue', at(20 * DAY), { revenue_usd: '10' });
+    expect((await postback(s, clickId, 'af_ad_revenue', at(21 * DAY), { revenue: '9', currency: 'EUR' })).outcome).toBe('unknown_event');
+
+    const [roas] = await campaignRoas(db, s.advertiserId);
+    expect(roas).toMatchObject({ spend: 6_400_000n, revenueD7: 5_240_000n, revenueD30: 15_240_000n, revenue: 15_240_000n, payingUsers: 1 });
+    expect(roas!.roasD7).toBeCloseTo(0.8187, 3);
+    expect(roas!.roas).toBeCloseTo(2.3812, 3);
+  });
+
+  it('ranks offers by smoothed earnings per click', async () => {
+    const weak = await setup();
+    const strong = await setup();
+    // "weak" gets many clicks and no conversions; "strong" converts most of its clicks.
+    for (let i = 0; i < 40; i++) await click(weak, { user: `w${i}` });
+    for (let i = 0; i < 10; i++) {
+      const c = await click(strong, { user: `s${i}` });
+      await postback(strong, c, 'install', at(60));
+      await postback(strong, c, 'af_level_achieved_10', at(3600));
+    }
+    const res = await listOffers(db, { appKey: weak.appKey, publisherUserId: 'new-user', signature: sign(weak.placementSecret, [weak.appKey, 'new-user']), country: 'TR', lang: 'en', trackingBaseUrl: TRACKING_BASE, now: at(7200) });
+    if (!res.ok) throw new Error(res.reason);
+    expect(res.offers.map((o) => o.offerId)).toEqual([strong.campaignId, weak.campaignId]);
   });
 });

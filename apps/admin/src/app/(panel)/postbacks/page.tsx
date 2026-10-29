@@ -21,6 +21,7 @@ const OUTCOME_LABELS: Record<string, string> = {
   duplicate: 'Tekrar',
   orphan: 'Tıklama bulunamadı',
   unknown_event: 'Tanımsız olay',
+  revenue_recorded: 'Gelir kaydedildi (ROAS)',
   invalid_signature: 'Geçersiz imza',
   unknown_advertiser: 'Bilinmeyen reklamveren',
   bad_request: 'Eksik parametre',

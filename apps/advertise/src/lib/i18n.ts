@@ -312,6 +312,8 @@ const panelEn = {
   campaigns: {
     title: 'Campaigns',
     budget: 'Budget used',
+    revenue: 'Revenue',
+    roasHint: 'Send purchase revenue from your MMP (revenue_usd) to see ROAS here.',
     clicks: 'Clicks',
     funnel: 'Funnel',
     completions: 'completions',
@@ -738,6 +740,8 @@ const panelTr: PanelDict = {
   campaigns: {
     title: 'Kampanyalar',
     budget: 'Kullanılan bütçe',
+    revenue: 'Gelir',
+    roasHint: 'ROAS’ı burada görmek için MMP’nizden satın alma gelirini (revenue_usd) gönderin.',
     clicks: 'Tıklama',
     funnel: 'Huni',
     completions: 'tamamlama',

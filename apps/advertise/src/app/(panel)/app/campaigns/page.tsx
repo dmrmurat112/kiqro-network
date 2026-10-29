@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { AlertCircle, CheckCircle2, Clock, Pause, Pencil, Play, Plus, Send } from 'lucide-react';
+import { campaignRoas, type CampaignRoas } from '@kiqro/network';
 import { advertiserCampaigns } from '@kiqro/network/advertiser';
 import { Card, Empty, PageHeader, StatusPill } from '@/components/panel/ui';
 import { db } from '@/lib/db';
@@ -13,7 +14,8 @@ export const dynamic = 'force-dynamic';
 export default async function CampaignsPage({ searchParams }: { searchParams: Promise<{ saved?: string; submitted?: string }> }) {
   const [{ org }, lang, sp] = await Promise.all([requireAdvertiserOrg(), panelLocale(), searchParams]);
   const t = PANEL[lang].campaigns;
-  const campaigns = await advertiserCampaigns(db, org.id);
+  const [campaigns, roasRows] = await Promise.all([advertiserCampaigns(db, org.id), campaignRoas(db, org.id)]);
+  const roasOf = new Map(roasRows.map((r) => [r.campaignId, r]));
 
   return (
     <>
@@ -81,6 +83,7 @@ export default async function CampaignsPage({ searchParams }: { searchParams: Pr
                     <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-surface-strong">
                       <div className="h-full rounded-full bg-gradient-to-r from-violet-500 to-orange-400" style={{ width: `${used}%` }} />
                     </div>
+                    <Roas r={roasOf.get(c.id)} spend={c.spend} t={t} lang={lang} />
                   </div>
                 </div>
 
@@ -145,6 +148,27 @@ function FunnelRow({ label, sub, value, extra, pct, muted }: { label: string; su
         {value}
         {extra && <span className="ml-2 text-subtle">{extra}</span>}
       </div>
+    </div>
+  );
+}
+
+/** Revenue the MMP reported for this campaign's users, and return on spend by days since the click. */
+function Roas({ r, spend, t, lang }: { r: CampaignRoas | undefined; spend: bigint; t: (typeof PANEL)['en']['campaigns']; lang: 'en' | 'tr' }) {
+  if (!r || r.revenue === 0n) return spend > 0n ? <div className="mt-3 max-w-64 text-xs text-subtle sm:ml-auto">{t.roasHint}</div> : null;
+  const pct = (v: number | null) => (v === null ? '—' : `%${Math.round(v * 100).toLocaleString(lang === 'tr' ? 'tr-TR' : 'en-US')}`);
+  const cells = [
+    { label: t.revenue, value: usd(r.revenue, lang), good: false },
+    { label: 'ROAS D7', value: pct(r.roasD7), good: (r.roasD7 ?? 0) >= 1 },
+    { label: 'ROAS D30', value: pct(r.roasD30), good: (r.roasD30 ?? 0) >= 1 },
+  ];
+  return (
+    <div className="mt-3 grid grid-cols-3 gap-3 text-xs sm:text-right">
+      {cells.map((c) => (
+        <div key={c.label}>
+          <div className="text-subtle">{c.label}</div>
+          <div className={`mt-0.5 font-mono font-semibold tabular-nums ${c.good ? 'text-good' : ''}`}>{c.value}</div>
+        </div>
+      ))}
     </div>
   );
 }

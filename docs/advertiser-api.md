@@ -56,6 +56,8 @@ Lifetime funnel per campaign.
 
 `status`: `draft`, `in_review`, `active`, `paused`, `completed`, `archived`.
 
+Each campaign also carries ROAS fields: `revenue_usd`, `revenue_d7_usd`, `revenue_d30_usd` (revenue within 7 / 30 days of the user's click), `paying_users`, and `roas_d7`, `roas_d30`, `roas` (revenue ÷ spend; `1.0` = break-even, `null` without spend). See *Revenue and ROAS* below.
+
 ### `POST /campaigns/{id}/pause` and `POST /campaigns/{id}/resume`
 
 Pauses or resumes a live campaign. Users who already started the offer can still finish it. Returns `{ "id": "cmp_…", "status": "paused" }`; `409` if the campaign is not live or paused.
@@ -65,7 +67,7 @@ Pauses or resumes a live campaign. Users who already started the offer can still
 One row per UTC day, including empty days.
 
 ```json
-{ "days": [ { "date": "2026-11-01", "spend_usd": "48.20", "installs": 24, "events": 11 } ] }
+{ "days": [ { "date": "2026-11-01", "spend_usd": "48.20", "revenue_usd": "61.75", "installs": 24, "events": 11 } ] }
 ```
 
 ### `GET /conversions`
@@ -115,6 +117,18 @@ Body (JSON): `{ "note": "…" }`. A reason is required to reject; it is shown to
 | 409 | `claim_balance` | Not enough balance or credit |
 | 409 | `claim_no_price` | The step has no price for the user's country |
 | 409 | `claim_reversed` | The conversion was refunded earlier |
+
+## Revenue and ROAS
+
+To see return on ad spend, let your MMP send in-app revenue for Kiqro users to the same postback URL, for any event (not only billed steps):
+
+| Parameter | |
+|---|---|
+| `revenue_usd` | Revenue in USD, e.g. AppsFlyer `{event_revenue_usd}`, Adjust `{revenue_usd}` |
+| `revenue` + `currency=USD` | Alternative; other currencies are ignored |
+| `event_id` | Optional MMP event id; a repeat of the same id for the same click is counted once |
+
+Revenue is never billed. It is matched to the user's Kiqro click and reported per campaign in the panel (Campaigns) and in `GET /campaigns` and `GET /stats`.
 
 ## Webhooks
 

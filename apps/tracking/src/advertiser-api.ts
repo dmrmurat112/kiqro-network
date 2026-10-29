@@ -1,7 +1,7 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { formatMicros } from '@kiqro/core';
 import type { Db } from '@kiqro/db';
-import { creditPosition, decideClaim, listClaims, type ClaimStatus } from '@kiqro/network';
+import { campaignRoas, creditPosition, dailyRevenue, decideClaim, listClaims, type CampaignRoas, type ClaimStatus } from '@kiqro/network';
 import {
   advertiserCampaigns,
   advertiserConversions,
@@ -56,7 +56,7 @@ export function registerAdvertiserApi(app: FastifyInstance, db: Db): void {
     });
 
     api.get('/campaigns', async (req) => {
-      const rows = await advertiserCampaigns(db, who(req).org.id);
+      const [rows, roas] = await Promise.all([advertiserCampaigns(db, who(req).org.id), campaignRoas(db, who(req).org.id)]);
       return {
         campaigns: rows.map((c) => ({
           id: c.id,
@@ -69,6 +69,7 @@ export function registerAdvertiserApi(app: FastifyInstance, db: Db): void {
           spend_usd: usd(c.spend),
           clicks: c.clicks,
           steps: c.tasks.map((t) => ({ seq: t.seq, event: t.event, name: t.name, completions: t.completions, spend_usd: usd(t.spend) })),
+          ...roasFields(roas.find((r) => r.campaignId === c.id)),
         })),
       };
     });
@@ -83,8 +84,8 @@ export function registerAdvertiserApi(app: FastifyInstance, db: Db): void {
 
     api.get<{ Querystring: Query }>('/stats', async (req) => {
       const days = [7, 30, 90].includes(Number(req.query.days)) ? Number(req.query.days) : 30;
-      const series = await advertiserDailySeries(db, who(req).org.id, days);
-      return { days: series.map((d) => ({ date: d.date, spend_usd: usd(d.spend), installs: d.installs, events: d.events })) };
+      const [series, revenue] = await Promise.all([advertiserDailySeries(db, who(req).org.id, days), dailyRevenue(db, who(req).org.id, days)]);
+      return { days: series.map((d) => ({ date: d.date, spend_usd: usd(d.spend), revenue_usd: usd(revenue.get(d.date) ?? 0n), installs: d.installs, events: d.events })) };
     });
 
     api.get<{ Querystring: Query }>('/conversions', async (req, reply) => {
@@ -140,4 +141,17 @@ export function registerAdvertiserApi(app: FastifyInstance, db: Db): void {
     api.post('/claims/:id/approve', decide(true));
     api.post('/claims/:id/reject', decide(false));
   }, { prefix: '/v1/advertiser' });
+}
+
+/** ROAS fields of a campaign in API responses; ratios are revenue / spend (1 = break-even). */
+function roasFields(r: CampaignRoas | undefined) {
+  return {
+    revenue_usd: usd(r?.revenue ?? 0n),
+    revenue_d7_usd: usd(r?.revenueD7 ?? 0n),
+    revenue_d30_usd: usd(r?.revenueD30 ?? 0n),
+    paying_users: r?.payingUsers ?? 0,
+    roas_d7: r?.roasD7 ?? null,
+    roas_d30: r?.roasD30 ?? null,
+    roas: r?.roas ?? null,
+  };
 }
