@@ -13,8 +13,14 @@ import {
   createPlacement,
   createProduct,
   createPublisher,
+  dashboardStats,
   getCampaignForm,
+  listPublisherPostbacks,
+  listRawPostbacks,
   getSessionUser,
+  listCampaigns,
+  listConversions,
+  listOrganizations,
   login,
   logout,
   recordTopUp,
@@ -99,6 +105,11 @@ describe('advertisers and top-ups', () => {
     expect(await getBalance(db, await getAccountId(db, 'advertiser_balance', id))).toBe(250_750_000n);
     const actions = (await db.select().from(auditLog)).map((a) => a.action);
     expect(actions).toEqual(expect.arrayContaining(['advertiser.create', 'advertiser.topup']));
+
+    const other = await createAdvertiser(db, actor, { ...advertiserForm, name: 'Empty Co' });
+    const listed = await listOrganizations(db, 'advertiser');
+    expect(listed.find((o) => o.id === id)!.balance).toBe(250_750_000n);
+    expect(listed.find((o) => o.id === other)!.balance).toBe(0n);
   });
 
   it('enforces roles: operators cannot move money, finance cannot create campaigns', async () => {
@@ -216,6 +227,16 @@ describe('held conversion review', () => {
     expect(await getBalance(db, await getAccountId(db, 'publisher_payable', s.publisherId))).toBe(280_000n);
     expect(await db.select().from(publisherPostbacks)).toHaveLength(1);
     await expect(approveHeldConversion(db, actor, conversionId, 'again please')).rejects.toThrow('Yalnızca bekleyen');
+
+    // Read models used by the panel pages.
+    expect(await listConversions(db, { status: 'approved' })).toHaveLength(1);
+    expect(await listConversions(db, { status: 'held' })).toHaveLength(0);
+    const [listed] = await listCampaigns(db, { orgId: s.advertiserId });
+    expect(listed!.spend).toBe(400_000n);
+    const stats = await dashboardStats(db, 1);
+    expect(stats).toMatchObject({ approved: 1, holdQueue: 0, spend: 400_000n, revenue: 120_000n, activeCampaigns: 1 });
+    expect((await listRawPostbacks(db)).length).toBeGreaterThan(0);
+    expect(await listPublisherPostbacks(db, 'pending')).toHaveLength(1);
   });
 
   it('rejects a held conversion without touching the ledger', async () => {

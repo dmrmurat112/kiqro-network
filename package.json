@@ -17,8 +17,10 @@
     "seed": "npm run seed -w @kiqro/tracking",
     "dev": "npm run dev -w @kiqro/tracking",
     "worker": "npm run worker -w @kiqro/tracking",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run"
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p apps/admin/tsconfig.json --noEmit",
+    "test": "vitest run",
+    "dev:admin": "npm run dev -w @kiqro/admin",
+    "create-admin": "npm run create-admin -w @kiqro/admin --"
   },
   "devDependencies": {
     "@types/node": "^22.20.5",

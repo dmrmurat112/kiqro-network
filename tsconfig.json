@@ -3,8 +3,12 @@
     "target": "ES2023",
     "module": "ESNext",
     "moduleResolution": "Bundler",
-    "lib": ["ES2023"],
-    "types": ["node"],
+    "lib": [
+      "ES2023"
+    ],
+    "types": [
+      "node"
+    ],
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "esModuleInterop": true,
@@ -15,5 +19,12 @@
     "allowImportingTsExtensions": true,
     "noEmit": true
   },
-  "include": ["packages/*/src", "packages/*/drizzle.config.ts", "apps/*/src", "apps/*/test", "packages/*/test", "apps/*/next.config.ts", "vitest.config.ts"]
+  "include": [
+    "packages/*/src",
+    "packages/*/test",
+    "packages/*/drizzle.config.ts",
+    "apps/tracking/src",
+    "apps/tracking/test",
+    "vitest.config.ts"
+  ]
 }

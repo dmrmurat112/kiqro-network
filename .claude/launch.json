@@ -1,0 +1,7 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    { "name": "admin", "runtimeExecutable": "npm", "runtimeArgs": ["run", "dev:admin"], "port": 4100 },
+    { "name": "tracking", "runtimeExecutable": "npm", "runtimeArgs": ["run", "dev"], "port": 4000 }
+  ]
+}

@@ -6,7 +6,7 @@ import { campaignSpend } from '../campaigns.ts';
 import { audit } from './audit.ts';
 import type { AdminUser } from './auth.ts';
 import { AdminError, requirePermission } from './errors.ts';
-import { countrySchema, parseInput, usdSchema } from './organizations.ts';
+import { countrySchema, intField, parseInput, usdSchema } from './organizations.ts';
 
 const { campaignTasks, campaigns, clicks, organizations, products, taskPayouts } = schema;
 
@@ -31,7 +31,7 @@ const optionalDate = z
 
 const taskInput = z.object({
   event: z.string().trim().min(1, 'MMP olay adı gerekli').max(100),
-  timeLimitDays: z.coerce.number().int().min(1).max(90),
+  timeLimitDays: intField(1, 90),
   nameEn: z.string().trim().min(1, 'İngilizce görev adı gerekli'),
   nameTr: z.string().trim().default(''),
   /** "*" is the default price; other keys are country codes. */
@@ -53,8 +53,8 @@ export const campaignInput = z
     dailyBudgetUsd: optionalUsd,
     startAt: optionalDate,
     endAt: optionalDate,
-    attributionWindowDays: z.coerce.number().int().min(1).max(30),
-    ctitMinSeconds: z.coerce.number().int().min(0).max(3600),
+    attributionWindowDays: intField(1, 30),
+    ctitMinSeconds: intField(0, 3600),
     titleEn: z.string().trim().min(2, 'İngilizce başlık gerekli'),
     titleTr: z.string().trim().default(''),
     descriptionEn: z.string().trim().default(''),

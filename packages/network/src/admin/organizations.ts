@@ -7,9 +7,12 @@ import { audit } from './audit.ts';
 import type { AdminUser } from './auth.ts';
 import { AdminError, describeValidation, requirePermission } from './errors.ts';
 
-const { ledgerEntries, organizations, placements, products } = schema;
+const { ledgerAccounts, ledgerEntries, organizations, placements, products } = schema;
 
 const country = z.string().trim().toUpperCase().regex(/^[A-Z]{2}$/, 'iki harfli ülke kodu olmalı');
+/** Integer from a form field (string) or code (number). */
+export const intField = (min: number, max: number) => z.union([z.number(), z.string()]).pipe(z.coerce.number().int().min(min).max(max));
+
 const usd = z.string().trim().regex(/^\d+(\.\d{1,6})?$/, 'geçerli bir tutar olmalı (ör. 12.50)');
 
 function parse<T extends z.ZodTypeAny>(schemaDef: T, input: unknown): z.infer<T> {
@@ -27,7 +30,7 @@ export const advertiserInput = z.object({
   country,
   billingEntity: z.enum(['kiqro_inc', 'kiqro_oy']),
   invoiceCurrency: z.enum(['USD', 'EUR']),
-  reversalWindowDays: z.coerce.number().int().min(1).max(90),
+  reversalWindowDays: intField(1, 90),
   // HTML checkboxes send "on" when ticked and nothing otherwise.
   requireSignedPostbacks: z.preprocess((v) => v === true || v === 'on' || v === 'true', z.boolean()),
 });
@@ -57,16 +60,15 @@ export async function createAdvertiser(db: Db, actor: AdminUser, input: z.input<
 /** Organizations of one type with their ledger balance (advertiser balance or publisher payable). */
 export async function listOrganizations(db: Db, type: 'advertiser' | 'publisher') {
   const kind = type === 'advertiser' ? 'advertiser_balance' : 'publisher_payable';
-  const rows = await db
-    .select({
-      org: organizations,
-      balance: sql<string>`coalesce((select sum(e.amount) from ${ledgerEntries} e join ledger_accounts a on a.id = e.account_id
-        where a.org_id = ${organizations.id} and a.kind = ${kind}), 0)`,
-    })
-    .from(organizations)
-    .where(eq(organizations.type, type))
-    .orderBy(desc(organizations.createdAt));
-  return rows.map((r) => ({ ...r.org, balance: BigInt(r.balance) }));
+  const orgs = await db.select().from(organizations).where(eq(organizations.type, type)).orderBy(desc(organizations.createdAt));
+  const balances = await db
+    .select({ orgId: ledgerAccounts.orgId, total: sql<string>`sum(${ledgerEntries.amount})` })
+    .from(ledgerEntries)
+    .innerJoin(ledgerAccounts, eq(ledgerAccounts.id, ledgerEntries.accountId))
+    .where(eq(ledgerAccounts.kind, kind))
+    .groupBy(ledgerAccounts.orgId);
+  const byOrg = new Map(balances.map((b) => [b.orgId, BigInt(b.total)]));
+  return orgs.map((org) => ({ ...org, balance: byOrg.get(org.id) ?? 0n }));
 }
 
 export async function getOrganization(db: Db, id: string) {
