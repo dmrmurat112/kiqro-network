@@ -26,6 +26,7 @@ export async function requestDemoAction(_: DemoState, form: FormData): Promise<D
       locale: form.get('locale'),
     },
     ip,
+    { to: process.env.LEADS_NOTIFY_EMAIL, adminBaseUrl: process.env.ADMIN_BASE_URL ?? 'http://localhost:4100' },
   );
   if (result.ok) return { status: 'success' };
   return { status: result.error, fields: result.fields };

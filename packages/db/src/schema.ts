@@ -47,6 +47,9 @@ export const organizations = pgTable('organizations', {
   postbackSecret: text('postback_secret'),
   /** Days after a conversion during which the advertiser may reverse it. */
   reversalWindowDays: integer('reversal_window_days').notNull().default(30),
+  /** Advertisers get an e-mail when their balance falls below this (micro-USD). */
+  lowBalanceThreshold: micros('low_balance_threshold').notNull().default(sql`100000000`), // $100
+  lowBalanceAlertedAt: timestamp('low_balance_alerted_at', { withTimezone: true }),
   createdAt: createdAt(),
 });
 
@@ -291,6 +294,43 @@ export const advertiserLoginAttempts = pgTable(
     createdAt: createdAt(),
   },
   (t) => [index('advertiser_login_attempts_email_idx').on(t.email, t.createdAt), index('advertiser_login_attempts_ip_idx').on(t.ip, t.createdAt)],
+);
+
+export const tokenPurpose = pgEnum('token_purpose', ['invite', 'reset']);
+
+/** Single-use links for setting a password (invitation) or resetting it. Only a hash is stored. */
+export const advertiserTokens = pgTable(
+  'advertiser_tokens',
+  {
+    tokenHash: text('token_hash').primaryKey(),
+    advertiserUserId: text('advertiser_user_id').notNull().references(() => advertiserUsers.id),
+    purpose: tokenPurpose('purpose').notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    usedAt: timestamp('used_at', { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [index('advertiser_tokens_user_idx').on(t.advertiserUserId, t.createdAt)],
+);
+
+/** Outgoing e-mail, delivered and retried by the worker (same pattern as publisher postbacks). */
+export const emailMessages = pgTable(
+  'email_messages',
+  {
+    id: text('id').primaryKey(),
+    to: text('to').notNull(),
+    template: text('template').notNull(),
+    subject: text('subject').notNull(),
+    html: text('html').notNull(),
+    text: text('text').notNull(),
+    status: outboxStatus('status').notNull().default('pending'),
+    attempts: integer('attempts').notNull().default(0),
+    nextAttemptAt: timestamp('next_attempt_at', { withTimezone: true }).notNull().defaultNow(),
+    lastError: text('last_error'),
+    providerMessageId: text('provider_message_id'),
+    sentAt: timestamp('sent_at', { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [index('email_messages_due_idx').on(t.status, t.nextAttemptAt)],
 );
 
 export const leadStatus = pgEnum('lead_status', ['new', 'contacted', 'qualified', 'won', 'lost']);

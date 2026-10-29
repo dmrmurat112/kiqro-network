@@ -4,6 +4,7 @@ import { newId, schema, type Db } from '@kiqro/db';
 import { audit } from '../admin/audit.ts';
 import type { AdminUser } from '../admin/auth.ts';
 import { AdminError, requirePermission } from '../admin/errors.ts';
+import { enqueueEmail } from '../email/queue.ts';
 
 const { leads } = schema;
 
@@ -22,8 +23,17 @@ const MAX_LEADS_PER_IP_PER_HOUR = 5;
 
 export type LeadResult = { ok: true } | { ok: false; error: 'invalid' | 'rate_limited'; fields?: string[] };
 
-/** Stores a demo request from the public site. Throttled per IP; the form also has a honeypot. */
-export async function submitLead(db: Db, input: unknown, ip: string | null, now = new Date()): Promise<LeadResult> {
+export interface LeadNotify {
+  /** Sales inbox that gets an e-mail per request (LEADS_NOTIFY_EMAIL), if set. */
+  to?: string;
+  adminBaseUrl: string;
+}
+
+/**
+ * Stores a demo request from the public site and notifies the sales inbox. Throttled per IP;
+ * the form also has a honeypot.
+ */
+export async function submitLead(db: Db, input: unknown, ip: string | null, notify?: LeadNotify, now = new Date()): Promise<LeadResult> {
   const parsed = leadInput.safeParse(input);
   if (!parsed.success) return { ok: false, error: 'invalid', fields: [...new Set(parsed.error.issues.map((i) => String(i.path[0])))] };
   if (ip) {
@@ -33,7 +43,30 @@ export async function submitLead(db: Db, input: unknown, ip: string | null, now 
       .where(and(eq(leads.ip, ip), gt(leads.createdAt, new Date(now.getTime() - 3_600_000))));
     if (recent!.n >= MAX_LEADS_PER_IP_PER_HOUR) return { ok: false, error: 'rate_limited' };
   }
-  await db.insert(leads).values({ id: newId('lead'), ...parsed.data, website: parsed.data.website || null, ip, createdAt: now });
+  const d = parsed.data;
+  await db.transaction(async (tx) => {
+    await tx.insert(leads).values({ id: newId('lead'), ...d, website: d.website || null, ip, createdAt: now });
+    if (notify?.to) {
+      await enqueueEmail(
+        tx,
+        notify.to,
+        {
+          name: 'lead_notification',
+          data: {
+            name: d.name,
+            email: d.email,
+            company: d.website ? `${d.company} (${d.website})` : d.company,
+            vertical: d.vertical ?? '—',
+            budget: d.monthlyBudget ?? '—',
+            message: d.message ?? '—',
+            adminLink: `${notify.adminBaseUrl.replace(/\/$/, '')}/leads`,
+          },
+        },
+        'tr',
+        now,
+      );
+    }
+  });
   return { ok: true };
 }
 

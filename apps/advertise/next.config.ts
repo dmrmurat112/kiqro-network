@@ -20,7 +20,11 @@ const config: NextConfig = {
   poweredByHeader: false,
   devIndicators: { position: 'bottom-right' },
   async headers() {
-    return [{ source: '/:path*', headers: securityHeaders }];
+    return [
+      { source: '/:path*', headers: securityHeaders },
+      // The password link carries its token in the URL; never leak it via Referer.
+      { source: '/set-password', headers: [{ key: 'Referrer-Policy', value: 'no-referrer' }, { key: 'Cache-Control', value: 'no-store' }] },
+    ];
   },
 };
 

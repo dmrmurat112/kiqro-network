@@ -252,7 +252,20 @@ export type SiteDict = Dict;
 /* ---------- Advertiser panel ---------- */
 const panelEn = {
   nav: { overview: 'Overview', campaigns: 'Campaigns', conversions: 'Conversions', integration: 'Integration', account: 'Account', logout: 'Log out' },
-  login: { title: 'Welcome back', sub: 'Sign in to your advertiser account', email: 'E-mail', password: 'Password', submit: 'Sign in', invalid: 'Wrong e-mail or password.', locked: 'Too many attempts. Try again in 15 minutes.', noAccount: 'No account yet?', demo: 'Book a demo' },
+  login: { title: 'Welcome back', sub: 'Sign in to your advertiser account', email: 'E-mail', password: 'Password', submit: 'Sign in', invalid: 'Wrong e-mail or password.', locked: 'Too many attempts. Try again in 15 minutes.', noAccount: 'No account yet?', demo: 'Book a demo', forgot: 'Forgot password?', passwordSet: 'Your password is set. Sign in with it.' },
+  forgot: { title: 'Reset your password', sub: 'Enter the e-mail you sign in with. If it belongs to an account, we will send a link to choose a new password.', submit: 'Send reset link', sent: 'If an account exists for that address, a reset link is on its way. It is valid for 60 minutes.', back: 'Back to sign in' },
+  setPassword: {
+    inviteTitle: 'Set your password',
+    resetTitle: 'Choose a new password',
+    for: 'For',
+    password: 'New password (at least 12 characters)',
+    confirm: 'Repeat the password',
+    submit: 'Save password',
+    mismatch: 'The passwords do not match.',
+    weak: 'Use at least 12 characters.',
+    invalid: 'This link has expired or was already used.',
+    requestNew: 'Request a new link',
+  },
   periods: { 7: 'Last 7 days', 30: 'Last 30 days', 90: 'Last 90 days' } as Record<number, string>,
   overview: {
     title: 'Overview',
@@ -306,7 +319,20 @@ type PanelDict = typeof panelEn;
 
 const panelTr: PanelDict = {
   nav: { overview: 'Genel bakış', campaigns: 'Kampanyalar', conversions: 'Dönüşümler', integration: 'Entegrasyon', account: 'Hesap', logout: 'Çıkış' },
-  login: { title: 'Tekrar hoş geldiniz', sub: 'Reklamveren hesabınıza giriş yapın', email: 'E-posta', password: 'Parola', submit: 'Giriş yap', invalid: 'E-posta veya parola hatalı.', locked: 'Çok fazla deneme. 15 dakika sonra tekrar deneyin.', noAccount: 'Hesabınız yok mu?', demo: 'Demo talep edin' },
+  login: { title: 'Tekrar hoş geldiniz', sub: 'Reklamveren hesabınıza giriş yapın', email: 'E-posta', password: 'Parola', submit: 'Giriş yap', invalid: 'E-posta veya parola hatalı.', locked: 'Çok fazla deneme. 15 dakika sonra tekrar deneyin.', noAccount: 'Hesabınız yok mu?', demo: 'Demo talep edin', forgot: 'Parolamı unuttum', passwordSet: 'Parolanız kaydedildi. Bu parolayla giriş yapabilirsiniz.' },
+  forgot: { title: 'Parolanızı sıfırlayın', sub: 'Giriş yaptığınız e-postayı yazın. Bir hesaba aitse yeni parola belirleme bağlantısı göndereceğiz.', submit: 'Sıfırlama bağlantısı gönder', sent: 'Bu adrese ait bir hesap varsa sıfırlama bağlantısı gönderildi. Bağlantı 60 dakika geçerlidir.', back: 'Girişe dön' },
+  setPassword: {
+    inviteTitle: 'Parolanızı belirleyin',
+    resetTitle: 'Yeni parola belirleyin',
+    for: 'Hesap',
+    password: 'Yeni parola (en az 12 karakter)',
+    confirm: 'Parolayı tekrar yazın',
+    submit: 'Parolayı kaydet',
+    mismatch: 'Parolalar eşleşmiyor.',
+    weak: 'En az 12 karakter kullanın.',
+    invalid: 'Bu bağlantının süresi dolmuş ya da daha önce kullanılmış.',
+    requestNew: 'Yeni bağlantı iste',
+  },
   periods: { 7: 'Son 7 gün', 30: 'Son 30 gün', 90: 'Son 90 gün' },
   overview: {
     title: 'Genel bakış',

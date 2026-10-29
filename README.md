@@ -37,6 +37,19 @@ Admin roles: `admin` (everything), `operator` (advertisers, campaigns, conversio
 
 Admin security: two-factor authentication (TOTP, any authenticator app) is mandatory — a new admin is sent to `/security` to enroll on first login. Five wrong attempts lock an e-mail for 15 minutes. If an admin loses their phone: `npm run reset-2fa -w @kiqro/admin -- email`. For local test accounts, `npm run dev-totp-code -w @kiqro/admin -- email` prints the current code (refuses to run against a non-local database).
 
+## E-mail
+
+E-mail goes through SendGrid's v3 API. Messages are written to `email_messages` in the same transaction as the change that causes them, then delivered (with retries) by the worker; without `SENDGRID_API_KEY` the worker prints them to its console instead. Configure `MAIL_FROM` with an address on a domain authenticated in SendGrid (Settings → Sender Authentication), otherwise SendGrid rejects the messages.
+
+| Template | When |
+|---|---|
+| `advertiser_invite` | Kiqro staff create an advertiser login: link to choose a password (72 h, single use) |
+| `password_reset` | "Forgot password" on the advertiser login page (60 min, single use, max 3 per hour, silent for unknown addresses) |
+| `low_balance` | Worker check every 10 min: balance under the advertiser's threshold (default $100), at most once a day |
+| `lead_notification` | Demo request from the site, to `LEADS_NOTIFY_EMAIL` |
+
+Templates are in `packages/network/src/email/templates.ts` (English and Turkish, by the user's panel language).
+
 ## Fraud controls
 
 Clicks are refused for VPN/proxy/Tor and datacenter IPs, provider risk score ≥ 90, a Cloudflare/provider country mismatch, more than 60 clicks per IP per hour, or a publisher user risk ≥ 90. Conversions are held for review (not billed, not rewarded) for IP risk ≥ 75, publisher user risk ≥ 70, a fourth distinct user installing from one IP within 24 h (device farm), or more than 20 conversions per user per hour. Thresholds live in `packages/network/src/fraud/rules.ts`.

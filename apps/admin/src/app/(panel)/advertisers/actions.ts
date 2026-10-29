@@ -1,7 +1,7 @@
 'use server';
 
 import { createAdvertiser, createProduct, recordTopUp } from '@kiqro/network/admin';
-import { createAdvertiserUser } from '@kiqro/network/advertiser';
+import { createAdvertiserUser, resendAdvertiserInvite } from '@kiqro/network/advertiser';
 import { field, runAction, type ActionState } from '@/lib/action';
 import { db } from '@/lib/db';
 
@@ -19,14 +19,20 @@ export async function createAdvertiserAction(_: ActionState, form: FormData): Pr
   }, '/advertisers');
 }
 
+const links = () => ({ advertiseBaseUrl: process.env.ADVERTISE_BASE_URL ?? 'http://localhost:4200' });
+
 export async function createAdvertiserUserAction(orgId: string, _: ActionState, form: FormData): Promise<ActionState> {
   return runAction(async (actor) => {
-    const { password } = await createAdvertiserUser(db, actor, orgId, {
-      email: field(form, 'email'),
-      name: field(form, 'name'),
-      locale: field(form, 'locale') as 'en',
-    });
-    return `Hesap oluşturuldu. Tek seferlik parola: ${password} — reklamverene güvenli bir kanalla iletin, bu ekrandan çıkınca tekrar gösterilmez.`;
+    const email = field(form, 'email');
+    await createAdvertiserUser(db, actor, orgId, { email, name: field(form, 'name'), locale: field(form, 'locale') as 'en' }, links());
+    return `Hesap oluşturuldu; ${email} adresine parola belirleme bağlantısı gönderiliyor (72 saat geçerli).`;
+  }, `/advertisers/${orgId}`);
+}
+
+export async function resendInviteAction(orgId: string, userId: string, _: ActionState): Promise<ActionState> {
+  return runAction(async (actor) => {
+    await resendAdvertiserInvite(db, actor, userId, links());
+    return 'Yeni davet bağlantısı gönderiliyor; öncekiler geçersiz oldu.';
   }, `/advertisers/${orgId}`);
 }
 

@@ -1,9 +1,9 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { eq } from 'drizzle-orm';
+import { desc, eq } from 'drizzle-orm';
 import { sign } from '@kiqro/core';
-import { schema, type Db } from '@kiqro/db';
+import { schema, topUpAdvertiser, type Db } from '@kiqro/db';
 import { resetTestDb, setupTestDb } from '@kiqro/db/testing';
-import { createDemoSetup, handleClick, handlePostback, type DemoSetup } from '../src/index.ts';
+import { createDemoSetup, deliverDueEmails, enqueueEmail, handleClick, handlePostback, renderEmail, sendgridMailer, type DemoSetup, type Mailer } from '../src/index.ts';
 import { createAdminUser, type AdminUser } from '../src/admin/index.ts';
 import {
   advertiserCampaigns,
@@ -12,9 +12,14 @@ import {
   advertiserDailySeries,
   advertiserLogin,
   advertiserOverview,
+  checkLowBalances,
   conversionsCsv,
   createAdvertiserUser,
   getAdvertiserSession,
+  inspectPasswordToken,
+  requestPasswordReset,
+  resendAdvertiserInvite,
+  setPasswordWithToken,
   submitLead,
 } from '../src/advertiser/index.ts';
 
@@ -41,25 +46,136 @@ async function convert(s: DemoSetup, user: string, event: string, clickAt: Date,
   return handlePostback(db, { advertiserKey: s.postbackKey, query: { click_id: c.clickId, event }, url: '/', ip: null, now: eventAt });
 }
 
+const LINKS = { advertiseBaseUrl: 'https://advertise.test' };
+
+/** Pulls the newest link sent to an address out of the e-mail queue, like a user clicking it. */
+async function tokenFromInbox(to: string): Promise<string> {
+  const [mail] = await db.select().from(schema.emailMessages).where(eq(schema.emailMessages.to, to)).orderBy(desc(schema.emailMessages.createdAt)).limit(1);
+  const token = /set-password\?token=([\w-]+)/.exec(mail!.text)?.[1];
+  if (!token) throw new Error('no link in e-mail');
+  return token;
+}
+
 describe('advertiser accounts', () => {
-  it('creates a login with a one-time password and opens a session scoped to the organization', async () => {
+  it('invites by e-mail, lets the user choose a password and opens an organization-scoped session', async () => {
     const s = await createDemoSetup(db);
-    const { password } = await createAdvertiserUser(db, await staff(), s.advertiserId, { email: 'ua@studio.test', name: 'UA Lead', locale: 'en' });
+    await createAdvertiserUser(db, await staff(), s.advertiserId, { email: 'ua@studio.test', name: 'UA Lead', locale: 'tr' }, LINKS);
+    const [mail] = await db.select().from(schema.emailMessages);
+    expect(mail).toMatchObject({ to: 'ua@studio.test', template: 'advertiser_invite', status: 'pending' });
+    expect(mail!.subject).toContain('hesabınız hazır');
+
+    const token = await tokenFromInbox('ua@studio.test');
+    expect(await inspectPasswordToken(db, token)).toMatchObject({ purpose: 'invite', email: 'ua@studio.test' });
+    expect(await setPasswordWithToken(db, token, 'short')).toEqual({ ok: false, reason: 'weak_password' });
+    expect(await setPasswordWithToken(db, token, 'a long enough password')).toMatchObject({ ok: true });
+    expect(await setPasswordWithToken(db, token, 'a long enough password')).toEqual({ ok: false, reason: 'invalid_token' });
+
     expect((await advertiserLogin(db, { email: 'ua@studio.test', password: 'wrong-password', ip: null })).status).toBe('invalid');
-    const result = await advertiserLogin(db, { email: 'UA@studio.test', password, ip: null });
+    const result = await advertiserLogin(db, { email: 'UA@studio.test', password: 'a long enough password', ip: null });
     if (result.status !== 'ok') throw new Error(result.status);
-    const session = await getAdvertiserSession(db, result.token);
-    expect(session?.org.id).toBe(s.advertiserId);
+    expect((await getAdvertiserSession(db, result.token))?.org.id).toBe(s.advertiserId);
 
     await db.update(schema.organizations).set({ status: 'suspended' }).where(eq(schema.organizations.id, s.advertiserId));
     expect(await getAdvertiserSession(db, result.token)).toBeNull();
   });
 
-  it('refuses duplicate e-mails', async () => {
+  it('resets passwords: silent for unknown e-mails, single-use, expiring, signs out sessions, rate limited', async () => {
     const s = await createDemoSetup(db);
     const actor = await staff();
-    await createAdvertiserUser(db, actor, s.advertiserId, { email: 'x@studio.test', name: 'Xavi' });
-    await expect(createAdvertiserUser(db, actor, s.advertiserId, { email: 'x@studio.test', name: 'Yuki' })).rejects.toThrow('zaten');
+    await createAdvertiserUser(db, actor, s.advertiserId, { email: 'ops@studio.test', name: 'Ops' }, LINKS);
+    await setPasswordWithToken(db, await tokenFromInbox('ops@studio.test'), 'first password 123');
+    const login = await advertiserLogin(db, { email: 'ops@studio.test', password: 'first password 123', ip: null });
+    if (login.status !== 'ok') throw new Error(login.status);
+
+    await requestPasswordReset(db, 'nobody@studio.test', LINKS);
+    expect(await db.select().from(schema.emailMessages).where(eq(schema.emailMessages.to, 'nobody@studio.test'))).toHaveLength(0);
+
+    const now = new Date();
+    await requestPasswordReset(db, 'OPS@studio.test', LINKS, now);
+    const token = await tokenFromInbox('ops@studio.test');
+    expect(await inspectPasswordToken(db, token, new Date(now.getTime() + 61 * 60_000))).toBeNull(); // expired after 60 min
+    expect(await setPasswordWithToken(db, token, 'second password 456', now)).toMatchObject({ ok: true });
+    expect(await getAdvertiserSession(db, login.token)).toBeNull(); // old sessions are signed out
+
+    await requestPasswordReset(db, 'ops@studio.test', LINKS, now);
+    await requestPasswordReset(db, 'ops@studio.test', LINKS, now);
+    await requestPasswordReset(db, 'ops@studio.test', LINKS, now);
+    const resets = (await db.select().from(schema.emailMessages)).filter((m) => m.template === 'password_reset');
+    expect(resets).toHaveLength(3); // the 4th request in the hour is ignored
+  });
+
+  it('refuses duplicate e-mails and re-sends invitations with a new link', async () => {
+    const s = await createDemoSetup(db);
+    const actor = await staff();
+    const { id } = await createAdvertiserUser(db, actor, s.advertiserId, { email: 'x@studio.test', name: 'Xavi' }, LINKS);
+    await expect(createAdvertiserUser(db, actor, s.advertiserId, { email: 'x@studio.test', name: 'Yuki' }, LINKS)).rejects.toThrow('zaten');
+    const first = await tokenFromInbox('x@studio.test');
+    await new Promise((r) => setTimeout(r, 5));
+    await resendAdvertiserInvite(db, actor, id, LINKS);
+    expect(await inspectPasswordToken(db, first)).toBeNull(); // the previous link stops working
+    expect(await inspectPasswordToken(db, await tokenFromInbox('x@studio.test'))).toMatchObject({ purpose: 'invite' });
+  });
+});
+
+describe('e-mail delivery and alerts', () => {
+  it('delivers queued mail, retries failures and stops on permanent errors', async () => {
+    await enqueueEmail(db, 'a@studio.test', { name: 'password_reset', data: { name: 'A', link: 'https://x.test', expiresMinutes: 60 } }, 'en');
+    await enqueueEmail(db, 'b@studio.test', { name: 'password_reset', data: { name: 'B', link: 'https://x.test', expiresMinutes: 60 } }, 'en');
+    const mailer: Mailer = {
+      send: async (m) => (m.to === 'a@studio.test' ? { ok: true, providerMessageId: 'sg-1' } : { ok: false, error: 'SendGrid 400: bad', permanent: true }),
+    };
+    expect(await deliverDueEmails(db, mailer)).toBe(2);
+    const rows = await db.select().from(schema.emailMessages);
+    expect(rows.find((r) => r.to === 'a@studio.test')).toMatchObject({ status: 'sent', providerMessageId: 'sg-1' });
+    expect(rows.find((r) => r.to === 'b@studio.test')).toMatchObject({ status: 'failed', attempts: 1 });
+  });
+
+  it('builds the SendGrid request without click tracking and maps responses', async () => {
+    let sent: { url: string; body: Record<string, unknown>; auth: string } | undefined;
+    const mailer = sendgridMailer({
+      apiKey: 'SG.key',
+      from: 'no-reply@kiqro.com',
+      fromName: 'Kiqro Network',
+      fetcher: async (url, init) => {
+        sent = { url, body: JSON.parse(init.body), auth: init.headers.Authorization! };
+        return { status: 202, headers: { get: () => 'msg-123' }, text: async () => '' };
+      },
+    });
+    expect(await mailer.send({ to: 'a@b.test', subject: 'S', html: '<p>h</p>', text: 't', category: 'password_reset' })).toEqual({ ok: true, providerMessageId: 'msg-123' });
+    expect(sent!.url).toBe('https://api.sendgrid.com/v3/mail/send');
+    expect(sent!.auth).toBe('Bearer SG.key');
+    expect(sent!.body).toMatchObject({ from: { email: 'no-reply@kiqro.com' }, categories: ['password_reset'], tracking_settings: { click_tracking: { enable: false } } });
+  });
+
+  it('escapes user input in templates', () => {
+    const mail = renderEmail({ name: 'password_reset', data: { name: '<script>x</script>', link: 'https://x.test', expiresMinutes: 60 } }, 'en');
+    expect(mail.html).not.toContain('<script>');
+    expect(mail.html).toContain('&lt;script&gt;');
+  });
+
+  it('alerts once per day below the threshold and re-arms after a top-up', async () => {
+    const s = await createDemoSetup(db, { topUpUsd: '50' });
+    const actor = await staff();
+    await createAdvertiserUser(db, actor, s.advertiserId, { email: 'fin@studio.test', name: 'Fin' }, LINKS);
+    const now = new Date();
+    expect(await checkLowBalances(db, LINKS, now)).toBe(1);
+    expect(await checkLowBalances(db, LINKS, new Date(now.getTime() + 3_600_000))).toBe(0);
+    const alerts = () => db.select().from(schema.emailMessages).where(eq(schema.emailMessages.template, 'low_balance'));
+    expect((await alerts())[0]!.subject).toContain('$50.00');
+
+    await topUpAdvertiser(db, s.advertiserId, 500_000_000n);
+    expect(await checkLowBalances(db, LINKS, new Date(now.getTime() + 2 * 3_600_000))).toBe(0);
+    const org = await db.query.organizations.findFirst({ where: eq(schema.organizations.id, s.advertiserId) });
+    expect(org!.lowBalanceAlertedAt).toBeNull();
+    expect(await alerts()).toHaveLength(1);
+  });
+
+  it('notifies the sales inbox about demo requests', async () => {
+    const lead = { name: 'Aino', email: 'aino@studio.fi', company: 'Studio Oy', locale: 'en' };
+    await submitLead(db, lead, null, { to: 'ads@kiqro.test', adminBaseUrl: 'https://admin.test' });
+    const [mail] = await db.select().from(schema.emailMessages);
+    expect(mail).toMatchObject({ to: 'ads@kiqro.test', template: 'lead_notification' });
+    expect(mail!.text).toContain('https://admin.test/leads');
   });
 });
 
@@ -100,8 +216,8 @@ describe('advertiser reports', () => {
 describe('leads', () => {
   it('validates, stores and throttles demo requests', async () => {
     const lead = { name: 'Aino', email: 'aino@studio.fi', company: 'Studio Oy', vertical: 'games', monthlyBudget: '5k-20k', locale: 'en' };
-    expect(await submitLead(db, { ...lead, email: 'nope' }, '203.0.113.5', NOW)).toMatchObject({ ok: false, error: 'invalid', fields: ['email'] });
-    for (let i = 0; i < 5; i++) expect((await submitLead(db, lead, '203.0.113.5', NOW)).ok).toBe(true);
-    expect(await submitLead(db, lead, '203.0.113.5', NOW)).toEqual({ ok: false, error: 'rate_limited' });
+    expect(await submitLead(db, { ...lead, email: 'nope' }, '203.0.113.5', undefined, NOW)).toMatchObject({ ok: false, error: 'invalid', fields: ['email'] });
+    for (let i = 0; i < 5; i++) expect((await submitLead(db, lead, '203.0.113.5', undefined, NOW)).ok).toBe(true);
+    expect(await submitLead(db, lead, '203.0.113.5', undefined, NOW)).toEqual({ ok: false, error: 'rate_limited' });
   });
 });

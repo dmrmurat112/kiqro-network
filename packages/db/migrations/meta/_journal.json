@@ -29,6 +29,13 @@
       "when": 1793302492021,
       "tag": "0003_advertiser_panel",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793303895698,
+      "tag": "0004_email",
+      "breakpoints": true
     }
   ]
 }

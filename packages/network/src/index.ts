@@ -6,3 +6,6 @@ export * from './offers.ts';
 export * from './outbox.ts';
 export * from './fraud/ip-intel.ts';
 export * from './fraud/rules.ts';
+export * from './email/mailer.ts';
+export * from './email/queue.ts';
+export * from './email/templates.ts';

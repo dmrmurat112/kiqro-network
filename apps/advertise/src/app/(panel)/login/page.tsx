@@ -1,37 +1,36 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { Logo } from '@/components/Logo';
+import { AuthShell } from '@/components/panel/AuthShell';
 import { PANEL } from '@/lib/i18n';
 import { currentAdvertiser, panelLocale } from '@/lib/session';
 import { LoginForm } from './LoginForm';
 
-export default async function LoginPage() {
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ password?: string }> }) {
   if (await currentAdvertiser()) redirect('/app');
-  const lang = await panelLocale();
+  const [lang, sp] = await Promise.all([panelLocale(), searchParams]);
   const t = PANEL[lang].login;
 
   return (
-    <main className="relative grid min-h-screen place-items-center overflow-hidden px-5">
-      <div className="bg-grid absolute inset-0 [mask-image:radial-gradient(ellipse_at_center,black_20%,transparent_70%)]" />
-      <div className="absolute top-1/4 left-1/2 h-[420px] w-[620px] -translate-x-1/2 rounded-full bg-violet-500/20 blur-[120px]" />
-      <div className="relative w-full max-w-sm">
-        <div className="mb-8 flex justify-center">
-          <Link href={`/${lang}`}>
-            <Logo />
-          </Link>
-        </div>
-        <div className="glass rounded-2xl p-7 shadow-[0_30px_100px_-30px_rgb(0_0_0/0.6)]">
-          <h1 className="text-xl font-semibold">{t.title}</h1>
-          <p className="mt-1 text-sm text-muted">{t.sub}</p>
-          <LoginForm t={t} />
-        </div>
-        <p className="mt-6 text-center text-sm text-muted">
+    <AuthShell
+      homeHref={`/${lang}`}
+      below={
+        <>
           {t.noAccount}{' '}
           <Link href={`/${lang}#demo`} className="font-medium text-violet-400 hover:text-violet-300">
             {t.demo}
           </Link>
-        </p>
+        </>
+      }
+    >
+      <h1 className="text-xl font-semibold">{t.title}</h1>
+      <p className="mt-1 text-sm text-muted">{t.sub}</p>
+      {sp.password === 'set' && <p className="mt-4 rounded-lg bg-good/10 px-3 py-2 text-sm text-good">{t.passwordSet}</p>}
+      <LoginForm t={t} />
+      <div className="mt-4 text-center">
+        <Link href="/forgot-password" className="text-sm text-muted hover:text-fg">
+          {t.forgot}
+        </Link>
       </div>
-    </main>
+    </AuthShell>
   );
 }

@@ -6,7 +6,7 @@ import { ActionForm } from '@/components/ActionForm';
 import { Badge } from '@/components/Badge';
 import { db } from '@/lib/db';
 import { dateTime, usd } from '@/lib/format';
-import { createAdvertiserUserAction, createProductAction, topUpAction } from '../actions';
+import { createAdvertiserUserAction, createProductAction, resendInviteAction, topUpAction } from '../actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -74,6 +74,7 @@ export default async function AdvertiserPage({ params }: { params: Promise<{ id:
                 <th>Ad</th>
                 <th>E-posta</th>
                 <th>Son giriş</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
@@ -81,7 +82,10 @@ export default async function AdvertiserPage({ params }: { params: Promise<{ id:
                 <tr key={u.id}>
                   <td>{u.name}</td>
                   <td>{u.email}</td>
-                  <td>{dateTime(u.lastLoginAt)}</td>
+                  <td>{u.lastLoginAt ? dateTime(u.lastLoginAt) : 'Henüz giriş yapmadı'}</td>
+                  <td>
+                    <ActionForm action={resendInviteAction.bind(null, id, u.id)} submitLabel="Daveti yeniden gönder" className="row" buttonClass="secondary small" />
+                  </td>
                 </tr>
               ))}
             </tbody>
