@@ -1,0 +1,992 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>Kiqro Offerwall Ağı — Ürün ve Teknik Tasarım Dökümanı</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm 18mm 16mm; }
+  * { box-sizing: border-box; }
+  body { font-family: "Segoe UI", Arial, sans-serif; color: #1f2a3a; font-size: 10.2pt; line-height: 1.5; margin: 0; }
+  h1 { font-size: 19pt; color: #1a4f8a; margin: 0 0 4mm; padding-bottom: 2mm; border-bottom: 2px solid #1a4f8a; page-break-before: always; }
+  h2 { font-size: 13pt; color: #1a4f8a; margin: 6mm 0 2mm; page-break-after: avoid; }
+  h3 { font-size: 11pt; color: #38445a; margin: 4mm 0 1.5mm; page-break-after: avoid; }
+  p { margin: 0 0 2.4mm; }
+  ul, ol { margin: 0 0 2.6mm; padding-left: 6mm; }
+  li { margin-bottom: 1mm; }
+  table { width: 100%; border-collapse: collapse; margin: 2mm 0 4mm; font-size: 9pt; page-break-inside: auto; }
+  tr { page-break-inside: avoid; }
+  th { background: #1a4f8a; color: #fff; text-align: left; padding: 1.6mm 2mm; font-weight: 600; }
+  td { border-bottom: 1px solid #e3e8ef; padding: 1.5mm 2mm; vertical-align: top; }
+  tr:nth-child(even) td { background: #f6f8fb; }
+  code, .mono { font-family: Consolas, "Courier New", monospace; font-size: 8.6pt; }
+  pre { font-family: Consolas, "Courier New", monospace; font-size: 8.2pt; background: #eef2f7; border-left: 3px solid #1a4f8a; padding: 2.5mm 3mm; white-space: pre-wrap; word-break: break-all; margin: 1.5mm 0 3.5mm; page-break-inside: avoid; }
+  .box { border: 1px solid #e3e8ef; border-left: 4px solid #1a4f8a; background: #f6f8fb; padding: 2.5mm 3.5mm; margin: 2.5mm 0 4mm; page-break-inside: avoid; }
+  .box.warn { border-left-color: #b1670f; background: #fdf7ee; }
+  .box.ok { border-left-color: #1b7f4b; background: #f0f8f3; }
+  .box.risk { border-left-color: #b3301f; background: #fcf1ef; }
+  .box b.t { display: block; margin-bottom: 1mm; }
+  .tag { display: inline-block; font-size: 7.6pt; padding: 0.3mm 1.6mm; border-radius: 2mm; background: #e3e8ef; color: #38445a; font-weight: 600; }
+  .tag.p0 { background: #1a4f8a; color: #fff; } .tag.p1 { background: #0a7d6b; color: #fff; } .tag.p2 { background: #8a94a6; color: #fff; }
+  .muted { color: #4a5568; font-size: 9pt; }
+  .small { font-size: 8.4pt; color: #4a5568; }
+  .cover { height: 255mm; display: flex; flex-direction: column; justify-content: space-between; }
+  .cover .brand { font-size: 13pt; font-weight: 700; letter-spacing: 3px; color: #1a4f8a; }
+  .cover .title { font-size: 30pt; font-weight: 700; color: #1f2a3a; line-height: 1.15; margin-top: 50mm; }
+  .cover .sub { font-size: 14pt; color: #38445a; margin-top: 5mm; }
+  .cover .meta td { border: none; padding: 0.8mm 0; background: none !important; font-size: 10pt; }
+  .cover .bar { height: 3mm; background: linear-gradient(90deg, #1a4f8a, #0a7d6b); margin-top: 8mm; width: 60mm; }
+  .toc { columns: 2; column-gap: 8mm; font-size: 9.6pt; }
+  .toc div { margin-bottom: 1.2mm; break-inside: avoid; }
+  .toc .n { color: #1a4f8a; font-weight: 700; display: inline-block; width: 7mm; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 3mm; margin: 2mm 0 4mm; }
+  .card { border: 1px solid #e3e8ef; border-top: 3px solid #1a4f8a; padding: 2.5mm 3mm; page-break-inside: avoid; }
+  .card h4 { margin: 0 0 1mm; font-size: 10pt; color: #1a4f8a; }
+  .card p, .card ul { font-size: 9pt; margin-bottom: 0; }
+  svg { display: block; margin: 2mm auto 4mm; max-width: 100%; }
+  .fig { text-align: center; font-size: 8.4pt; color: #4a5568; margin-top: -2mm; margin-bottom: 4mm; }
+  .kpi { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2.5mm; margin: 2mm 0 4mm; }
+  .kpi div { border: 1px solid #e3e8ef; padding: 2mm; text-align: center; }
+  .kpi b { display: block; font-size: 14pt; color: #1a4f8a; }
+  .kpi span { font-size: 8pt; color: #4a5568; }
+  .avoid { page-break-inside: avoid; }
+</style>
+</head>
+<body>
+
+<!-- ===================== KAPAK ===================== -->
+<section class="cover">
+  <div>
+    <div class="brand">KIQRO</div>
+    <div class="title">Kiqro Offerwall Ağı<br>Ürün, İş Modeli ve Teknik Tasarım Dökümanı</div>
+    <div class="sub">Reklamveren paneli, yayıncı paneli, offerwall, takip altyapısı, fraud, faturalama ve yol haritası</div>
+    <div class="bar"></div>
+  </div>
+  <table class="meta">
+    <tr><td style="width:45mm"><b>Belge türü</b></td><td>Ürün gereksinim dökümanı (PRD) + teknik mimari</td></tr>
+    <tr><td><b>Sürüm</b></td><td>Taslak v1.0 — kararlar işlendi (29 Ekim 2026)</td></tr>
+    <tr><td><b>Tarih</b></td><td>29 Ekim 2026</td></tr>
+    <tr><td><b>Hazırlayan</b></td><td>Kiqro Yazılım ve Dijital Pazarlama Ltd. Şti.</td></tr>
+    <tr><td><b>Gizlilik</b></td><td>Şirket içi — dağıtılmaz</td></tr>
+    <tr><td><b>Kullanım</b></td><td>Bu döküman onaylandıktan sonra geliştirme için ana referans olarak kullanılacaktır. Bölüm 22.2'deki kararlar 29 Ekim 2026'da onaylanmış ve dökümana işlenmiştir.</td></tr>
+  </table>
+</section>
+
+<!-- ===================== İÇİNDEKİLER ===================== -->
+<h1 style="page-break-before: always;">İçindekiler</h1>
+<div class="toc">
+  <div><span class="n">1</span>Yönetici özeti</div>
+  <div><span class="n">2</span>Mevcut durum ve neden kendi ağımız</div>
+  <div><span class="n">3</span>Rakip ve referans platform analizi</div>
+  <div><span class="n">4</span>Ekosistem, aktörler ve para akışı</div>
+  <div><span class="n">5</span>Fiyatlama modelleri ve gelir paylaşımı</div>
+  <div><span class="n">6</span>Ürün kapsamı: altı yüzey</div>
+  <div><span class="n">7</span>Reklamveren paneli (detaylı)</div>
+  <div><span class="n">8</span>Kampanya oluşturma sihirbazı</div>
+  <div><span class="n">9</span>Raporlama ve analitik</div>
+  <div><span class="n">10</span>Yayıncı paneli</div>
+  <div><span class="n">11</span>Offerwall son kullanıcı deneyimi ve SDK'lar</div>
+  <div><span class="n">12</span>Yönetim (operasyon) paneli</div>
+  <div><span class="n">13</span>Takip, attribution ve postback altyapısı</div>
+  <div><span class="n">14</span>MMP entegrasyonları ve iOS/Android özel durumları</div>
+  <div><span class="n">15</span>Fraud önleme ve trafik kalitesi</div>
+  <div><span class="n">16</span>Teknik mimari ve veri modeli</div>
+  <div><span class="n">17</span>Public API tasarımı</div>
+  <div><span class="n">18</span>Ödeme, faturalama, muhasebe ve vergi</div>
+  <div><span class="n">19</span>Hukuk, gizlilik ve mağaza politikaları</div>
+  <div><span class="n">20</span>Reklamveren pazarlama web sitesi</div>
+  <div><span class="n">21</span>Yol haritası, ekip, bütçe ve KPI'lar</div>
+  <div><span class="n">22</span>Riskler ve onaylanan kararlar</div>
+  <div><span class="n">E</span>Ekler: makro listesi, postback örnekleri, sözlük, kaynaklar</div>
+</div>
+
+<!-- ===================== 1 ===================== -->
+<h1>1. Yönetici özeti</h1>
+<p>Kiqro bugün 15'ten fazla üçüncü taraf offerwall ve surveywall sağlayıcısını tek bir API katmanında birleştiren bir <b>yayıncıdır (publisher)</b>. Reklamverenin parası Kiqro'ya ancak Torox, AdscendMedia, ayeT-Studios, CPX Research, Lootably gibi aracılar üzerinden ulaşır ve bu aracılar zincirden kendi paylarını alır. Ayrıca envanterin miktarı ve birim değeri Kiqro'nun kontrolünde değildir: Temmuz 2026'da tamamlanan görev hacmi Haziran'ın %83'ü olmasına rağmen ciro %28'inde kalmış, görev başına gelir 0,501 dolardan 0,169 dolara düşmüştür. Kredilendirilen işlemlerin üçte ikisi tek bir sağlayıcıdan gelmektedir.</p>
+<p>Bu döküman, Kiqro'nun bu ilişkinin yönünü tersine çevirerek <b>kendi offerwall ağını</b> nasıl kuracağını tanımlar: reklamveren (oyun stüdyosu, fintech, SaaS, e-ticaret, müzik) kampanyasını doğrudan Kiqro'ya tanımlar; kampanya önce Kiqro'nun kendi kullanıcı platformunda (kiqro.com, iOS, Android), ardından ağa bağlanan üçüncü taraf yayıncılarda yayınlanır. Kiqro, değer zincirinde <b>yayıncı konumundan ağ (network) katmanına</b> geçer.</p>
+
+<div class="kpi">
+  <div><b>6</b><span>ürün yüzeyi (site, reklamveren, yayıncı, offerwall, admin, API)</span></div>
+  <div><b>4</b><span>geliştirme fazı (MVP → self-serve → ağ → optimizasyon)</span></div>
+  <div><b>~16 hf</b><span>Faz 1 MVP: ilk doğrudan reklamveren canlıda</span></div>
+  <div><b>%100</b><span>MVP'de doğrudan kampanya gelirinin Kiqro'da kalan oranı (aracısız)</span></div>
+</div>
+
+<h2>Önerilen strateji: “önce kendi envanterimiz, sonra ağ”</h2>
+<ol>
+  <li><b>Faz 1 — Doğrudan kampanya MVP'si (yayıncı = sadece Kiqro).</b> Reklamveren ile doğrudan anlaşılır, kampanyalar admin panelinden Kiqro ekibi tarafından kurulur, reklamverene salt okunur bir raporlama paneli verilir; bakiye Stripe ile yüklenir. Takip, MMP (AppsFlyer, Adjust, Singular) postback'leri ve S2S postback üzerinden yapılır. Kiqro uygulaması ağa <b>diğer offerwall'larda olduğu gibi bir yayıncı olarak</b> entegre edilir: kullanıcı ödülü (döviz kuru) entegrasyon sırasında placement ayarında belirlenir, ödül kullanıcıya anında verilir, sonradan gelen geri almalar chargeback ile işlenir.</li>
+  <li><b>Faz 2 — Self-serve reklamveren paneli.</b> Reklamveren kendisi kayıt olur, bakiye yükler (Stripe zaten F1'de; F2'de SEPA, otomatik yükleme ve fatura otomasyonu eklenir), kampanya sihirbazıyla kampanya kurar, onaya gönderir. MMP'lerde “entegre partner” olarak listelenme süreci tamamlanır.</li>
+  <li><b>Faz 3 — Yayıncı ağı.</b> Üçüncü taraf ödül uygulamaları, oyunlar ve web siteleri Kiqro offerwall'unu iframe/SDK ile entegre eder. Yayıncı paneli, gelir paylaşımı ve yayıncı ödemeleri devreye girer.</li>
+  <li><b>Faz 4 — Optimizasyon ve farklılaşma.</b> ROAS hedefli otomatik teklif, ML tabanlı görev sıralama, kaynak bazlı teklif. (Kiqro Artists ve Doğrulanmış Deneyim Ağı bu ağdan <b>ayrı sistemler</b> olarak yürütülür — K-15.)</li>
+</ol>
+<div class="box"><b class="t">Neden bu sıralama?</b>Bir ağın en zor kısmı iki tarafı aynı anda bulmaktır (tavuk-yumurta problemi). Kiqro'nun avantajı arz tarafının zaten var olmasıdır: 69.635 kayıtlı kullanıcı, 110 ülke, 13 dil, ölçülmüş %68,6 net marj. Bu nedenle ilk reklamverene “bizim ağımızdaki yayıncılar” değil, “bizim kullanıcılarımız” satılır; yayıncı ağı ancak reklamveren talebi kullanıcı havuzunu aştığında açılır. Bu, hem yazılım kapsamını hem de fraud riskini ilk 6 ayda dramatik biçimde düşürür.</div>
+
+<!-- ===================== 2 ===================== -->
+<h1>2. Mevcut durum ve neden kendi ağımız</h1>
+<h2>2.1 Bugünkü değer zinciri</h2>
+<svg width="660" height="120" viewBox="0 0 660 120" font-family="Segoe UI, Arial" font-size="11">
+  <defs><marker id="a" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#38445a"/></marker></defs>
+  <rect x="5" y="35" width="110" height="46" rx="5" fill="#eef2f7" stroke="#1a4f8a"/><text x="60" y="55" text-anchor="middle" font-weight="600">Reklamveren</text><text x="60" y="70" text-anchor="middle" fill="#4a5568">oyun / app</text>
+  <rect x="140" y="35" width="110" height="46" rx="5" fill="#eef2f7" stroke="#1a4f8a"/><text x="195" y="55" text-anchor="middle" font-weight="600">Ajans / DSP</text><text x="195" y="70" text-anchor="middle" fill="#4a5568">(opsiyonel)</text>
+  <rect x="275" y="35" width="120" height="46" rx="5" fill="#fdf7ee" stroke="#b1670f"/><text x="335" y="55" text-anchor="middle" font-weight="600">Offerwall ağı</text><text x="335" y="70" text-anchor="middle" fill="#4a5568">Torox, ayeT, Adscend…</text>
+  <rect x="420" y="35" width="110" height="46" rx="5" fill="#eef2f7" stroke="#1a4f8a"/><text x="475" y="55" text-anchor="middle" font-weight="600">Kiqro</text><text x="475" y="70" text-anchor="middle" fill="#4a5568">yayıncı</text>
+  <rect x="555" y="35" width="100" height="46" rx="5" fill="#eef2f7" stroke="#1a4f8a"/><text x="605" y="55" text-anchor="middle" font-weight="600">Kullanıcı</text><text x="605" y="70" text-anchor="middle" fill="#4a5568">ödül</text>
+  <line x1="115" y1="58" x2="138" y2="58" stroke="#38445a" marker-end="url(#a)"/><line x1="250" y1="58" x2="273" y2="58" stroke="#38445a" marker-end="url(#a)"/><line x1="395" y1="58" x2="418" y2="58" stroke="#38445a" marker-end="url(#a)"/><line x1="530" y1="58" x2="553" y2="58" stroke="#38445a" marker-end="url(#a)"/>
+  <text x="335" y="104" text-anchor="middle" fill="#b1670f">Ağ marjı tipik olarak %30–50 (sektör gözlemi, doğrulanmalı)</text>
+  <text x="330" y="20" text-anchor="middle" fill="#38445a" font-weight="600">Bugün: Kiqro zincirin sonunda, kalan pay üzerinden kazanıyor</text>
+</svg>
+<p>Hedef yapıda Kiqro, “Offerwall ağı” kutusunun yerine geçer. Doğrudan kampanyalarda reklamverenin ödediği tutarın tamamı Kiqro'ya gelir; kullanıcı ödülü düşüldükten sonra kalan tamamı marjdır. Üçüncü taraf yayıncılara dağıtılan kampanyalarda ise Kiqro ağ marjını alır.</p>
+
+<h2>2.2 Kendi ağın çözdüğü dört sorun</h2>
+<table>
+<tr><th style="width:28%">Sorun (ölçülmüş)</th><th>Kendi ağın etkisi</th></tr>
+<tr><td>Envanter değeri dalgalı: Haziran → Temmuz görev başına gelir %66 düştü</td><td>Doğrudan kampanyalarda fiyat reklamverenle sözleşmeyle sabitlenir; dönemsel bütçe kesintilerinden etkilenme azalır.</td></tr>
+<tr><td>Tek sağlayıcı bağımlılığı: kredilendirilen işlemlerin ~2/3'ü tek kaynaktan</td><td>Gelir kaynağı çeşitlenir; bir sağlayıcının hesabı kısıtlaması veya kapatması varoluşsal risk olmaktan çıkar.</td></tr>
+<tr><td>Aracı marjı: reklamveren bütçesinin bir kısmı zincirde kalıyor</td><td>Aynı reklamveren bütçesinden Kiqro'ya kalan pay ve kullanıcıya verilebilecek ödül birlikte artar → dönüşüm artar.</td></tr>
+<tr><td>Türk kullanıcı için düşük teklif: global reklamveren TR'ye az ödüyor</td><td>Türk / bölgesel reklamverenler (yerel oyun stüdyoları, fintech, e-ticaret) doğrudan TR kullanıcısı satın alabilir; bu pazarda global ağlar zayıftır.</td></tr>
+</table>
+
+<h2>2.3 Yeniden kullanılabilecek mevcut varlıklar</h2>
+<ul>
+  <li><b>Kullanıcı platformu</b> (web, iOS, Android) ve 13 dilli arayüz, çoklu para birimi, ülke bazlı ödeme altyapısı.</li>
+  <li><b>Sağlayıcı birleştirme katmanı</b>: 15+ sağlayıcının teklifini tek formatta normalize eden katman. Kiqro'nun kendi ağı bu katmana diğer sağlayıcılar gibi “Kiqro Direct” adlı bir sağlayıcı olarak, yayıncı entegrasyonu (Offers API + yayıncı postback'i) ile eklenir → kullanıcı tarafında neredeyse sıfır değişiklik.</li>
+  <li><b>Fraud skorlama</b>: bot, sahte hesap ve çoklu hesap tespiti. Ağ modelinde reklamverene satılan en önemli güvencedir.</li>
+  <li><b>Dinamik görev eşleştirme ve fiyatlama</b>: hangi teklifin hangi kullanıcıya hangi sırada gösterileceği.</li>
+  <li><b>Postback alma tecrübesi</b>: Kiqro bugün sağlayıcılardan postback alıyor; ağ olunca hem MMP'lerden postback alacak hem de yayıncılara postback gönderecek.</li>
+</ul>
+<div class="box warn"><b class="t">Kontrol edilmesi gereken: mevcut sağlayıcı sözleşmeleri</b>Bazı offerwall sağlayıcılarının yayıncı sözleşmelerinde “reklamvereni doğrudan kaçırmama (non-circumvention / non-solicitation)” maddeleri bulunur. Bir sağlayıcı üzerinden tanıdığımız bir reklamverenle doğrudan anlaşmak sözleşme ihlali olabilir. Faz 1'den önce tüm aktif sağlayıcı sözleşmeleri bu açıdan hukukçuya okutulmalı; ilk doğrudan reklamverenler bu sağlayıcıların bilinen reklamverenleri dışından seçilmelidir.</div>
+
+<!-- ===================== 3 ===================== -->
+<h1>3. Rakip ve referans platform analizi</h1>
+<p>Aşağıdaki platformlar, reklamveren paneli tasarımında örnek alınacak özellik setini belirlemek için incelenmiştir. Bazı ayrıntılar (özellikle panelin girişten sonraki ekranları) kamuya açık değildir; bu bölüm kamuya açık dokümantasyon, basın kaynakları ve sektör bilgisine dayanır ve rakamlar şirket beyanıdır.</p>
+
+<h2>3.1 Almedia (Freecash)</h2>
+<ul>
+  <li>Berlin merkezli; Freecash, PrizePlay ve zave.it'i işletir. Kendini “ödüllü kullanıcı edinimi (rewarded UA)” platformu olarak konumlar: reklamveren (çoğunlukla mobil oyun stüdyosu) etkileşimli kullanıcı için ödeme yapar, Freecash bunun bir kısmını kullanıcıya aktarır.</li>
+  <li>Şirket beyanlarına göre 1.200'ü aşkın reklamverene hizmet, 500 milyon doları aşan kümülatif kullanıcı ödemesi ve 1 milyar dolar yıllık gelir koşu hızı (run-rate). Rakamlar denetlenmemiştir.</li>
+  <li><b>Kritik ders:</b> Freecash 13 Nisan 2026'da App Store'dan, ardından Google Play'den kaldırıldı; Google Play'e 6 Mayıs 2026'da geri döndü. Apple belirli bir madde gerekçesi açıklamadı. 2026'da 100 milyon doların üzerinde kullanıcı edinimi harcayan bir şirket bile mağaza kararıyla kanalını bir gecede kaybedebiliyor. Kiqro için çıkarım: <b>web offerwall her zaman birinci sınıf vatandaş olmalı</b> ve mağaza politikalarına uyum (Bölüm 19) ürün gereksinimidir.</li>
+  <li>Model olarak Almedia hem büyük bir “ödül uygulaması” hem de reklamverenle doğrudan çalışan bir UA satıcısıdır. Bu, Kiqro'nun Faz 1–2 hedef modelinin büyük ölçekli karşılığıdır.</li>
+</ul>
+
+<h2>3.2 ayeT-Studios</h2>
+<ul>
+  <li>Almanya merkezli; hem yayıncı tarafı (Offerwall, Surveywall, Rewarded Video, SDK'lar: Android, iOS, Unity, React Native, web) hem reklamveren tarafı sunar.</li>
+  <li>Reklamverene <b>self-serve platform</b> sunar: kampanyaları gerçek zamanlı yönetme, CPI (yükle + aç) ve CPA/CPE kampanyaları, aracısız (direct) bütçe.</li>
+  <li>Yayıncı tarafında ayrı Offerwall ve Surveywall API'leri, kullanıcı bazlı filtreleme ve dönüşüm geri çağrıları (callback) bulunur.</li>
+  <li><b>Kiqro için çıkarım:</b> Bir ağın iki yüzü aynı ürün ailesinde olmalı; reklamveren paneli ve yayıncı SDK'sı aynı takip omurgasını paylaşmalı.</li>
+</ul>
+
+<h2>3.3 AdscendMedia (Edge226 şirketi)</h2>
+<ul>
+  <li>ABD merkezli; ödüllü offerwall alanının en eski oyuncularından. Ürünleri: Offer Wall (web + Android/iOS SDK + WebView), <b>Offer Wall API</b>, <b>Offers API</b> (teklifleri ham veri olarak çekip kendi arayüzünde gösterme) ve <b>Market Research API</b> (anket).</li>
+  <li>Reklamveren tarafında MMP'lerle postback entegrasyonu: Airbridge rehberine göre reklamverene Adscend tarafından bir “Advertiser ID” ve “Key” verilir, her uygulama içi olay için ayrı Event ID tanımlanır ve MMP bu kimliklerle Adscend'e postback atar.</li>
+  <li><b>Kiqro için çıkarım:</b> Reklamveren başına benzersiz kimlik + gizli anahtar + olay kimliği modeli basit ve MMP'lerle uyumludur; Kiqro aynı modeli kullanmalıdır (Bölüm 13).</li>
+</ul>
+
+<h2>3.4 Torox</h2>
+<ul>
+  <li>Oyun ve uygulama kullanıcı edinimine odaklı offerwall ağı; çok adımlı CPE (oyun içi seviye/etkinlik) teklifleriyle bilinir. Yayıncılara web offerwall ve API sunar; reklamverenle çoğunlukla hesap yöneticisi üzerinden çalışır.</li>
+  <li>Kamuya açık reklamveren dokümantasyonu sınırlıdır; özellik setinin doğrulanması için reklamveren olarak demo talep edilmesi önerilir (Bölüm 22, karar K-12).</li>
+  <li><b>Kiqro için çıkarım:</b> Çok adımlı (multi-reward) görev, kullanıcıya her adımda ayrı ödül, adım başına ayrı fiyat — Kiqro'nun kampanya modelinin merkezinde olmalıdır.</li>
+</ul>
+
+<h2>3.5 Referans: Tapjoy (Unity) ve Digital Turbine — en iyi belgelenmiş reklamveren panelleri</h2>
+<p>Tapjoy (Unity Grow Offerwall) ve Digital Turbine (DT Offer Wall, eski Fyber) reklamveren panelleri ayrıntılı biçimde belgelenmiştir ve Kiqro panelinin alan (field) düzeyindeki tasarımı için en iyi referanstır.</p>
+<table>
+<tr><th style="width:30%">Özellik</th><th>Tapjoy CPE reklam seti (belgelenmiş)</th></tr>
+<tr><td>Ödül tipi</td><td>Tek ödül (single reward) veya çoklu ödül (multi rewards). Çoklu ödülde doğrusal (sıralı) ve doğrusal olmayan olaylar.</td></tr>
+<tr><td>Olay satırı</td><td>MMP olay adı (MMP'dekiyle birebir aynı), olay tipi, olay değeri, teklif (bid).</td></tr>
+<tr><td>Teklif stratejisi</td><td>ROAS hedefi (ör. D3'te %90), varsayılan teklif + yayıncı uygulaması bazında teklif, CSV ile toplu teklif yükleme.</td></tr>
+<tr><td>Bütçe ve limitler</td><td>Günlük bütçe, toplam bütçe, toplam dönüşüm limiti; hangisine önce ulaşılırsa yayın durur.</td></tr>
+<tr><td>Hedefleme</td><td>Cihaz tipi, OS sürümü, yalnızca Wi-Fi, cihaz modeli, ülke/bölge, ABD DMA, yarıçap (CSV), yaş derecelendirmesi, cihaz dili.</td></tr>
+<tr><td>Takip</td><td>Client-side click + MMP takip linki (Adjust, AppsFlyer, Singular), attribution penceresi (gün).</td></tr>
+<tr><td>Kreatif</td><td>İkon, başlık, hero görsel, animasyonlu ikon, talimat (metin / 4 görsellik galeri / 15 sn video), her MMP olayına kullanıcı dostu ad, kreatifler arası A/B trafik bölme.</td></tr>
+<tr><td>Notlar ve inceleme</td><td>Yayıncı izin/engel listesi, minimum/maksimum tıklama→dönüşüm süresi (CTCT), ilk olaya tahmini süre, 5 ekran görüntüsü. Onay ~1 iş günü.</td></tr>
+</table>
+<p>Digital Turbine'in ACP Edge paneli ise self-serve akışı “Ürün ekle → Kampanya oluştur → Çeviriler → Önizleme” olarak kurgular; ülke ve kaynak bazında teklif ayarı ile gerçek zamanlı performans izleme sunar.</p>
+
+<h2>3.6 Karşılaştırma ve Kiqro'nun konumu</h2>
+<table>
+<tr><th>Özellik</th><th>Almedia</th><th>ayeT</th><th>Adscend</th><th>Torox</th><th>Tapjoy/DT</th><th>Kiqro hedefi</th></tr>
+<tr><td>Kendi kullanıcı platformu</td><td>Var (Freecash)</td><td>Yok</td><td>Yok</td><td>Yok</td><td>Kısmen</td><td><b>Var</b></td></tr>
+<tr><td>Self-serve reklamveren paneli</td><td>Sınırlı/AM</td><td>Var</td><td>AM ağırlıklı</td><td>AM ağırlıklı</td><td>Var</td><td>Faz 2</td></tr>
+<tr><td>Çoklu adımlı CPE</td><td>Var</td><td>Var</td><td>Var</td><td>Var</td><td>Var</td><td>Faz 1</td></tr>
+<tr><td>ROAS hedefli teklif</td><td>Var</td><td>?</td><td>?</td><td>?</td><td>Var</td><td>Faz 4</td></tr>
+<tr><td>Anket (surveywall)</td><td>Var</td><td>Var</td><td>Var</td><td>Var</td><td>Kısmen</td><td>Mevcut (3. taraf)</td></tr>
+<tr><td>Yerel ödeme / dil (TR, Nordik)</td><td>Orta</td><td>Orta</td><td>Zayıf</td><td>Orta</td><td>Orta</td><td><b>Güçlü (13 dil)</b></td></tr>
+<tr><td>Fiziksel dünya (saha) görevleri</td><td>Yok</td><td>Yok</td><td>Yok</td><td>Yok</td><td>Yok</td><td><b>DDN (ayrı ürün)</b></td></tr>
+</table>
+<p class="small">AM: hesap yöneticisi (account manager) üzerinden kurulum. “?”: kamuya açık kaynakta doğrulanamadı.</p>
+<div class="box ok"><b class="t">Konumlanma önerisi</b>“Doğrulanmış etkileşim için ödeme yaparsınız; fraud faturanıza yansımaz; Türkiye, Nordikler ve DACH'ta yerel dilde, yerel ödemeli, yüksek etkileşimli kullanıcıya doğrudan ulaşırsınız.” Kiqro, büyük global ağlarla teklif hacminde değil, <b>şeffaflık, yerel pazar derinliği ve trafik kalitesinde</b> yarışmalıdır.</div>
+
+<!-- ===================== 4 ===================== -->
+<h1>4. Ekosistem, aktörler ve para akışı</h1>
+<h2>4.1 Aktörler</h2>
+<table>
+<tr><th style="width:22%">Aktör</th><th>Rol</th><th style="width:30%">Kiqro'daki karşılığı</th></tr>
+<tr><td>Reklamveren</td><td>Kullanıcı / aksiyon satın alan taraf: oyun stüdyosu, fintech, SaaS, e-ticaret, plak şirketi.</td><td>Reklamveren paneli, bakiye, kampanyalar</td></tr>
+<tr><td>Ajans</td><td>Birden fazla reklamveren adına kampanya yöneten taraf.</td><td>Çoklu müşteri (multi-client) hesabı</td></tr>
+<tr><td>Yayıncı (publisher)</td><td>Offerwall'u kendi kullanıcısına gösteren uygulama/site. İlk yayıncı Kiqro'nun kendisidir.</td><td>Yayıncı paneli, placement, SDK</td></tr>
+<tr><td>Son kullanıcı</td><td>Görevi tamamlayıp ödül alan kişi.</td><td>Offerwall arayüzü</td></tr>
+<tr><td>MMP</td><td>Mobil ölçüm ortağı (AppsFlyer, Adjust, Singular, Kochava, Branch, Tenjin). Yüklemenin/olayın hangi ağa ait olduğuna karar verir.</td><td>Entegre partner kaydı, postback alıcısı</td></tr>
+<tr><td>Ödeme sağlayıcıları</td><td>Reklamverenden tahsilat (Stripe), yayıncıya ödeme (Wise, PayPal, Payoneer, havale).</td><td>Faturalama ve defter (ledger) modülü</td></tr>
+<tr><td>Fraud/veri sağlayıcıları</td><td>IP itibarı, VPN/proxy tespiti, cihaz bütünlüğü (Play Integrity, App Attest).</td><td>Fraud servisi</td></tr>
+</table>
+
+<h2>4.2 Para akışı</h2>
+<svg width="660" height="200" viewBox="0 0 660 200" font-family="Segoe UI, Arial" font-size="11">
+  <defs><marker id="b" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#1a4f8a"/></marker></defs>
+  <rect x="10" y="70" width="120" height="52" rx="5" fill="#eef2f7" stroke="#1a4f8a"/><text x="70" y="92" text-anchor="middle" font-weight="600">Reklamveren</text><text x="70" y="108" text-anchor="middle" fill="#4a5568">ön ödemeli bakiye</text>
+  <rect x="240" y="70" width="140" height="52" rx="5" fill="#1a4f8a"/><text x="310" y="92" text-anchor="middle" fill="#fff" font-weight="600">Kiqro Ağı</text><text x="310" y="108" text-anchor="middle" fill="#dfe8f3">ledger + marj</text>
+  <rect x="500" y="10" width="150" height="52" rx="5" fill="#eef2f7" stroke="#1a4f8a"/><text x="575" y="32" text-anchor="middle" font-weight="600">Kiqro uygulaması</text><text x="575" y="48" text-anchor="middle" fill="#4a5568">(1. taraf yayıncı)</text>
+  <rect x="500" y="130" width="150" height="52" rx="5" fill="#eef2f7" stroke="#1a4f8a"/><text x="575" y="152" text-anchor="middle" font-weight="600">3. taraf yayıncı</text><text x="575" y="168" text-anchor="middle" fill="#4a5568">net-30 ödeme</text>
+  <line x1="130" y1="96" x2="238" y2="96" stroke="#1a4f8a" stroke-width="2" marker-end="url(#b)"/><text x="184" y="88" text-anchor="middle">100 birim</text>
+  <line x1="380" y1="85" x2="498" y2="40" stroke="#1a4f8a" stroke-width="2" marker-end="url(#b)"/><text x="440" y="50" text-anchor="middle">kullanıcı ödülü</text>
+  <line x1="380" y1="108" x2="498" y2="152" stroke="#1a4f8a" stroke-width="2" marker-end="url(#b)"/><text x="440" y="148" text-anchor="middle">gelir payı</text>
+</svg>
+<p class="fig">Şekil 1 — Reklamveren bakiyesinden kullanıcı ödülüne ve yayıncı payına para akışı</p>
+<ol>
+  <li>Reklamveren bakiye yükler (ön ödeme). Büyük reklamverenlere ileride kredi limiti + net-15/30 faturalama tanınabilir.</li>
+  <li>Doğrulanmış her dönüşümde reklamveren bakiyesinden <b>reklamveren fiyatı</b> düşülür (ledger kaydı: reklamveren borç, Kiqro gelir).</li>
+  <li>Dönüşüm Kiqro uygulamasında gerçekleştiyse kullanıcıya <b>ödül</b> yazılır; gerçekleştiği yer 3. taraf yayıncıysa yayıncıya <b>yayıncı payı</b> yazılır ve yayıncı kendi kullanıcısına ödül verir.</li>
+  <li>Kullanıcı ödülü ve yayıncı payı <b>anında</b> yazılır (bekletme yok). Reversal penceresi içinde geri alma gelirse reklamverene iade edilir, yayıncıya chargeback (<code>status=2</code>) gönderilir ve ledger ters kayıtla düzeltilir.</li>
+</ol>
+
+<!-- ===================== 5 ===================== -->
+<h1>5. Fiyatlama modelleri ve gelir paylaşımı</h1>
+<h2>5.1 Desteklenecek fiyatlama modelleri</h2>
+<table>
+<tr><th style="width:16%">Model</th><th>Tanım</th><th style="width:22%">Örnek kullanım</th><th style="width:10%">Faz</th></tr>
+<tr><td><b>CPI</b></td><td>Cost per install. Yükleme + ilk açılış MMP tarafından ağa atfedildiğinde ödeme.</td><td>Hiper-casual oyun, basit uygulama</td><td><span class="tag p0">F1</span></td></tr>
+<tr><td><b>CPE (çoklu adım)</b></td><td>Cost per engagement. Her olay (seviye 10, seviye 25, ilk satın alma) için ayrı fiyat. Kullanıcı her adımda ayrı ödül alır.</td><td>Mid-core oyun, uzun ömürlü uygulama</td><td><span class="tag p0">F1</span></td></tr>
+<tr><td><b>CPA</b></td><td>Cost per action. Tek bir hedef aksiyon: kayıt, KYC tamamlama, ilk yatırma, ilk sipariş.</td><td>Fintech, e-ticaret, SaaS deneme</td><td><span class="tag p0">F1</span></td></tr>
+<tr><td><b>CPL / CPR</b></td><td>Cost per lead / registration. Web formu, e-posta onayı.</td><td>Web SaaS, abonelik</td><td><span class="tag p1">F2</span></td></tr>
+<tr><td><b>CPS (gelir payı)</b></td><td>Satışın %'si kadar ödeme (cashback benzeri).</td><td>E-ticaret</td><td><span class="tag p2">F3</span></td></tr>
+<tr><td><b>ROAS hedefli</b></td><td>Reklamveren hedef ROAS (ör. D7 %40) verir; sistem olay fiyatlarını ve dağıtımı otomatik ayarlar.</td><td>Büyük oyun stüdyoları</td><td><span class="tag p2">F4</span></td></tr>
+<tr><td><b>Stream / dinleme</b></td><td>Doğrulanmış dinleme / şarkı sözü doğrulaması başına. <i>Kapsam dışı:</i> Kiqro Artists ayrı sistemde yürütülür (K-15).</td><td>Plak şirketleri</td><td><span class="tag p2">—</span></td></tr>
+</table>
+
+<h2>5.2 Fiyat katmanları — tek kampanyada üç ayrı tutar</h2>
+<p>Her olay (event) için sistemde birbirinden bağımsız üç tutar tutulur. Bu ayrım veri modelinin temelidir ve ilk günden kurulmalıdır:</p>
+<table>
+<tr><th style="width:24%">Tutar</th><th>Açıklama</th><th style="width:25%">Kim görür?</th></tr>
+<tr><td><b>Reklamveren fiyatı</b> (advertiser payout / bid)</td><td>Reklamverenin bakiyesinden düşen tutar. Ülke, OS ve kaynak bazında farklılaşabilir.</td><td>Reklamveren, admin</td></tr>
+<tr><td><b>Yayıncı payı</b> (publisher payout)</td><td>Yayıncıya yazılan tutar = reklamveren fiyatı × yayıncı gelir payı oranı. Kiqro 1. taraf yayıncı olduğunda iç transfer olarak tutulur.</td><td>Yayıncı, admin</td></tr>
+<tr><td><b>Kullanıcı ödülü</b></td><td>Son kullanıcıya gösterilen ve verilen ödül (puan / yerel para birimi). <b>Yayıncı belirler:</b> placement entegrasyonunda tanımlanan döviz kuru (1 $ yayıncı payı = X puan) ile hesaplanır. Kiqro uygulaması için de aynı ayar kullanılır.</td><td>Son kullanıcı</td></tr>
+</table>
+
+<h2>5.3 Örnek birim ekonomi (varsayımsal, karar bekliyor)</h2>
+<table>
+<tr><th>Senaryo</th><th>Reklamveren ödemesi</th><th>Yayıncı payı</th><th>Kullanıcı ödülü</th><th>Kiqro brüt marj</th></tr>
+<tr><td>Bugün: 3. taraf ağ → Kiqro</td><td>10,00 $</td><td>~6,00 $ (ağ ~%40 alır)</td><td>~2,00 $</td><td>~4,00 $ (%40)</td></tr>
+<tr><td>Doğrudan kampanya, Kiqro uygulamasında</td><td>10,00 $</td><td>iç gelir payı (admin belirler)</td><td>Kiqro placement kuruna göre, ör. 3,00 $</td><td><b>~7,00 $ (%70)</b></td></tr>
+<tr><td>Doğrudan kampanya, 3. taraf yayıncıda</td><td>10,00 $</td><td>6,50 $ (%65 pay)</td><td>yayıncı belirler</td><td>3,50 $ (%35)</td></tr>
+</table>
+<p class="muted">Not: Bugünkü ölçülen net marj %68,6'dır; bu, ağın kesintisinden sonra kalan tutar üzerinden kullanıcıya ödenen payı yansıtır. Doğrudan kampanyada kullanıcı ödülü artırılabilir (dönüşüm artar) ve yine de Kiqro'ya kalan mutlak tutar yükselir. Karar (K-6, K-7): Kullanıcı ödülü oranını her yayıncı kendi placement ayarında belirler; Kiqro uygulaması da bu kuralı kendi placement'ında uygular. Yayıncı gelir payı sabit değildir — Kiqro admin panelinden <b>her yayıncı (gerekirse her placement) için ayrı</b> tanımlanır.</p>
+
+<h2>5.4 Fiyat önerisi motoru (reklamverene “önerilen teklif”)</h2>
+<p>Self-serve panelde reklamveren olay fiyatı girerken sistem, ülke ve kategori bazında geçmiş verilerden bir öneri aralığı gösterir: “Bu ülkede benzer CPE olayları için önerilen aralık: X–Y $; bu aralığın altında teslimat düşük olabilir.” Başlangıçta bu tablo elle (admin panelinden) güncellenir; Faz 4'te veriden otomatik hesaplanır.</p>
+
+<!-- ===================== 6 ===================== -->
+<h1>6. Ürün kapsamı: altı yüzey</h1>
+<div class="grid2">
+  <div class="card"><h4>A. Pazarlama web sitesi</h4><p>advertise.kiqro.com. Reklamveren ve yayıncı kazanımı, fiyatlama, vaka çalışmaları, dokümantasyon, demo talebi.</p></div>
+  <div class="card"><h4>B. Reklamveren paneli</h4><p>advertiser.kiqro.com. Kayıt/KYC, uygulamalar, kampanyalar, raporlar, bakiye ve faturalar, ekip, API anahtarları.</p></div>
+  <div class="card"><h4>C. Yayıncı paneli</h4><p>publisher.kiqro.com. Uygulama/site ve placement tanımı, sanal para ayarı, postback, entegrasyon, gelir raporları, ödemeler.</p></div>
+  <div class="card"><h4>D. Offerwall + SDK'lar</h4><p>wall.kiqro.com iframe/web, Android, iOS, Unity, React Native, Flutter SDK; Offers API (ham teklif listesi).</p></div>
+  <div class="card"><h4>E. Yönetim (admin/ops) paneli</h4><p>admin.kiqro.com. Onaylar, kampanya incelemesi, fraud konsolu, manuel düzeltmeler, finans mutabakatı, fiyat tabloları.</p></div>
+  <div class="card"><h4>F. Takip altyapısı + Public API</h4><p>track.kiqro.com (tıklama/yönlendirme), pb.kiqro.com (postback alımı), api.kiqro.com (REST API), webhook'lar.</p></div>
+</div>
+
+<h2>6.1 Kullanıcı rolleri ve yetkiler</h2>
+<table>
+<tr><th style="width:22%">Rol</th><th>Yüzey</th><th>Yetkiler</th></tr>
+<tr><td>Reklamveren Sahibi</td><td>B</td><td>Her şey; ödeme yöntemi, ekip yönetimi, hesap kapatma.</td></tr>
+<tr><td>Reklamveren Yöneticisi</td><td>B</td><td>Kampanya oluşturma/düzenleme, raporlar, bakiye yükleme (ödeme yöntemi ekleyemez).</td></tr>
+<tr><td>Reklamveren Analist</td><td>B</td><td>Salt okunur raporlar ve dışa aktarma.</td></tr>
+<tr><td>Finans</td><td>B, C</td><td>Faturalar, ödemeler, fatura bilgileri.</td></tr>
+<tr><td>Ajans Yöneticisi</td><td>B</td><td>Birden fazla reklamveren hesabı arasında geçiş; müşteri bazlı yetki.</td></tr>
+<tr><td>Yayıncı Sahibi / Geliştirici</td><td>C</td><td>Placement, postback, SDK anahtarları / yalnızca teknik ayarlar.</td></tr>
+<tr><td>Kiqro Admin / Hesap Yöneticisi / Fraud Analisti / Finans</td><td>E</td><td>Rol bazlı; her işlem denetim günlüğüne (audit log) yazılır. Admin'in reklamveren hesabına “kimliğine bürünerek” girişi (impersonation) kayıt altına alınır.</td></tr>
+</table>
+
+<!-- ===================== 7 ===================== -->
+<h1>7. Reklamveren paneli (detaylı)</h1>
+<h2>7.1 Bilgi mimarisi (menü)</h2>
+<table>
+<tr><th style="width:24%">Menü</th><th>İçerik</th><th style="width:10%">Faz</th></tr>
+<tr><td>Genel Bakış (Dashboard)</td><td>Bugün / 7 gün / 30 gün harcama, dönüşüm, eCPA, aktif kampanya, bakiye ve tahmini kalan gün, uyarılar (bütçe bitiyor, onay bekliyor, postback gelmiyor).</td><td><span class="tag p0">F1</span></td></tr>
+<tr><td>Uygulamalar / Ürünler</td><td>Mağaza URL'si veya web sitesi ile ürün ekleme; mağazadan otomatik ikon, ad, kategori, yaş derecesi çekme; MMP seçimi ve bağlantı durumu; olay sözlüğü (MMP olay adları).</td><td><span class="tag p0">F1</span></td></tr>
+<tr><td>Kampanyalar</td><td>Liste (durum, bütçe, harcama, dönüşüm, eCPA, ROAS), filtreleme, toplu duraklatma, kopyalama, sihirbaz ile yeni kampanya.</td><td><span class="tag p0">F1</span> (görüntüleme) / <span class="tag p1">F2</span> (oluşturma)</td></tr>
+<tr><td>Raporlar</td><td>Özelleştirilebilir pivot rapor, kohort / retention, olay hunisi, kaynak (sub-ID) kırılımı, reversal raporu, zamanlanmış e-posta raporları, CSV/XLSX dışa aktarma.</td><td><span class="tag p0">F1</span>–<span class="tag p1">F2</span></td></tr>
+<tr><td>Kaynak Kontrolü</td><td>Yayıncı/alt kaynak bazında performans, engelleme ve izin listesi, kaynak bazında teklif çarpanı.</td><td><span class="tag p2">F3</span></td></tr>
+<tr><td>Faturalama</td><td>Bakiye, yükleme (kart, SEPA, havale), otomatik yükleme (auto-recharge), faturalar ve PDF indirme, işlem geçmişi, fatura bilgileri ve VAT numarası.</td><td><span class="tag p1">F2</span></td></tr>
+<tr><td>Entegrasyon</td><td>MMP kurulum rehberleri, postback URL'leri, test aracı (postback simülatörü), son 100 postback günlüğü ve hata nedenleri.</td><td><span class="tag p0">F1</span></td></tr>
+<tr><td>Ekip</td><td>Kullanıcı davet, roller, 2FA zorunluluğu.</td><td><span class="tag p1">F2</span></td></tr>
+<tr><td>API</td><td>API anahtarları (okuma / yazma kapsamlı), webhook uç noktaları, istek günlüğü.</td><td><span class="tag p1">F2</span></td></tr>
+<tr><td>Destek</td><td>Talep oluşturma, hesap yöneticisi iletişimi, SSS, durum sayfası.</td><td><span class="tag p0">F1</span></td></tr>
+</table>
+
+<h2>7.2 Kayıt ve hesap doğrulama (onboarding / KYB)</h2>
+<ol>
+  <li><b>Kayıt:</b> e-posta + parola veya Google ile giriş; e-posta doğrulama; zorunlu 2FA (TOTP) — reklamveren hesabı para içerdiği için.</li>
+  <li><b>Şirket bilgisi:</b> ticari unvan, ülke, adres, vergi/VAT numarası (AB içi VIES sorgusu ile otomatik doğrulama), web sitesi, iletişim kişisi, aylık tahmini bütçe, kategori.</li>
+  <li><b>Doğrulama (KYB):</b> otomatik kontroller (alan adı e-postası, VIES, mağazada geliştirici adı eşleşmesi) + manuel admin onayı. Riskli kategoriler (kumar, kripto, finansal ürünler, yetişkin) için lisans/belge yükleme.</li>
+  <li><b>Sözleşme:</b> Reklamveren Hizmet Şartları ve Veri İşleme Sözleşmesi (DPA) tıklama ile kabul; büyük müşteriler için imzalı Insertion Order (IO).</li>
+  <li><b>İlk ürün ve MMP bağlantısı:</b> sihirbaz kullanıcıyı ürün ekleme ve test postback'i gönderme adımına yönlendirir. Test postback başarılı olmadan kampanya onaya gönderilemez.</li>
+</ol>
+
+<h2>7.3 Ürün (uygulama) kaydı</h2>
+<table>
+<tr><th style="width:28%">Alan</th><th>Açıklama</th></tr>
+<tr><td>Platform</td><td>Android, iOS, Web, PC/Steam (ileride), Konsol (ileride).</td></tr>
+<tr><td>Mağaza URL'si / paket adı</td><td>Google Play paket adı, App Store ID; web için alan adı. Mağaza verisi otomatik çekilir ve günlük güncellenir (uygulama mağazadan kalkarsa kampanyalar otomatik duraklatılır).</td></tr>
+<tr><td>MMP</td><td>AppsFlyer, Adjust, Singular, Kochava, Branch, Tenjin, Airbridge, “MMP yok — S2S postback”, “Kiqro SDK”.</td></tr>
+<tr><td>Olay sözlüğü</td><td>MMP'deki olay adları (ör. <code>af_level_achieved_10</code>, <code>first_deposit</code>). Postback geldikçe sistem bilinmeyen olay adlarını “keşfedilen olaylar” olarak listeler; reklamveren tek tıkla sözlüğe ekler.</td></tr>
+<tr><td>Kategori ve yaş derecesi</td><td>Hedefleme ve politika kontrolü için.</td></tr>
+<tr><td>Gelir olayı</td><td>ROAS hesaplaması için hangi olayların gelir taşıdığı ve para birimi (ör. <code>af_purchase</code>, <code>revenue</code> alanı).</td></tr>
+</table>
+
+<!-- ===================== 8 ===================== -->
+<h1>8. Kampanya oluşturma sihirbazı</h1>
+<p>Sihirbaz yedi adımdan oluşur. Her adım kaydedilebilir (taslak), ve son adımda tüm alanlar bir özet ekranında gösterilip onaya gönderilir. Faz 1'de aynı form admin panelinde Kiqro ekibi tarafından kullanılır; Faz 2'de reklamverene açılır.</p>
+
+<h2>Adım 1 — Temel bilgiler</h2>
+<table>
+<tr><th style="width:28%">Alan</th><th>Açıklama / kural</th></tr>
+<tr><td>Kampanya adı</td><td>Dahili ad; kullanıcıya gösterilmez.</td></tr>
+<tr><td>Ürün</td><td>Kayıtlı ürünlerden seçim.</td></tr>
+<tr><td>Hedef / model</td><td>CPI, CPE (çoklu adım), CPA, CPL, Anket, Stream. Seçim sonraki adımların alanlarını değiştirir.</td></tr>
+<tr><td>Başlangıç / bitiş</td><td>Tarih-saat ve saat dilimi; opsiyonel gün/saat planlaması (dayparting).</td></tr>
+<tr><td>Kullanıcı tipi</td><td>Yalnızca yeni kullanıcı (varsayılan; MMP yeniden yükleme kuralı ile) / yeniden etkileşim (re-engagement).</td></tr>
+</table>
+
+<h2>Adım 2 — Görevler (olaylar) ve ödemeler</h2>
+<p>Kampanyanın kalbidir. Her satır bir görevdir:</p>
+<table>
+<tr><th style="width:25%">Alan</th><th>Açıklama</th></tr>
+<tr><td>Görev sırası</td><td>Doğrusal (sıralı — seviye 5 → 10 → 20) veya doğrusal olmayan (herhangi sırada).</td></tr>
+<tr><td>MMP olay adı</td><td>Olay sözlüğünden; MMP'dekiyle birebir aynı olmalı. CPI için sistem olayı <code>install</code>.</td></tr>
+<tr><td>Olay değeri koşulu (ops.)</td><td>Ör. <code>level &gt;= 10</code>, <code>revenue &gt;= 4.99</code>.</td></tr>
+<tr><td>Kullanıcıya görünen ad</td><td>“Seviye 10'a ulaş”. 13 dil için çeviri alanı; boş bırakılırsa makine çevirisi + admin kontrolü.</td></tr>
+<tr><td>Reklamveren fiyatı</td><td>Varsayılan fiyat + ülke bazında fiyat tablosu (CSV ile içe aktarılabilir).</td></tr>
+<tr><td>Tamamlama süresi limiti</td><td>Yüklemeden itibaren kaç gün içinde (ör. 14 gün). Sonrasında gelen olay ödenmez.</td></tr>
+<tr><td>Olay başına limit</td><td>Bu olay için toplam ödenecek dönüşüm sayısı (ops.).</td></tr>
+<tr><td>Bonus / zaman sınırlı ödül</td><td>“İlk 3 günde seviye 10 = +%50 ödül” gibi hızlandırıcılar (Faz 3).</td></tr>
+</table>
+<div class="box"><b class="t">Kural: kullanıcı ödülünü reklamveren belirlemez</b>Reklamveren yalnızca kendi ödediği tutarı belirler. Kullanıcıya gösterilen ödül, yayıncının placement entegrasyonunda belirlediği döviz kuru ile hesaplanır (Kiqro uygulamasında da Kiqro'nun kendi placement ayarı). Reklamveren panelinde “tahmini kullanıcı ödülü” sadece bilgi amaçlı gösterilebilir.</div>
+
+<h2>Adım 3 — Hedefleme</h2>
+<table>
+<tr><th style="width:25%">Boyut</th><th>Seçenekler</th></tr>
+<tr><td>Coğrafya</td><td>Ülke (zorunlu), bölge/şehir (opsiyonel). IP + cihaz dili + SIM ülkesi (SDK ile) tutarlılık kontrolü.</td></tr>
+<tr><td>Platform / cihaz</td><td>OS, minimum OS sürümü, cihaz tipi (telefon/tablet), cihaz modeli izin/engel listesi, minimum RAM (oyunlar için).</td></tr>
+<tr><td>Dil</td><td>Cihaz/hesap dili.</td></tr>
+<tr><td>Demografi</td><td>Yaş aralığı (min. 18 önerilir), cinsiyet — Kiqro profil verisinden; yalnızca kullanıcının açık rızası olan profil alanları kullanılır.</td></tr>
+<tr><td>Kullanıcı kalitesi</td><td>Minimum Kiqro kalite skoru, minimum hesap yaşı, “daha önce X kategorisinde ödeme yapmış” (Faz 4).</td></tr>
+<tr><td>Bağlantı</td><td>Yalnızca Wi-Fi (büyük oyunlar için).</td></tr>
+<tr><td>Yayıncı</td><td>Yalnızca Kiqro uygulaması / tüm ağ / seçili yayıncılar; engel listesi (Faz 3).</td></tr>
+</table>
+
+<h2>Adım 4 — Bütçe ve limitler</h2>
+<table>
+<tr><th style="width:28%">Alan</th><th>Kural</th></tr>
+<tr><td>Toplam bütçe</td><td>Zorunlu. Ulaşıldığında kampanya otomatik durur.</td></tr>
+<tr><td>Günlük bütçe</td><td>Opsiyonel. UTC veya reklamveren saat diliminde gün sıfırlaması.</td></tr>
+<tr><td>Günlük / toplam yükleme limiti (cap)</td><td>CPI/CPE için yükleme sayısı limiti.</td></tr>
+<tr><td>Ülke bazında limit</td><td>Ör. DE günlük 200, FI günlük 50.</td></tr>
+<tr><td>Teslimat hızı</td><td>Standart (gün içine yay) / Hızlandırılmış.</td></tr>
+</table>
+<div class="box warn"><b class="t">Teknik not: bütçe aşımı (overdelivery)</b>Çoklu adımlı kampanyalarda kullanıcı bugün yükler, ama ödenecek olaylar 14 gün boyunca gelir. Bu yüzden bütçe kontrolü sadece harcanmış tutara değil <b>“taahhüt edilmiş tahmini harcamaya”</b> göre yapılmalıdır: yeni tıklama kabul edilmeden önce <i>harcanan + (aktif kullanıcılar × beklenen kalan olay değeri)</i> hesaplanır. Bütçe bittiğinde yeni kullanıcı alımı durur; daha önce başlamış kullanıcıların olayları ödenmeye devam eder (sektör pratiği) — bu davranış sözleşmede açıkça yazılmalıdır.</div>
+
+<h2>Adım 5 — Takip (tracking)</h2>
+<table>
+<tr><th style="width:28%">Alan</th><th>Açıklama</th></tr>
+<tr><td>Takip yöntemi</td><td>MMP takip linki / S2S postback (MMP'siz web teklifleri) / Kiqro SDK / Pixel (yalnız web, en zayıf yöntem).</td></tr>
+<tr><td>Takip linki</td><td>MMP'nin verdiği tıklama URL'si; sistem gerekli makroları (Ek A) otomatik ekler ve doğrular (ör. AppsFlyer linkinde <code>clickid={click_id}</code> yoksa uyarı).</td></tr>
+<tr><td>Görüntüleme (impression) URL'si</td><td>Opsiyonel; offerwall'da teklif görüntülendiğinde çağrılır.</td></tr>
+<tr><td>Attribution penceresi</td><td>Tıklama → yükleme maksimum süresi (öneri 7 gün).</td></tr>
+<tr><td>CTIT kuralları</td><td>Minimum ve maksimum tıklama→yükleme süresi. Ör. 10 saniyeden kısa yüklemeler fraud kabul edilir.</td></tr>
+<tr><td>Test</td><td>“Test tıklaması oluştur” → reklamveren gerçek cihazla yükler → panelde tıklama, yükleme ve olayların geldiği canlı izlenir.</td></tr>
+</table>
+
+<h2>Adım 6 — Kreatif ve talimatlar</h2>
+<ul>
+  <li>Teklif başlığı, kısa açıklama, adım adım talimat (kullanıcının görevi nasıl tamamlayacağı ve <b>neyin sayılmayacağı</b>: “daha önce yüklediyseniz ödül verilmez”).</li>
+  <li>İkon (mağazadan veya yükleme), kapak görseli (1200×628), opsiyonel 15 sn video, ekran görüntüleri.</li>
+  <li>13 dil için çeviriler; eksik dil varsa o dildeki kullanıcıya İngilizce gösterilir.</li>
+  <li>Kreatif A/B testi (trafik bölme yüzdesi) — Faz 3.</li>
+</ul>
+
+<h2>Adım 7 — Özet, politika onayı ve gönderim</h2>
+<p>Reklamveren özet ekranında tüm ayarları görür, reklam politikası onay kutusunu işaretler ve kampanyayı <b>incelemeye</b> gönderir. Kampanya durumları:</p>
+<pre>Taslak → İncelemede → (Reddedildi | Onaylandı) → Aktif ⇄ Duraklatıldı → (Bütçe bitti | Süresi doldu | Tamamlandı) → Arşiv</pre>
+<p>İnceleme kontrol listesi (admin): takip linki çalışıyor mu, test dönüşümü geldi mi, mağaza sayfası canlı mı, yaş derecesi ve kategori politikaya uygun mu, olay süreleri gerçekçi mi (seviye 50 / 3 gün gibi tamamlanamayacak hedefler kullanıcı şikâyeti üretir), fiyat önerilen aralıkta mı. Hedef inceleme süresi: 1 iş günü.</p>
+
+<h2>8.1 Kampanya canlıyken yapılabilecek değişiklikler</h2>
+<table>
+<tr><th>Değişiklik</th><th>Yeniden inceleme gerekir mi?</th></tr>
+<tr><td>Bütçe, limit, duraklatma, ülke ekleme/çıkarma</td><td>Hayır — anında</td></tr>
+<tr><td>Fiyat artırma</td><td>Hayır</td></tr>
+<tr><td>Fiyat düşürme</td><td>Hayır, ama yalnızca <b>yeni</b> tıklamalara uygulanır; önceden başlamış kullanıcıya söz verilen ödül değişmez</td></tr>
+<tr><td>Olay ekleme / olay tanımı değiştirme, takip linki değiştirme, kreatif</td><td>Evet</td></tr>
+</table>
+
+<!-- ===================== 9 ===================== -->
+<h1>9. Raporlama ve analitik</h1>
+<h2>9.1 Metrikler</h2>
+<table>
+<tr><th style="width:26%">Metrik</th><th>Tanım</th></tr>
+<tr><td>Gösterim / Tıklama / CTR</td><td>Teklifin offerwall'da görüntülenmesi, kullanıcının teklife tıklaması.</td></tr>
+<tr><td>Yükleme (install)</td><td>MMP tarafından Kiqro'ya atfedilmiş yükleme.</td></tr>
+<tr><td>CR (dönüşüm oranı)</td><td>Yükleme / tıklama.</td></tr>
+<tr><td>Olay tamamlama</td><td>Her olay için tamamlanan kullanıcı sayısı ve yüklemeye oranı (huni).</td></tr>
+<tr><td>Harcama</td><td>Doğrulanmış (reddedilmemiş) dönüşümlerin reklamveren fiyatı toplamı.</td></tr>
+<tr><td>eCPI / eCPA</td><td>Harcama / yükleme; harcama / hedef aksiyon.</td></tr>
+<tr><td>Gelir ve ROAS D0/D1/D3/D7/D14/D30</td><td>MMP'den gelen gelir olaylarından, yükleme gününe göre kohort. ROAS = kohort geliri / kohort harcaması.</td></tr>
+<tr><td>Retention D1/D7/D30</td><td>MMP'den gelen oturum/olay verisiyle (reklamveren paylaşıyorsa).</td></tr>
+<tr><td>Reversal / reddedilen</td><td>Fraud veya reklamveren talebiyle iptal edilen dönüşümler ve nedenleri.</td></tr>
+<tr><td>Ortalama tamamlama süresi</td><td>Yükleme → her olay arasındaki medyan süre.</td></tr>
+</table>
+<h2>9.2 Boyutlar (kırılımlar)</h2>
+<p>Tarih (saat/gün/hafta/ay), kampanya, ürün, olay, ülke, OS, OS sürümü, cihaz, dil, yayıncı (anonimleştirilmiş kaynak ID'si — yayıncının adı ancak yayıncı izin verirse gösterilir), alt kaynak (sub_id), kreatif, yaş grubu, cinsiyet.</p>
+<h2>9.3 Rapor özellikleri</h2>
+<ul>
+  <li>Tarih aralığı, karşılaştırma (önceki dönem), saat dilimi seçimi, para birimi (USD/EUR).</li>
+  <li>Kaydedilmiş görünümler; zamanlanmış e-posta raporu (günlük/haftalık); CSV/XLSX dışa aktarma; Reporting API (Bölüm 17).</li>
+  <li><b>Veri tazeliği:</b> tıklama ve dönüşümler &lt;1 dk; kohort/ROAS raporları saatlik.</li>
+  <li><b>Dönüşüm düzeyinde log:</b> her dönüşüm için tıklama ID'si, zaman damgaları, ülke, olay, durum, fraud skoru (bant olarak: düşük/orta/yüksek). Reklamverenin kendi MMP verisiyle mutabakat yapabilmesi için kritiktir.</li>
+</ul>
+<div class="box ok"><b class="t">Farklılaştırıcı: Kalite raporu</b>Reklamverene her ay “Elenen trafik raporu” gönderilir: kaç tıklama/yükleme fraud nedeniyle faturaya yansımadı, nedenleri (VPN, emülatör, CTIT, çoklu hesap). Bu, “fraud faturanıza yansımaz” vaadini somutlaştırır ve rakiplerde nadirdir.</div>
+
+<!-- ===================== 10 ===================== -->
+<h1>10. Yayıncı paneli</h1>
+<p>Dış yayıncılara Faz 3'te açılır. Faz 1–2'de tek yayıncı Kiqro'dur; Kiqro uygulaması diğer offerwall'ları nasıl entegre ediyorsa kendi ağını da öyle entegre eder: placement oluşturulur, döviz kuru (kullanıcı ödülü) belirlenir, yayıncı postback URL'si tanımlanır. Bu nedenle placement, döviz kuru ve yayıncı postback'i Faz 1 kapsamındadır ve Faz 3'e geçişte mimari değişmez.</p>
+<h2>10.1 Özellikler</h2>
+<table>
+<tr><th style="width:26%">Modül</th><th>İçerik</th></tr>
+<tr><td>Kayıt ve onay</td><td>Uygulama/site bilgisi, trafik kaynağı, aylık aktif kullanıcı, ülke dağılımı, örnek ekran görüntüleri. Manuel onay — düşük kaliteli yayıncı tüm ağı zehirler.</td></tr>
+<tr><td>Placement (yerleşim)</td><td>Her uygulama/site için bir veya daha fazla yerleşim; her birinin <code>app_key</code>'i, sanal para birimi adı ve ikonu, <b>döviz kuru (1 USD yayıncı payı = X puan — kullanıcı ödülünü yayıncı bu alanla belirler)</b>, yuvarlama kuralı, minimum ödül. Gelir payı yayıncıya görünür ama yalnızca Kiqro admin tarafından değiştirilebilir.</td></tr>
+<tr><td>Postback ayarı</td><td>Yayıncının sunucusuna gidecek URL şablonu, makrolar (<code>{user_id}</code>, <code>{amount}</code>, <code>{payout_usd}</code>, <code>{transaction_id}</code>, <code>{offer_name}</code>, <code>{status}</code>, <code>{signature}</code>), gizli anahtar, IP izin listesi, test gönderimi, yeniden deneme günlüğü.</td></tr>
+<tr><td>Görünüm özelleştirme</td><td>Renk, logo, karanlık mod, varsayılan dil, kategori sırası; önizleme.</td></tr>
+<tr><td>Teklif kontrolü</td><td>Kategori engelleme (ör. finans), belirli reklamvereni engelleme, yetişkin içeriği kapalı (varsayılan).</td></tr>
+<tr><td>Raporlar</td><td>Gösterim, tıklama, dönüşüm, gelir, eCPM (1.000 offerwall açılışı başına gelir), ARPU, ülke/teklif kırılımı.</td></tr>
+<tr><td>Ödemeler</td><td>Kazanç bakiyesi (bekleyen / onaylanmış), ödeme eşiği (öneri 100 $), ödeme yöntemi (havale, PayPal, Wise, Payoneer), net-30 takvimi, fatura/self-billing belgesi, vergi formu (ABD kişileri için W-9/W-8BEN — ileride).</td></tr>
+<tr><td>Kalite skoru</td><td>Yayıncının reversal oranı ve fraud oranı; eşik aşımında otomatik uyarı → gelir payı düşürme → askıya alma.</td></tr>
+</table>
+<h2>10.2 Yayıncıya giden postback</h2>
+<pre>GET https://yayinci.com/kiqro-callback?uid=8812&amp;amount=350&amp;payout=1.20&amp;tx=kq_9f2c1e7a&amp;status=1&amp;sig=6b1f…
+sig = HMAC_SHA256(secret, "uid|amount|tx|status")  — hex
+status: 1 = kredi, 2 = geri alma (reversal)</pre>
+<p>Yeniden deneme: yayıncı HTTP 200 dönmezse üstel bekleme ile 24 saat boyunca 10 deneme; hepsi başarısızsa panelde “başarısız postback” olarak listelenir ve elle tekrar gönderilebilir. Yayıncı aynı <code>tx</code> için tekrarlanan isteği yok saymakla yükümlüdür (idempotency) — dokümantasyonda belirtilir.</p>
+
+<!-- ===================== 11 ===================== -->
+<h1>11. Offerwall son kullanıcı deneyimi ve SDK'lar</h1>
+<h2>11.1 Kiqro uygulamasında doğrudan kampanyaların gösterimi</h2>
+<p>Kiqro uygulaması kendi ağını, diğer offerwall sağlayıcıları gibi bir yayıncı entegrasyonuyla bağlar: mevcut sağlayıcı birleştirme katmanına “Kiqro Direct” adlı yeni bir kaynak eklenir; teklifler Offers API'den çekilir, ödüller yayıncı postback'i ile gelir, kullanıcı ödülü placement döviz kuruyla belirlenir. Doğrudan teklifler diğer tekliflerle aynı listede gösterilir, ancak sıralama algoritmasına iki ek sinyal girer: (1) Kiqro'ya kalan marj (doğrudan tekliflerde daha yüksek), (2) reklamveren hedeflerine uyum. Kullanıcı arayüzünde “Öne çıkan” rozeti ile işaretlenebilir.</p>
+<h2>11.2 Teklif detay ekranı</h2>
+<ul>
+  <li>Toplam ödül, adım listesi (her adımın ödülü ve süresi), tamamlanan adımlar için ilerleme çubuğu.</li>
+  <li>“Görevi başlat” → tıklama kaydı (click_id) → mağaza/hedef URL.</li>
+  <li>Kurallar: “Uygulamayı daha önce yüklemiş olmamalısınız”, “VPN kapalı olmalı”, “Adımlar X gün içinde tamamlanmalı”.</li>
+  <li><b>Takip durumu:</b> “Yükleme algılandı ✓ / Seviye 10 bekleniyor”. Kullanıcının en çok şikâyet ettiği konu “ödülüm gelmedi”dir; şeffaf durum destek yükünü düşürür.</li>
+  <li><b>Eksik ödül talebi (missing credit):</b> tıklamadan 24 saat sonra açılan form; ekran görüntüsü yükleme. Talep reklamverene/MMP'ye iletilir; panelde reklamveren onay/ret verebilir.</li>
+</ul>
+<h2>11.3 Üçüncü taraf yayıncılar için entegrasyon seçenekleri (Faz 3)</h2>
+<table>
+<tr><th style="width:24%">Yöntem</th><th>Açıklama</th></tr>
+<tr><td>Web offerwall (iframe / yeni sekme)</td><td><code>https://wall.kiqro.com/?app_key=…&amp;user_id=…&amp;sig=…</code>. En hızlı entegrasyon; mobil uygulamalarda WebView ile de kullanılabilir.</td></tr>
+<tr><td>Android SDK (Kotlin)</td><td>Offerwall açma, cihaz bütünlüğü sinyali (Play Integrity API), kurulu paket kontrolü (Android 11+ paket görünürlüğü kısıtlarına uygun şekilde), reklam kimliği (GAID, kullanıcı izni ile).</td></tr>
+<tr><td>iOS SDK (Swift)</td><td>Offerwall, App Attest ile cihaz doğrulama, ATT izin durumu, IDFV.</td></tr>
+<tr><td>Unity / React Native / Flutter</td><td>Native SDK'ların sarmalayıcıları; oyun yayıncıları için Unity önceliklidir.</td></tr>
+<tr><td>Offers API</td><td>Teklifleri JSON olarak döndürür; yayıncı kendi arayüzünde gösterir (Kiqro'nun bugün sağlayıcılardan aldığı modelin aynısı).</td></tr>
+</table>
+
+<!-- ===================== 12 ===================== -->
+<h1>12. Yönetim (operasyon) paneli</h1>
+<table>
+<tr><th style="width:24%">Modül</th><th>İşlevler</th><th style="width:9%">Faz</th></tr>
+<tr><td>Reklamveren yönetimi</td><td>KYB onay kuyruğu, hesap durumu, kredi limiti, özel fiyat anlaşmaları, hesap yöneticisi ataması, impersonation (kayıtlı).</td><td>F1</td></tr>
+<tr><td>Kampanya inceleme</td><td>İnceleme kuyruğu ve kontrol listesi, takip linki test aracı, red nedeni şablonları, kampanyayı kullanıcı adına oluşturma (F1'in ana aracı).</td><td>F1</td></tr>
+<tr><td>Yayıncı gelir payları</td><td>Her yayıncı ve placement için ayrı gelir payı oranı (Kiqro uygulaması dahil), geçerlilik tarihi, değişiklik geçmişi; minimum Kiqro marjı uyarısı.</td><td>F1</td></tr>
+<tr><td>Fraud konsolu</td><td>Şüpheli dönüşüm kuyruğu, kullanıcı/cihaz/IP arama, kural yönetimi (eşikler), toplu reversal, yayıncı askıya alma, kullanıcı yasaklama.</td><td>F1</td></tr>
+<tr><td>Postback izleme</td><td>Gelen tüm postback'lerin ham kaydı, eşleşmeyen (orphan) postback'ler, hata oranı alarmları (ör. 2 saattir postback gelmeyen aktif kampanya).</td><td>F1</td></tr>
+<tr><td>Finans</td><td>Bakiye yüklemeleri, manuel kredi/düzeltme (çift onaylı), fatura kesimi, yayıncı ödeme partileri, ledger mutabakatı, gelir raporu (brüt/net/marj).</td><td>F1–F2</td></tr>
+<tr><td>Destek</td><td>Eksik ödül talepleri, reklamveren talepleri, SLA takibi.</td><td>F1</td></tr>
+<tr><td>Yayıncı yönetimi</td><td>Onay, gelir payı oranı, kalite skoru, ödeme bekletme.</td><td>F3</td></tr>
+<tr><td>Sistem</td><td>Özellik bayrakları, fiyat önerisi tabloları, döviz kurları, çeviri yönetimi, denetim günlüğü.</td><td>F1</td></tr>
+</table>
+
+<!-- ===================== 13 ===================== -->
+<h1>13. Takip, attribution ve postback altyapısı</h1>
+<p>Bir offerwall ağının teknik kalbi takip altyapısıdır. Hata burada doğrudan para kaybıdır: ya reklamveren haksız fatura görür ya da Kiqro hak ettiği geliri alamaz.</p>
+<h2>13.1 Uçtan uca akış (mobil uygulama, MMP ile)</h2>
+<svg width="660" height="300" viewBox="0 0 660 300" font-family="Segoe UI, Arial" font-size="10.5">
+  <defs><marker id="c" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#38445a"/></marker></defs>
+  <g font-weight="600" text-anchor="middle">
+    <rect x="10" y="10" width="100" height="30" rx="4" fill="#eef2f7" stroke="#1a4f8a"/><text x="60" y="29">Kullanıcı</text>
+    <rect x="140" y="10" width="110" height="30" rx="4" fill="#1a4f8a"/><text x="195" y="29" fill="#fff">track.kiqro.com</text>
+    <rect x="280" y="10" width="100" height="30" rx="4" fill="#eef2f7" stroke="#1a4f8a"/><text x="330" y="29">MMP</text>
+    <rect x="410" y="10" width="110" height="30" rx="4" fill="#eef2f7" stroke="#1a4f8a"/><text x="465" y="29">Mağaza / Uygulama</text>
+    <rect x="550" y="10" width="100" height="30" rx="4" fill="#1a4f8a"/><text x="600" y="29" fill="#fff">pb.kiqro.com</text>
+  </g>
+  <g stroke="#c5cfdc" stroke-dasharray="3,3"><line x1="60" y1="40" x2="60" y2="290"/><line x1="195" y1="40" x2="195" y2="290"/><line x1="330" y1="40" x2="330" y2="290"/><line x1="465" y1="40" x2="465" y2="290"/><line x1="600" y1="40" x2="600" y2="290"/></g>
+  <g stroke="#38445a" fill="none">
+    <line x1="60" y1="65" x2="193" y2="65" marker-end="url(#c)"/>
+    <line x1="195" y1="95" x2="328" y2="95" marker-end="url(#c)"/>
+    <line x1="330" y1="125" x2="463" y2="125" marker-end="url(#c)"/>
+    <line x1="465" y1="160" x2="332" y2="160" marker-end="url(#c)"/>
+    <line x1="330" y1="190" x2="598" y2="190" marker-end="url(#c)"/>
+    <line x1="465" y1="225" x2="332" y2="225" marker-end="url(#c)"/>
+    <line x1="330" y1="250" x2="598" y2="250" marker-end="url(#c)"/>
+  </g>
+  <g fill="#1f2a3a">
+    <text x="64" y="60">1. Teklife tıklar</text>
+    <text x="199" y="90">2. click_id üret, kaydet, 302 yönlendir</text>
+    <text x="334" y="120">3. Mağazaya yönlendir</text>
+    <text x="336" y="155">4. Yükle + ilk açılış (MMP SDK)</text>
+    <text x="334" y="185">5. Atıf: Kiqro → install postback (click_id)</text>
+    <text x="336" y="220">6. Uygulama içi olay (seviye 10)</text>
+    <text x="334" y="245">7. Olay postback (click_id, event)</text>
+    <text x="330" y="282" text-anchor="middle" fill="#0a7d6b" font-weight="600">8. Doğrula → fraud skoru → ledger → kullanıcıya ödül / yayıncıya postback</text>
+  </g>
+</svg>
+<p class="fig">Şekil 2 — Tıklamadan ödüle takip akışı</p>
+
+<h2>13.2 Tıklama servisi (track.kiqro.com)</h2>
+<ul>
+  <li>Girdi: <code>/c/{offer_id}?pub={placement_id}&amp;uid={publisher_user_id}&amp;sub1..sub5&amp;sig=…</code></li>
+  <li>İşlem: imzayı doğrula → teklif aktif mi, kullanıcının ülkesi/cihazı hedefe uyuyor mu, bütçe/limit var mı (Redis'te atomik sayaç) → kullanıcı bu teklifi daha önce tamamlamış mı → <b>click_id</b> (128-bit, URL güvenli, ör. ULID) üret → tıklamayı kuyruğa yaz → reklamverenin takip linkine makroları doldurarak 302 yönlendir.</li>
+  <li>Performans hedefi: p95 &lt; 50 ms; veritabanına senkron yazma yapılmaz (kuyruk + Redis). Bölgesel yük: AB (birincil), ileride ABD.</li>
+  <li>Kullanıcıya hata durumunda boş ekran yerine açıklamalı sayfa gösterilir (“Bu teklif ülkenizde mevcut değil”).</li>
+</ul>
+
+<h2>13.3 Postback alım servisi (pb.kiqro.com)</h2>
+<pre>GET https://pb.kiqro.com/v1/mmp/{advertiser_key}?click_id={clickid}&amp;event={event_name}
+    &amp;event_value={event_value}&amp;revenue={revenue}&amp;currency={currency}
+    &amp;install_ts={install_unix_ts}&amp;event_ts={event_unix_ts}&amp;os={os}&amp;country={country_code}
+    &amp;idfa={idfa}&amp;gaid={advertising_id}&amp;sig={signature}</pre>
+<ol>
+  <li><b>Kimlik doğrulama:</b> URL'deki reklamveren anahtarı + (destekleniyorsa) HMAC imza + MMP IP aralığı izin listesi.</li>
+  <li><b>Ham kayıt:</b> her istek, işlenmeden önce değiştirilemez bir “postback_raw” tablosuna yazılır (anlaşmazlık durumunda kanıt).</li>
+  <li><b>Eşleştirme:</b> click_id → tıklama → kampanya, yayıncı, kullanıcı. Eşleşmezse “orphan” kuyruğu.</li>
+  <li><b>Olay eşleme:</b> MMP olay adı → kampanya görevi. Görev sırası ve süre limiti kontrolü.</li>
+  <li><b>Tekillik (idempotency):</b> (click_id, görev_id) benzersiz anahtarı; aynı olay ikinci kez ödenmez.</li>
+  <li><b>Fraud değerlendirmesi:</b> CTIT, IP/ülke tutarlılığı, cihaz sinyalleri, kullanıcı skoru → onay / bekletme / red.</li>
+  <li><b>Ledger:</b> reklamveren borçlandırılır, kullanıcı/yayıncı alacaklandırılır (bekleyen statüsünde).</li>
+  <li><b>Bildirim:</b> Kiqro uygulamasında kullanıcıya bildirim; 3. taraf yayıncıya postback; reklamverene webhook (opsiyonel).</li>
+  <li>Yanıt: her zaman hızlı HTTP 200 (iş kuyrukta yapılır); geçersiz imzada 403.</li>
+</ol>
+
+<h2>13.4 Reversal (geri alma)</h2>
+<p>Reklamveren veya MMP, sonradan fraud tespit ettiği dönüşümleri bildirebilir (AppsFlyer Protect360 post-attribution, Adjust Fraud Prevention vb.). Kanallar: (a) panelde CSV yükleme, (b) Reversal API, (c) MMP'nin otomatik “rejected install/in-app event” postback'i. Kural: <b>reversal penceresi (varsayılan 30 gün, reklamveren bazında ayarlanabilir)</b> içinde gelen geri almalar kabul edilir; reklamverenin bakiyesine iade yapılır, yayıncıya <code>status=2</code> chargeback postback'i gönderilir. Pencere sonrası reversal yalnızca anlaşmalı istisnalarla işlenir.</p>
+<div class="box"><b class="t">Karar (K-8): anlık ödül + chargeback modeli</b>Kullanıcı ödülünü hiç beklemeden alır; bekletme (hold) uygulanmaz. Sonradan gelen geri almalar chargeback ile işlenir:<ul style="margin-top:1mm"><li><b>Ağ tarafı:</b> reversal gelince reklamverene iade yapılır, yayıncı payı ters kayıtla geri alınır, yayıncıya <code>status=2</code> postback'i gider. Yayıncı bu riski kendi kullanıcısına yansıtır (sektör standardı).</li><li><b>Kiqro uygulaması tarafı:</b> chargeback postback'i geldiğinde kullanıcının bakiyesinden ilgili tutar düşülür; bakiye eksiye düşebilir. Bakiyesi eksi olan kullanıcı, eksi kapanana kadar çekim yapamaz; tekrarlayan chargeback kullanıcı risk skorunu yükseltir, eşik aşılırsa hesap incelemeye alınır.</li><li><b>Önleme ödülden önce:</b> anlık ödül, fraud kontrolünün dönüşüm anında (postback işlenirken) yapılmasını zorunlu kılar. Kritik riskli dönüşüm hiç kredilendirilmez; ödül verildikten sonraki tek savunma chargeback'tir.</li><li>Kullanıcı şartlarına “geri alınan görev ödülleri bakiyeden düşülür” maddesi eklenir ve geri alma kullanıcıya bildirimle açıklanır.</li></ul></div>
+
+<h2>13.5 Web teklifleri (MMP olmadan)</h2>
+<ul>
+  <li><b>S2S postback (önerilen):</b> reklamveren kendi sunucusundan <code>https://pb.kiqro.com/v1/s2s/{advertiser_key}?click_id=…&amp;goal=signup&amp;sig=…</code> çağırır. click_id, yönlendirmede reklamverenin URL'sine parametre olarak eklenir; reklamveren bunu oturumunda saklar.</li>
+  <li><b>Pixel/JS etiketi:</b> teşekkür sayfasına konulan görünmez görsel/JS. Üçüncü taraf çerez kısıtlamaları nedeniyle güvenilmez; yalnızca birinci taraf çerez/URL parametresi ile ve geçici çözüm olarak.</li>
+  <li><b>Affiliate platformları:</b> Everflow, TUNE, Impact, Partnerize, CAKE kullanan reklamverenler için hazır postback şablonları (Faz 2).</li>
+</ul>
+
+<!-- ===================== 14 ===================== -->
+<h1>14. MMP entegrasyonları ve iOS/Android özel durumları</h1>
+<h2>14.1 “Entegre partner” olmak</h2>
+<p>Reklamverenin MMP panelinde Kiqro'yu listeden seçip olayları tıklamayla eşleyebilmesi için Kiqro'nun her MMP'de <b>ad network / integrated partner</b> olarak kayıtlı olması gerekir. Aksi halde her reklamveren için elle “custom postback” kurmak gerekir ve bu satış sürecini ciddi biçimde yavaşlatır.</p>
+<table>
+<tr><th style="width:18%">MMP</th><th>Yapılacaklar</th><th style="width:12%">Öncelik</th></tr>
+<tr><td>AppsFlyer</td><td>Partner başvurusu; partner şablonu: tıklama URL şablonu, install ve in-app event postback şablonları, makro eşlemesi, Protect360 rejected postback desteği.</td><td><span class="tag p0">F1–F2</span></td></tr>
+<tr><td>Adjust</td><td>Modül/partner başvurusu; callback URL şablonu; olay token eşlemesi.</td><td><span class="tag p0">F1–F2</span></td></tr>
+<tr><td>Singular</td><td>Partner konfigürasyonu; özellikle oyun stüdyolarında yaygın.</td><td><span class="tag p1">F2</span></td></tr>
+<tr><td>Kochava, Branch, Tenjin, Airbridge</td><td>Talep geldikçe; ara dönemde custom postback ile.</td><td><span class="tag p2">F3</span></td></tr>
+</table>
+<p class="muted">Partner başvuru süreçleri haftalar sürebilir ve çoğu zaman en az bir aktif reklamveren referansı ister. Faz 1'de ilk reklamverenler “custom postback” ile başlatılır; paralelde partner başvuruları yapılır. Partner şablon gereksinimleri her MMP'nin güncel partner dokümantasyonundan doğrulanmalıdır.</p>
+
+<h2>14.2 iOS özel durumları</h2>
+<ul>
+  <li><b>ATT (App Tracking Transparency):</b> Kullanıcı izin vermezse IDFA yoktur; deterministik atıf sınırlanır. Apple cihaz parmak izi (fingerprinting) yöntemlerini yasakladığından MMP'ler bu durumda çoğunlukla SKAdNetwork / AdAttributionKit ve kısıtlı sinyallerle çalışır. Ödüllü kampanyalarda iOS dönüşüm oranı ve atıf oranı Android'den düşük olur; reklamverenle beklenti baştan yönetilmelidir.</li>
+  <li><b>SKAdNetwork / AdAttributionKit:</b> Kiqro ağ olarak Apple'a SKAdNetwork ID kaydı yaptırmalı ve reklamverenlerin Info.plist'ine eklenmesi için yayınlamalıdır (Faz 2–3). Bu ölçüm toplulaştırılmış ve gecikmelidir; kullanıcı bazlı ödül için tek başına yeterli değildir.</li>
+  <li><b>Pratik sonuç:</b> Sektörde ödüllü iOS kampanyaları daha az ve daha pahalıdır. Faz 1–2'de Android ve web öncelikli, iOS “reklamveren talep ederse” stratejisi önerilir.</li>
+</ul>
+<h2>14.3 Android özel durumları</h2>
+<ul>
+  <li>Google Play Install Referrer + GAID ile atıf güvenilirdir; ödüllü kampanyaların büyük çoğunluğu Android'dedir.</li>
+  <li>Android SDK'da <b>Play Integrity API</b> ile cihaz bütünlüğü (rootlu cihaz, emülatör) sinyali toplanmalı.</li>
+  <li>Paket görünürlüğü (Android 11+) kısıtları nedeniyle “uygulama zaten yüklü mü” kontrolü sınırlıdır; asıl kaynak MMP'nin “yeni yükleme / yeniden yükleme” ayrımıdır.</li>
+</ul>
+
+<!-- ===================== 15 ===================== -->
+<h1>15. Fraud önleme ve trafik kalitesi</h1>
+<p>Ödüllü trafik, doğası gereği fraud'a en açık trafik türüdür: kullanıcının para kazanma motivasyonu vardır. Reklamverenin Kiqro'ya güvenmesi ve MMP'lerin Kiqro'yu “yüksek riskli kaynak” olarak işaretlememesi için çok katmanlı savunma şarttır.</p>
+<table>
+<tr><th style="width:18%">Katman</th><th>Kontroller</th><th style="width:16%">Ne zaman</th></tr>
+<tr><td>Hesap</td><td>E-posta/telefon doğrulama, tek kullanımlık e-posta alan adlarını engelleme, çoklu hesap tespiti (cihaz parmak izi, ödeme hesabı eşleşmesi, davranış benzerliği) — Kiqro'da mevcut.</td><td>Kayıt, çekim</td></tr>
+<tr><td>Ağ / IP</td><td>VPN, proxy, Tor, veri merkezi IP'si tespiti (IPQualityScore, MaxMind GeoIP2 Anonymous IP vb.), IP ülkesi ↔ hedef ülke ↔ cihaz dili tutarlılığı, IP başına tıklama hızı.</td><td>Tıklama, postback</td></tr>
+<tr><td>Cihaz</td><td>Emülatör, root/jailbreak (Play Integrity, App Attest), cihaz çiftlikleri (aynı modelden yoğun kümeler), saat dilimi uyumsuzluğu.</td><td>SDK, tıklama</td></tr>
+<tr><td>Zamanlama</td><td>CTIT (tıklama→yükleme) çok kısa (enjeksiyon) veya çok uzun (click spamming); olaylar arası insanüstü hız (seviye 1→50 on dakikada).</td><td>Postback</td></tr>
+<tr><td>Davranış</td><td>Kullanıcının teklif tamamlama hızı, tüm teklifleri sadece ilk adımda bırakma, anormal kazanç eğrisi.</td><td>Sürekli</td></tr>
+<tr><td>MMP sinyalleri</td><td>AppsFlyer Protect360, Adjust Fraud Prevention Suite gibi araçların reddettiği yükleme/olaylar → otomatik reversal.</td><td>Postback</td></tr>
+<tr><td>Yayıncı</td><td>Yayıncı bazlı reversal oranı, CR anomalisi, ani hacim artışı; eşik aşımında otomatik bekletme.</td><td>Günlük</td></tr>
+</table>
+<h2>15.1 Skor ve eylem matrisi</h2>
+<table>
+<tr><th>Risk skoru</th><th>Tıklamada</th><th>Dönüşümde</th><th>Kullanıcı ödülü (anlık model)</th></tr>
+<tr><td>0–30 (düşük)</td><td>İzin</td><td>Onay, faturalanır</td><td>Anında</td></tr>
+<tr><td>31–70 (orta)</td><td>İzin</td><td>Onay, faturalanır</td><td>Anında; kullanıcı izlemeye alınır</td></tr>
+<tr><td>71–90 (yüksek)</td><td>İzin, işaretle</td><td>İnceleme kuyruğu — onaylanana kadar faturalanmaz</td><td>Onaylanınca verilir</td></tr>
+<tr><td>91–100 (kritik)</td><td>Engelle</td><td>Red — faturalanmaz</td><td>Yok; hesap incelemesi</td></tr>
+</table>
+<div class="box warn"><b class="t">İlke: şüphe faturanın aleyhine değil, lehine</b>Şüpheli dönüşüm reklamverene <b>faturalanmaz</b>. Bu kısa vadede gelir kaybı gibi görünse de, reklamverenin reversal talep etme oranını, destek yükünü ve MMP'deki “kaynak kalitesi” itibarını korur. Kiqro'nun satış vaadiyle doğrudan bağlantılıdır.</div>
+
+<!-- ===================== 16 ===================== -->
+<h1>16. Teknik mimari ve veri modeli</h1>
+<p class="muted">Karar (K-3): Mevcut Kiqro backend'i Node.js / TypeScript olduğundan tüm yeni servisler TypeScript ile, tek bir monorepo içinde (pnpm/Turborepo) geliştirilir. Veritabanı ve barındırma seçimleri mevcut altyapı incelendikten sonra kesinleşir.</p>
+<h2>16.1 Servisler</h2>
+<svg width="660" height="250" viewBox="0 0 660 250" font-family="Segoe UI, Arial" font-size="10.5">
+  <defs><marker id="d" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#8a94a6"/></marker></defs>
+  <g text-anchor="middle">
+    <rect x="10" y="10" width="640" height="34" rx="4" fill="#eef2f7" stroke="#1a4f8a"/><text x="330" y="31" font-weight="600">Next.js arayüzleri: Pazarlama sitesi · Reklamveren · Yayıncı · Admin · Offerwall (web)</text>
+    <rect x="10" y="70" width="200" height="44" rx="4" fill="#1a4f8a"/><text x="110" y="88" fill="#fff" font-weight="600">Core API</text><text x="110" y="104" fill="#dfe8f3">REST + yetki + iş kuralları</text>
+    <rect x="230" y="70" width="200" height="44" rx="4" fill="#1a4f8a"/><text x="330" y="88" fill="#fff" font-weight="600">Tracking (click)</text><text x="330" y="104" fill="#dfe8f3">yüksek hacim, düşük gecikme</text>
+    <rect x="450" y="70" width="200" height="44" rx="4" fill="#1a4f8a"/><text x="550" y="88" fill="#fff" font-weight="600">Postback ingest</text><text x="550" y="104" fill="#dfe8f3">MMP / S2S alım</text>
+    <rect x="10" y="140" width="640" height="30" rx="4" fill="#fdf7ee" stroke="#b1670f"/><text x="330" y="160" font-weight="600">Kuyruk (Redpanda/Kafka veya SQS) — click, conversion, postback-out, fraud olayları</text>
+    <rect x="10" y="196" width="150" height="44" rx="4" fill="#eef2f7" stroke="#1a4f8a"/><text x="85" y="214" font-weight="600">Conversion worker</text><text x="85" y="230" fill="#4a5568">eşleme + ledger</text>
+    <rect x="175" y="196" width="150" height="44" rx="4" fill="#eef2f7" stroke="#1a4f8a"/><text x="250" y="214" font-weight="600">Fraud servisi</text><text x="250" y="230" fill="#4a5568">mevcut skor + kurallar</text>
+    <rect x="340" y="196" width="150" height="44" rx="4" fill="#eef2f7" stroke="#1a4f8a"/><text x="415" y="214" font-weight="600">Postback-out worker</text><text x="415" y="230" fill="#4a5568">yayıncı + webhook</text>
+    <rect x="505" y="196" width="145" height="44" rx="4" fill="#eef2f7" stroke="#1a4f8a"/><text x="577" y="214" font-weight="600">Billing worker</text><text x="577" y="230" fill="#4a5568">fatura, ödeme</text>
+  </g>
+  <g stroke="#8a94a6"><line x1="110" y1="114" x2="110" y2="138" marker-end="url(#d)"/><line x1="330" y1="114" x2="330" y2="138" marker-end="url(#d)"/><line x1="550" y1="114" x2="550" y2="138" marker-end="url(#d)"/><line x1="330" y1="44" x2="330" y2="68" marker-end="url(#d)"/></g>
+</svg>
+<p class="fig">Şekil 3 — Servis mimarisi (veri katmanı: PostgreSQL, Redis, ClickHouse, nesne depolama)</p>
+
+<table>
+<tr><th style="width:22%">Bileşen</th><th>Öneri</th><th style="width:30%">Gerekçe</th></tr>
+<tr><td>Arayüzler</td><td>Next.js (React, TypeScript), Tailwind, i18n (13 dil), tablo/grafik: TanStack Table + ECharts</td><td>Tek kod tabanında birden çok panel; SSR ile pazarlama sitesi SEO'su.</td></tr>
+<tr><td>Core API</td><td>Node.js + TypeScript (NestJS) — mevcut Kiqro backend'iyle aynı dil (K-3); OpenAPI şeması</td><td>Panel ve public API aynı şemayı kullanır.</td></tr>
+<tr><td>Tracking / Postback</td><td>Node.js + TypeScript (Fastify), stateless, yatay ölçeklenen; Core API ile ortak tip/şema paketi (monorepo)</td><td>p95 &lt; 50 ms; trafik ani artışlara dayanıklı.</td></tr>
+<tr><td>İşlemsel veritabanı</td><td>PostgreSQL (yönetilen; ör. AWS RDS / Aurora, eu-north-1 Stockholm veya eu-central-1)</td><td>Ledger için ACID; AB veri yerleşimi (GDPR).</td></tr>
+<tr><td>Önbellek / sayaçlar</td><td>Redis</td><td>Bütçe/limit sayaçları, rate limit, oturum.</td></tr>
+<tr><td>Analitik</td><td>ClickHouse (veya BigQuery)</td><td>Milyarlarca tıklama/olay üzerinde saniyelik rapor.</td></tr>
+<tr><td>Kuyruk</td><td>Redpanda/Kafka (ölçek) veya AWS SQS/SNS (basitlik — F1 için önerilen)</td><td>Tıklama/postback'i senkron yazmadan kabul etmek.</td></tr>
+<tr><td>Depolama / CDN</td><td>S3 uyumlu depolama + Cloudflare</td><td>Kreatifler, faturalar; DDoS koruması.</td></tr>
+<tr><td>Gözlemlenebilirlik</td><td>OpenTelemetry, Grafana/Prometheus veya Datadog, Sentry</td><td>Postback kesintisi = gelir kaybı; anında alarm.</td></tr>
+<tr><td>Kimlik</td><td>Kendi auth (Argon2 + TOTP 2FA) veya Auth0/Clerk; admin için SSO</td><td>Para içeren hesaplar.</td></tr>
+</table>
+
+<h2>16.2 Temel veri modeli</h2>
+<table>
+<tr><th style="width:22%">Tablo</th><th>Ana alanlar</th></tr>
+<tr><td>organizations</td><td>id, type (advertiser/agency/publisher/internal), legal_name, country, vat_id, status, kyb_status, credit_limit, currency, account_manager_id</td></tr>
+<tr><td>users / memberships</td><td>user_id, org_id, role, 2fa_enabled, last_login</td></tr>
+<tr><td>products</td><td>id, org_id, platform, store_id/bundle, mmp, name, icon_url, category, age_rating, store_status</td></tr>
+<tr><td>product_events</td><td>id, product_id, mmp_event_name, is_revenue, discovered_at</td></tr>
+<tr><td>campaigns</td><td>id, product_id, model, status, start_at, end_at, total_budget, daily_budget, caps_json, tracking_url, impression_url, attribution_window, ctit_min, ctit_max, new_users_only</td></tr>
+<tr><td>campaign_tasks</td><td>id, campaign_id, seq, mmp_event_name, condition_json, time_limit_days, cap, display_name_i18n</td></tr>
+<tr><td>task_payouts</td><td>task_id, country (veya *), os, source_id (veya *), advertiser_price, currency, valid_from</td></tr>
+<tr><td>targeting</td><td>campaign_id, countries[], regions[], os_min, devices, languages[], age_min, age_max, genders[], min_quality_score, wifi_only, publisher_allow[], publisher_block[]</td></tr>
+<tr><td>creatives</td><td>campaign_id, lang, title, description, instructions, icon, cover, video, ab_weight</td></tr>
+<tr><td>placements</td><td>id, publisher_org_id, app_key, secret, currency_name, exchange_rate, revshare_pct, postback_url, status</td></tr>
+<tr><td>clicks (ClickHouse + sıcak kopya Redis)</td><td>click_id, ts, campaign_id, placement_id, publisher_user_id, ip, country, ua, device_fp, sub1–5, fraud_score</td></tr>
+<tr><td>postbacks_raw</td><td>id, received_at, source, method, url, headers, body, ip, signature_valid</td></tr>
+<tr><td>conversions</td><td>id, click_id, task_id, status (pending/approved/held/rejected/reversed), advertiser_price, publisher_payout, user_reward, fraud_score, reasons[], event_ts, approved_at</td></tr>
+<tr><td>ledger_entries</td><td>id, txn_id, account_id, amount (işaretli, minor unit), currency, type, ref_type, ref_id, created_at — <b>yalnızca ekleme; güncelleme/silme yok</b></td></tr>
+<tr><td>accounts</td><td>id, owner_org_id, kind (advertiser_balance, publisher_payable, user_reward, kiqro_revenue, tax_payable…)</td></tr>
+<tr><td>invoices / payments / payouts</td><td>fatura numarası, dönem, satırlar, VAT, PDF; ödeme sağlayıcı referansları</td></tr>
+<tr><td>audit_log</td><td>actor, action, entity, before, after, ip, ts</td></tr>
+</table>
+<div class="box"><b class="t">Para kuralları</b>(1) Tutarlar float değil, tamsayı minor unit (mikro dolar: 1 $ = 1.000.000) olarak saklanır. (2) Her para hareketi çift kayıtlı ledger işlemidir; bakiyeler ledger'dan türetilir. (3) Döviz çevrimi işlem anındaki kur ile yapılır ve kur kayda yazılır. (4) Reklamveren bakiyesi hiçbir zaman eksiye düşemez (kredi limiti tanımlı değilse) — kontrol veritabanı işlemi içinde yapılır.</div>
+
+<h2>16.3 Fonksiyonel olmayan gereksinimler</h2>
+<table>
+<tr><th style="width:30%">Gereksinim</th><th>Hedef</th></tr>
+<tr><td>Erişilebilirlik</td><td>Tracking ve postback: %99,95; paneller: %99,9</td></tr>
+<tr><td>Gecikme</td><td>Tıklama yönlendirme p95 &lt; 50 ms; postback kabul p95 &lt; 100 ms; panel sayfaları &lt; 1,5 sn</td></tr>
+<tr><td>Ölçek (F3 hedefi)</td><td>Günde 5 milyon tıklama, 500 bin postback; yatay ölçeklenebilir</td></tr>
+<tr><td>Veri kaybı</td><td>Kabul edilmiş hiçbir postback kaybolmaz (kuyruk kalıcılığı + ham kayıt)</td></tr>
+<tr><td>Güvenlik</td><td>OWASP ASVS L2, tüm hassas alanlar şifreli, yıllık sızma testi, en az yetki ilkesi, gizli anahtar yönetimi (Vault/Secrets Manager)</td></tr>
+<tr><td>Yedekleme</td><td>Günlük tam + PITR (anlık geri dönüş), RPO 5 dk, RTO 1 saat</td></tr>
+<tr><td>Veri saklama</td><td>Tıklamalar 13 ay, ham postback 24 ay, ledger/fatura yasal süre (Finlandiya muhasebe mevzuatına göre — muhasebeci teyidi)</td></tr>
+</table>
+
+<!-- ===================== 17 ===================== -->
+<h1>17. Public API tasarımı</h1>
+<p>REST, JSON, <code>https://api.kiqro.com/v1</code>. Kimlik doğrulama: <code>Authorization: Bearer &lt;api_key&gt;</code>; anahtarlar kapsamlıdır (reports:read, campaigns:write…). Hız limiti: anahtar başına dakikada 120 istek. Tüm yazma uçları <code>Idempotency-Key</code> başlığını destekler. OpenAPI 3.1 şeması ve Postman koleksiyonu yayınlanır.</p>
+<h2>17.1 Reklamveren API</h2>
+<table>
+<tr><th style="width:38%">Uç nokta</th><th>Açıklama</th></tr>
+<tr><td><code>GET /products</code>, <code>POST /products</code></td><td>Ürün listeleme/ekleme</td></tr>
+<tr><td><code>GET /campaigns</code>, <code>POST /campaigns</code></td><td>Kampanya listeleme/oluşturma (taslak)</td></tr>
+<tr><td><code>PATCH /campaigns/{id}</code></td><td>Bütçe, limit, durum (pause/resume), ülke fiyatları</td></tr>
+<tr><td><code>POST /campaigns/{id}/submit</code></td><td>İncelemeye gönder</td></tr>
+<tr><td><code>GET /reports?dimensions=date,country&amp;metrics=spend,installs,roas_d7</code></td><td>Toplulaştırılmış rapor</td></tr>
+<tr><td><code>GET /conversions?campaign_id=&amp;from=&amp;to=</code></td><td>Dönüşüm düzeyinde log (sayfalı)</td></tr>
+<tr><td><code>POST /reversals</code></td><td>click_id listesi + neden ile geri alma talebi</td></tr>
+<tr><td><code>GET /billing/balance</code>, <code>GET /billing/invoices</code></td><td>Bakiye, faturalar</td></tr>
+<tr><td><code>POST /webhooks</code></td><td>Olay abonelikleri: conversion.approved, campaign.budget_exhausted, campaign.status_changed, balance.low</td></tr>
+</table>
+<h2>17.2 Yayıncı API</h2>
+<table>
+<tr><th style="width:38%">Uç nokta</th><th>Açıklama</th></tr>
+<tr><td><code>GET /offers?placement=&amp;user_id=&amp;country=&amp;os=</code></td><td>Kullanıcıya uygun teklif listesi (Offers API)</td></tr>
+<tr><td><code>GET /publisher/reports</code></td><td>Gelir raporları</td></tr>
+<tr><td><code>GET /publisher/users/{user_id}/history</code></td><td>Bir kullanıcının teklif geçmişi (destek için)</td></tr>
+</table>
+<h2>17.3 Örnek: kampanya oluşturma</h2>
+<pre>POST /v1/campaigns
+{
+  "product_id": "prd_01J…",
+  "name": "DragonRealm – DE/FI CPE Kasım",
+  "model": "cpe",
+  "schedule": { "start_at": "2026-11-15T00:00:00Z", "end_at": null },
+  "budget": { "total": 15000.00, "daily": 800.00, "currency": "USD" },
+  "targeting": { "countries": ["DE","FI","SE"], "os": "android", "os_min": "10", "age_min": 18 },
+  "tracking": { "url": "https://app.appsflyer.com/com.dragon.realm?pid=kiqro_int&amp;clickid={click_id}&amp;af_siteid={source_id}",
+                "attribution_window_days": 7, "ctit_min_sec": 10 },
+  "tasks": [
+    { "seq": 1, "event": "install", "time_limit_days": 1,
+      "payouts": [ { "country": "*", "price": 0.40 } ] },
+    { "seq": 2, "event": "af_level_achieved_10", "time_limit_days": 7,
+      "payouts": [ { "country": "DE", "price": 3.00 }, { "country": "*", "price": 2.20 } ] },
+    { "seq": 3, "event": "af_purchase", "condition": { "revenue_gte": 4.99 }, "time_limit_days": 14,
+      "payouts": [ { "country": "*", "price": 6.00 } ] }
+  ]
+}</pre>
+
+<!-- ===================== 18 ===================== -->
+<h1>18. Ödeme, faturalama, muhasebe ve vergi</h1>
+<h2>18.1 Reklamverenden tahsilat</h2>
+<table>
+<tr><th style="width:24%">Yöntem</th><th>Detay</th><th style="width:10%">Faz</th></tr>
+<tr><td>Kredi kartı</td><td>Stripe; 3D Secure; minimum yükleme 500 $ (K-9). Kart yüklemelerinde işlem ücreti reklamverene yansıtılabilir. Geçiş döneminde Kiqro Inc. Stripe hesabı, Oy kurulduktan sonra Oy'un Stripe hesabı.</td><td>F1</td></tr>
+<tr><td>SEPA havale / SEPA Direct Debit</td><td>Stripe veya banka; AB reklamverenleri için en yaygın yöntem.</td><td>F2</td></tr>
+<tr><td>Uluslararası havale (SWIFT)</td><td>Proforma fatura → ödeme → admin onaylı bakiye kaydı. Büyük tutarlar için F1'den itibaren Stripe'a ek seçenek.</td><td>F1</td></tr>
+<tr><td>Otomatik yükleme</td><td>Bakiye eşiğin altına düşünce kayıtlı karttan yükleme.</td><td>F2</td></tr>
+<tr><td>Kredi hattı / net-30</td><td>Büyük, doğrulanmış reklamverenler için; kredi sigortası değerlendirilmeli.</td><td>F3</td></tr>
+</table>
+<h2>18.2 Faturalama ve KDV</h2>
+<div class="box"><b class="t">Karar (K-10, K-11): faturalayan şirket ve model</b>Geçiş döneminde tahsilat ve faturalama <b>Kiqro Inc.</b> üzerinden Stripe sanal pos altyapısıyla yapılır; Finlandiya Oy kurulduktan sonra yeni reklamverenler Oy'a geçirilir. Sistem bu nedenle <b>çoklu faturalayan şirket (billing entity)</b> destekler: her reklamveren hesabı bir faturalayan şirkete bağlıdır; fatura numarası serisi, vergi kuralları ve Stripe hesabı şirket bazındadır. Avans faturası mı, ay sonu harcama faturası mı sorusu mali müşavire bırakılmıştır; yazılım iki modeli de destekler. Aşağıdaki KDV kuralları Finlandiya Oy dönemine aittir; Kiqro Inc. döneminin vergi uygulaması mali müşavirle ayrıca netleştirilmelidir.</div>
+<ul>
+  <li><b>Fatura zamanı:</b> Ön ödemede “avans faturası” veya ay sonunda gerçekleşen harcama için fatura — hangisinin uygulanacağı mali müşavirle belirlenmeli (Bölüm 22).</li>
+  <li><b>Finlandiya içi B2B:</b> Genel KDV oranı %25,5 (1 Eylül 2024'ten itibaren).</li>
+  <li><b>AB içi B2B:</b> Hizmet alıcının ülkesinde vergilenir; geçerli VAT numarası (VIES) ile <b>ters ibraz (reverse charge)</b>, faturada KDV gösterilmez, AB satış listesi (recapitulative statement) beyanı.</li>
+  <li><b>AB dışı B2B</b> (Türkiye, ABD, Birleşik Krallık): genellikle Finlandiya KDV'si kapsamı dışı; faturada not düşülür.</li>
+  <li>Fatura numaralandırma ardışık ve değiştirilemez; e-fatura (Finvoice / Peppol) desteği Finlandiya'daki kurumsal müşteriler için önemlidir.</li>
+  <li>Muhasebe yazılımı entegrasyonu (ör. Procountor, Netvisor veya Xero) — muhasebecinin kullandığı sisteme göre.</li>
+</ul>
+<h2>18.3 Yayıncı ve kullanıcı ödemeleri</h2>
+<ul>
+  <li><b>Yayıncılar:</b> aylık, net-30, eşik 100 $; Wise / PayPal / Payoneer / SEPA. AB yayıncılarından fatura veya “self-billing” anlaşması; vergi kimliği toplama.</li>
+  <li><b>Kullanıcılar (Kiqro uygulaması):</b> mevcut çekim altyapısı aynen devam eder. Doğrudan kampanya ödülleri mevcut bakiyeye yazılır.</li>
+  <li><b>Kur riski:</b> Reklamveren USD, maliyet EUR/TRY olabilir. Fiyat tabloları tek para biriminde (USD önerilir) tutulup faturalama para birimi ayrı seçilebilir.</li>
+</ul>
+<h2>18.4 Mutabakat</h2>
+<p>Ay sonunda reklamverenle MMP verisi karşılaştırılır: Kiqro dönüşüm sayısı ile reklamverenin MMP'deki Kiqro atıflı olay sayısı arasındaki fark %5'i aşarsa otomatik uyarı. Mutabakat raporu (dönüşüm ID'leri ile) panelden indirilebilir.</p>
+
+<!-- ===================== 19 ===================== -->
+<h1>19. Hukuk, gizlilik ve mağaza politikaları</h1>
+<div class="box risk"><b class="t">Uyarı</b>Bu bölüm hukuki görüş değildir; geliştirmeye paralel olarak Finlandiya'da veri koruma ve reklam hukuku bilen bir avukatla doğrulanmalıdır. Mağaza politikaları sık değişir; geliştirme başlamadan güncel metinler okunmalıdır.</div>
+<h2>19.1 Sözleşmeler</h2>
+<table>
+<tr><th style="width:28%">Belge</th><th>İçerik</th></tr>
+<tr><td>Reklamveren Hizmet Şartları</td><td>Ön ödeme, doğrulanmış dönüşüm tanımı, fraud ve reversal penceresi, bütçe bittiğinde başlamış kullanıcıların olaylarının ödenmesi, yasaklı içerik, sorumluluk sınırı, uyuşmazlık (Finlandiya hukuku).</td></tr>
+<tr><td>Insertion Order (IO) şablonu</td><td>Büyük reklamverenler için: kampanya, fiyatlar, dönem, ödeme koşulları, özel KPI'lar.</td></tr>
+<tr><td>Yayıncı Hizmet Şartları</td><td>Gelir payı, ödeme koşulları, yasaklı trafik (teşvikli olmayan yerleşimlerde ödül vaadi, bot, sahte kullanıcı), clawback hakkı, denetim.</td></tr>
+<tr><td>Veri İşleme Sözleşmesi (DPA)</td><td>GDPR m.28; Kiqro'nun hangi veriler için veri sorumlusu, hangileri için veri işleyen olduğu.</td></tr>
+<tr><td>Reklam İçerik Politikası</td><td>Yasaklı ve kısıtlı kategoriler (aşağıda).</td></tr>
+<tr><td>Kullanıcı Şartları güncellemesi</td><td>Doğrudan kampanyalarda ödül, bekletme, eksik ödül süreci.</td></tr>
+</table>
+<h2>19.2 GDPR ve ePrivacy</h2>
+<ul>
+  <li><b>Roller:</b> Kiqro kendi kullanıcı verisi için veri sorumlusudur. Reklamverene kişisel veri (ad, e-posta) <b>paylaşılmaz</b>; yalnızca takma adlı kimlikler (click_id, MMP üzerinden reklam kimliği) akar.</li>
+  <li><b>Hukuki dayanak:</b> sözleşmenin ifası (ödül vermek için takip), meşru menfaat (fraud önleme), açık rıza (demografik hedefleme, reklam kimliği kullanımı — CMP ile).</li>
+  <li><b>Veri minimizasyonu ve saklama süreleri</b> (16.3); IP adreslerinin belirli süre sonra kısaltılması.</li>
+  <li><b>Veri yerleşimi:</b> AB bölgesinde barındırma; AB dışı alt işleyenler için SCC.</li>
+  <li><b>Kayıtlar:</b> İşleme faaliyetleri envanteri (RoPA), DPIA (profil bazlı hedefleme ve fraud skoru otomatik karar niteliği taşıyabileceğinden), veri ihlali bildirim prosedürü (72 saat).</li>
+  <li><b>Çocuklar:</b> Minimum yaş 18 (veya hukuki görüşe göre 16); yaş derecesi “çocuklara yönelik” uygulamalar kampanyaya kabul edilmez.</li>
+</ul>
+<h2>19.3 Reklam içerik politikası</h2>
+<table>
+<tr><th style="width:24%">Durum</th><th>Kategoriler</th></tr>
+<tr><td>Yasak</td><td>Yetişkin içerik, yasa dışı ürünler, sahte/yanıltıcı uygulamalar, kötü amaçlı yazılım, piramit/MLM, kripto “kazan” şemaları, lisanssız kumar, kişisel veri toplamayı ana amaç edinen teklifler, çocuklara yönelik uygulamalar.</td></tr>
+<tr><td>Kısıtlı (belge + onay)</td><td>Lisanslı kumar/bahis (ülke lisansı), finansal ürünler ve kredi (yerel düzenleyici izni), kripto borsaları (MiCA lisansı vb.), alkol, sağlık/ilaç, flört.</td></tr>
+</table>
+<h2>19.4 Mağaza politikaları</h2>
+<ul>
+  <li><b>Apple App Store:</b> İnceleme Kuralları, kullanıcıyı başka uygulamaları indirmeye, puanlamaya veya yorum yapmaya teşvik etmeye yönelik kısıtlamalar içerir (ör. 3.2.2 “kabul edilemez” iş modelleri ve 5.6 geliştirici davranışı maddeleri). Freecash'in 2026'daki kaldırılma vakası bu alanın belirsizliğini gösterir. Gereken: iOS uygulamasında teklif sunumu Apple'ın güncel kurallarına göre hukukçu + deneyimli bir yayıncı danışmanla gözden geçirilmeli; web offerwall alternatifi her zaman hazır tutulmalı.</li>
+  <li><b>Google Play:</b> Puan/yorum karşılığı ödül kesinlikle yasaktır; kampanya görevlerinde “uygulamayı 5 yıldızla oyla” gibi görevler <b>hiçbir şekilde</b> kabul edilmez. Teşvikli yüklemelerin Google Play mağaza sıralama sinyallerini manipüle etmesine ilişkin kurallar takip edilmelidir.</li>
+  <li><b>Reklamverenin MMP'si ve mağaza:</b> Bazı reklamverenler teşvikli (incentivized) trafiği kendi politikaları gereği kabul etmez; kampanya kurulumunda “bu trafik teşviklidir” beyanı ve onay kutusu zorunlu olmalıdır.</li>
+</ul>
+<h2>19.5 Tüketici koruma ve şeffaflık</h2>
+<p>Kullanıcıya ödülün şartları açıkça gösterilmeli (süre, ülke, yeni kullanıcı şartı). AB Haksız Ticari Uygulamalar Direktifi ve Dijital Hizmetler Yasası (DSA) kapsamındaki reklam şeffaflığı yükümlülükleri (reklamın kim adına gösterildiği bilgisi gibi) avukatla değerlendirilmelidir.</p>
+
+<!-- ===================== 20 ===================== -->
+<h1>20. Reklamveren pazarlama web sitesi</h1>
+<p>Adres (K-1): <b>advertise.kiqro.com</b> (ayrı alt alan adı, kullanıcı sitesiyle karışmaz; kullanıcı kitlesi ile reklamveren kitlesinin mesajı farklıdır). Dil: İngilizce (ana), Fince, Almanca, Türkçe.</p>
+<h2>20.1 Site haritası</h2>
+<table>
+<tr><th style="width:24%">Sayfa</th><th>İçerik</th></tr>
+<tr><td>Ana sayfa</td><td>Değer önerisi (“Doğrulanmış etkileşim için ödeyin”), kilit rakamlar (kullanıcı, ülke, dil, görev tamamlama), nasıl çalışır (3 adım), çözümler, MMP logoları, güven unsurları, CTA: “Demo talep et” / “Kampanya başlat”.</td></tr>
+<tr><td>Reklamverenler</td><td>Modeller (CPI/CPE/CPA), hedefleme, fraud koruması, raporlama ekran görüntüleri, kalite raporu örneği.</td></tr>
+<tr><td>Çözümler</td><td>Mobil oyunlar · Fintech · E-ticaret · SaaS. (Kiqro Artists ve Doğrulanmış Deneyim Ağı ayrı sistemlerdir; sitede yalnızca bağlantı olarak yer alabilir.)</td></tr>
+<tr><td>Yayıncılar</td><td>Offerwall ile para kazanma, gelir payı, SDK'lar, entegrasyon süresi, başvuru formu (Faz 3'te açılır).</td></tr>
+<tr><td>Kitle</td><td>Ülke bazında kullanıcı dağılımı, demografi, cihaz dağılımı (güncel ve doğrulanabilir verilerle).</td></tr>
+<tr><td>Fiyatlandırma</td><td>Performans bazlı; minimum yükleme; “gösterim/tıklama ücreti yok”; tahmini CPI/CPE aralıkları veya “teklif al”.</td></tr>
+<tr><td>Vaka çalışmaları</td><td>İlk pilotlardan sonra (izinli).</td></tr>
+<tr><td>Dokümantasyon</td><td>docs.kiqro.com — MMP rehberleri, S2S postback, API referansı, SDK'lar, makrolar.</td></tr>
+<tr><td>Güven merkezi</td><td>Fraud politikası, reklam içerik politikası, gizlilik, DPA, alt işleyen listesi, güvenlik.</td></tr>
+<tr><td>Hakkımızda / İletişim / Blog</td><td>Ekip, Finlandiya merkezi, demo formu (CRM'e bağlı: HubSpot/Pipedrive), SEO içerikleri.</td></tr>
+</table>
+<h2>20.2 Satış hunisi</h2>
+<p>Ziyaretçi → demo formu / kayıt → otomatik e-posta + takvim bağlantısı → hesap yöneticisi görüşmesi → test bütçesi (ör. 1.000–2.000 $) → kampanya → haftalık performans raporu → ölçeklendirme. Faz 1'de “kayıt ol” düğmesi yerine “Demo talep et” kullanılır; self-serve Faz 2'de açılır.</p>
+
+<!-- ===================== 21 ===================== -->
+<h1>21. Yol haritası, ekip, bütçe ve KPI'lar</h1>
+<h2>21.1 Fazlar</h2>
+<table>
+<tr><th style="width:15%">Faz</th><th style="width:13%">Süre (tahmini)</th><th>Kapsam</th><th style="width:22%">Çıkış kriteri</th></tr>
+<tr><td><b>F0 Hazırlık</b></td><td>3–4 hafta</td><td>Bu dökümanın onayı, karar listesinin kapatılması, sağlayıcı sözleşmesi incelemesi, hukuki şablonlar, MMP partner başvuruları, tasarım (Figma) — panel ekranları, ilk 3 pilot reklamveren görüşmesi.</td><td>Onaylı PRD + tasarım, en az 1 imzalı pilot</td></tr>
+<tr><td><b>F1 MVP</b></td><td>12–16 hafta</td><td>Tracking + postback servisleri, ledger, admin paneli (kampanya kurulum, inceleme, fraud kuyruğu, manuel bakiye), reklamveren paneli <i>salt okunur</i> (dashboard, raporlar, dönüşüm logu, entegrasyon/test aracı), Kiqro uygulamasının kendi ağını yayıncı olarak entegre etmesi (placement + döviz kuru + yayıncı postback'i, anlık ödül + chargeback), yayıncı bazlı gelir payı yönetimi, custom MMP postback, S2S postback, Stripe (Kiqro Inc.) + havale ile bakiye, pazarlama sitesi v1 (advertise.kiqro.com).</td><td>3 reklamveren canlı, postback başarı &gt; %99, fraud oranı &lt; %5</td></tr>
+<tr><td><b>F2 Self-serve</b></td><td>10–12 hafta</td><td>Kayıt/KYB, kampanya sihirbazı, SEPA ve otomatik yükleme, otomatik fatura ve VAT, çoklu faturalayan şirket (Inc. → Oy geçişi), ekip/roller, API v1 + webhook, AppsFlyer/Adjust/Singular partner şablonları, zamanlanmış raporlar, kohort/ROAS.</td><td>Reklamverenin destek almadan kampanya açabilmesi; 15+ aktif reklamveren</td></tr>
+<tr><td><b>F3 Ağ</b></td><td>12 hafta</td><td>Yayıncı paneli, web offerwall (iframe), Android/iOS/Unity SDK, Offers API, yayıncı postback ve ödemeleri, kaynak kontrolü, yayıncı kalite skoru.</td><td>10 dış yayıncı, dış yayıncı geliri toplamın %20'si</td></tr>
+<tr><td><b>F4 Optimizasyon</b></td><td>sürekli</td><td>ROAS hedefli teklif, ML sıralama, otomatik fiyat önerisi, kreatif A/B.</td><td>Reklamveren ROAS'ında ölçülebilir artış</td></tr>
+</table>
+<p class="muted">Finlandiya 12 aylık planı ile hizalama: F0–F1 Finlandiya'nın ilk 3–4 ayı (Nordik reklamveren pilotları), F2 Almanya açılımıyla (ay 4–6), F3 Birleşik Krallık (ay 7–9), F4 ABD ölçeklenmesiyle (ay 10–12) örtüşür.</p>
+
+<h2>21.2 Ekip</h2>
+<table>
+<tr><th style="width:30%">Rol</th><th style="width:12%">F1</th><th>Not</th></tr>
+<tr><td>Kurucular + Claude (geliştirme)</td><td>—</td><td>Karar (K-4): Tüm servisler ve paneller kurucular ile Claude birlikte, iç geliştirme olarak yazılır. Kurucular ürün sahibi ve kod inceleyici; Claude kodlama, test yazımı ve dokümantasyon. Para akışı (ledger, chargeback) ve postback kodu her birleştirmede otomatik testlerden geçmek zorundadır.</td></tr>
+<tr><td>Mevcut yazılım firması</td><td>—</td><td>Yalnızca mevcut uygulamanın bakım ve desteği; yeni ağ kapsamı dışında.</td></tr>
+<tr><td>Ürün tasarımı (UI/UX)</td><td>—</td><td>Panel ekranları Claude ile ortak bir tasarım sistemi üzerinden; gerekirse F0'da serbest tasarımcı.</td></tr>
+<tr><td>Satış / hesap yöneticisi</td><td>—</td><td>Karar (K-13): reklamveren arayışı sonraya bırakıldı; F1 sonuna doğru başlatılır.</td></tr>
+<tr><td>Fraud / destek operasyonu</td><td>0,5</td><td>Mevcut ekipten.</td></tr>
+</table>
+<p class="muted">Geliştirme iç kaynakla yürütüleceğinden F1 süresi, kurucuların inceleme ve test için ayırabileceği zamana bağlıdır. Önerilen çalışma biçimi: her iş paketi (ör. “postback alım servisi”) için bu dökümandan kısa bir teknik görev tanımı → Claude ile geliştirme → otomatik testler → kurucu incelemesi → staging ortamında uçtan uca test.</p>
+
+<h2>21.3 Altyapı ve araç maliyetleri (aylık, F1 ölçeği, tahmini)</h2>
+<table>
+<tr><th>Kalem</th><th style="width:22%">Tahmini aylık</th></tr>
+<tr><td>Bulut (DB, sunucular, Redis, kuyruk, ClickHouse küçük küme)</td><td>400–1.200 $</td></tr>
+<tr><td>IP itibarı / VPN tespiti API'si</td><td>100–500 $ (hacme bağlı)</td></tr>
+<tr><td>Gözlemlenebilirlik + hata takibi</td><td>100–300 $</td></tr>
+<tr><td>E-posta, CRM, destek aracı</td><td>100–300 $</td></tr>
+<tr><td>Stripe</td><td>İşlem başına (kart ~%1,5–3, SEPA düşük)</td></tr>
+<tr><td>MMP partnerliği</td><td>Genellikle ağ tarafı için ücretsizdir; doğrulanmalı</td></tr>
+</table>
+
+<h2>21.4 KPI'lar</h2>
+<table>
+<tr><th style="width:30%">Alan</th><th>KPI</th></tr>
+<tr><td>Ticari</td><td>Doğrudan reklamveren sayısı, aylık doğrudan ciro, doğrudan cironun toplam ciroya oranı (hedef 12. ayda %40+), reklamveren elde tutma (3 ay), ortalama aylık reklamveren harcaması</td></tr>
+<tr><td>Marj</td><td>Doğrudan kampanyalarda brüt marj, ağ (3. taraf yayıncı) marjı, görev başına gelir (bugün 0,49 $) </td></tr>
+<tr><td>Kalite</td><td>Reversal oranı (&lt;%3), fraud elenme oranı, reklamveren D7 ROAS, MMP mutabakat farkı (&lt;%5)</td></tr>
+<tr><td>Teknik</td><td>Postback başarı oranı, tıklama p95 gecikmesi, kesinti süresi</td></tr>
+<tr><td>Kullanıcı</td><td>Doğrudan tekliflerde tıklama→tamamlama oranı, eksik ödül talebi oranı, çözüm süresi</td></tr>
+</table>
+
+<!-- ===================== 22 ===================== -->
+<h1>22. Riskler ve onaylanan kararlar</h1>
+<h2>22.1 Riskler</h2>
+<table>
+<tr><th style="width:27%">Risk</th><th style="width:10%">Etki</th><th>Azaltma</th></tr>
+<tr><td>İlk reklamverenleri bulamamak (talep tarafı)</td><td>Yüksek</td><td>Reklamveren arayışı sonraya bırakıldığından (K-13) yazılım bittiğinde ilk müşterinin hazır olmaması riski vardır; F1'in son 4 haftasında hedef listesi hazırlanmalıdır. Yerel (TR, Nordik, DACH) orta ölçekli stüdyolar hedeflenir; ilk kampanyada test bütçesine indirim / garanti.</td></tr>
+<tr><td>Mevcut sağlayıcılarla sözleşme çatışması</td><td>Yüksek</td><td>Sözleşme incelemesi; çakışan reklamverenlerden kaçınma; sağlayıcılarla şeffaf iletişim.</td></tr>
+<tr><td>Fraud nedeniyle reklamveren kaybı / MMP'de kara liste</td><td>Yüksek</td><td>Bölüm 15; ilk aşamada yalnızca Kiqro'nun bilinen kullanıcıları (3. taraf yayıncı yok); şüpheli faturalanmaz.</td></tr>
+<tr><td>Mağaza politikası (Freecash vakası)</td><td>Yüksek</td><td>Web offerwall her zaman hazır; mağaza uyum incelemesi; puan/yorum görevi yasağı.</td></tr>
+<tr><td>Postback/tracking hatası → gelir kaybı</td><td>Orta</td><td>Ham kayıt, alarmlar, otomatik testler, MMP ile günlük mutabakat.</td></tr>
+<tr><td>Çoklu adımlı kampanyada bütçe aşımı</td><td>Orta</td><td>Taahhüt edilmiş harcama hesaplaması (Bölüm 8, Adım 4); sözleşme maddesi.</td></tr>
+<tr><td>Kapsamın şişmesi (scope creep)</td><td>Orta</td><td>Faz disiplini: F1'de self-serve, yayıncı paneli ve SDK yok.</td></tr>
+<tr><td>iOS atıf kısıtları</td><td>Orta</td><td>Android/web öncelikli; iOS beklentisinin baştan yönetilmesi.</td></tr>
+</table>
+
+<h2>22.2 Onaylanan kararlar (29 Ekim 2026)</h2>
+<table>
+<tr><th style="width:7%">#</th><th style="width:30%">Konu</th><th>Karar</th></tr>
+<tr><td>K-1</td><td>Marka ve alan adı</td><td><b>advertise.kiqro.com</b> — pazarlama sitesi; paneller advertiser/publisher/admin alt alan adlarında.</td></tr>
+<tr><td>K-2</td><td>Faz 1 yayıncısı</td><td>Yalnızca Kiqro uygulaması; dış yayıncılar Faz 3'te.</td></tr>
+<tr><td>K-3</td><td>Teknoloji</td><td>Mevcut backend Node.js / TypeScript; tüm yeni servisler TypeScript monorepo'da.</td></tr>
+<tr><td>K-4</td><td>Geliştirme</td><td>Kurucular + Claude ile iç geliştirme; mevcut yazılım firması yalnızca bakım/destek.</td></tr>
+<tr><td>K-5</td><td>Para birimi</td><td>Fiyatlar USD; fatura para birimi USD veya EUR seçmeli.</td></tr>
+<tr><td>K-6</td><td>Kullanıcı ödülü</td><td>Ödülü yayıncı belirler (placement döviz kuru), diğer offerwall'lardaki gibi. Kiqro da kendi ağını entegre ederken bu ayarı yapar.</td></tr>
+<tr><td>K-7</td><td>Yayıncı gelir payı</td><td>Sabit oran yok; Kiqro admin panelinden her yayıncı (ve placement) için ayrı belirlenir.</td></tr>
+<tr><td>K-8</td><td>Bekletme / reversal</td><td>Kullanıcı ödülü anında; bekletme yok. Geri almalar chargeback ile (yayıncıya <code>status=2</code>, Kiqro uygulamasında bakiyeden düşüm, eksi bakiyede çekim kilidi). Reversal penceresi varsayılan 30 gün, reklamveren bazında ayarlanabilir.</td></tr>
+<tr><td>K-9</td><td>Minimum yükleme</td><td>500 $.</td></tr>
+<tr><td>K-10</td><td>Fatura modeli</td><td>Mali müşavir karar verecek; yazılım avans ve ay sonu modellerini destekler.</td></tr>
+<tr><td>K-11</td><td>Faturalayan şirket</td><td>Geçiş döneminde Kiqro Inc. (Stripe sanal pos), Finlandiya Oy kurulduktan sonra Oy. Çoklu faturalayan şirket desteği gerekir.</td></tr>
+<tr><td>K-12</td><td>Rakip demo hesapları</td><td>Evet — F0'da ayeT, Torox ve Adscend'den reklamveren demo hesabı talep edilecek.</td></tr>
+<tr><td>K-13</td><td>İlk reklamveren listesi</td><td>Sonraya bırakıldı; F1'in son 4 haftasında başlatılması önerilir (bkz. risk tablosu).</td></tr>
+<tr><td>K-14</td><td>Minimum kullanıcı yaşı</td><td>18.</td></tr>
+<tr><td>K-15</td><td>Kiqro Artists ve Doğrulanmış Deneyim Ağı</td><td>Ayrı sistemler; offerwall ağının kapsamı dışında.</td></tr>
+</table>
+<h3>Açık kalan konular</h3>
+<ul>
+  <li>Kiqro Inc. döneminde fatura ve vergi uygulaması (mali müşavir).</li>
+  <li>Mevcut altyapıda kullanılan veritabanı ve barındırma ortamı (mevcut kod incelenince kesinleşecek).</li>
+  <li>Mevcut sağlayıcı sözleşmelerindeki reklamvereni doğrudan alma yasağı maddeleri (hukukçu incelemesi).</li>
+</ul>
+<div class="box ok"><b class="t">Sonraki adım</b>Faz 1 kapsamının ve ekran listesinin kesinleştirilmesi; ardından geliştirme veri modeli ve tracking/postback servisiyle başlar.</div>
+
+
+<!-- ===================== EKLER ===================== -->
+<h1>Ekler</h1>
+<h2>Ek A — Takip linki makroları (Kiqro → reklamveren)</h2>
+<table>
+<tr><th style="width:26%">Makro</th><th>Açıklama</th></tr>
+<tr><td><code>{click_id}</code></td><td>Benzersiz tıklama kimliği; MMP'den geri dönmesi zorunlu.</td></tr>
+<tr><td><code>{campaign_id}</code> / <code>{task_id}</code></td><td>Kiqro kampanya / görev kimliği.</td></tr>
+<tr><td><code>{source_id}</code></td><td>Anonimleştirilmiş yayıncı/placement kimliği (af_siteid vb. için).</td></tr>
+<tr><td><code>{sub_source}</code></td><td>Alt kaynak (yayıncının kendi sub ID'si, hash'li).</td></tr>
+<tr><td><code>{country}</code>, <code>{os}</code>, <code>{os_version}</code>, <code>{lang}</code></td><td>Tıklama anındaki bilgiler.</td></tr>
+<tr><td><code>{gaid}</code> / <code>{idfa}</code></td><td>Reklam kimliği (yalnızca izin varsa ve SDK üzerinden).</td></tr>
+<tr><td><code>{ip}</code>, <code>{ua}</code></td><td>URL kodlanmış IP ve user agent (MMP'nin talep ettiği durumlarda).</td></tr>
+<tr><td><code>{timestamp}</code></td><td>Unix zaman damgası.</td></tr>
+</table>
+<h2>Ek B — Yayıncı postback makroları (Kiqro → yayıncı)</h2>
+<table>
+<tr><th style="width:26%">Makro</th><th>Açıklama</th></tr>
+<tr><td><code>{user_id}</code></td><td>Yayıncının kendi kullanıcı kimliği.</td></tr>
+<tr><td><code>{amount}</code></td><td>Yayıncının sanal para biriminde ödül miktarı.</td></tr>
+<tr><td><code>{payout_usd}</code></td><td>Yayıncıya yazılan USD tutar.</td></tr>
+<tr><td><code>{transaction_id}</code></td><td>Benzersiz işlem kimliği (idempotency).</td></tr>
+<tr><td><code>{offer_id}</code>, <code>{offer_name}</code>, <code>{task_name}</code></td><td>Teklif ve görev bilgisi.</td></tr>
+<tr><td><code>{status}</code></td><td>1 = kredi, 2 = geri alma.</td></tr>
+<tr><td><code>{ip}</code>, <code>{country}</code></td><td>Kullanıcının dönüşüm anındaki IP/ülke bilgisi.</td></tr>
+<tr><td><code>{signature}</code></td><td>HMAC-SHA256 imza.</td></tr>
+</table>
+<h2>Ek C — İmza doğrulama örneği (Node.js)</h2>
+<pre>const crypto = require('crypto');
+function verify(q, secret) {
+  const base = [q.user_id, q.amount, q.transaction_id, q.status].join('|');
+  const expected = crypto.createHmac('sha256', secret).update(base).digest('hex');
+  return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(String(q.signature)));
+}</pre>
+<h2>Ek D — Sözlük</h2>
+<table>
+<tr><th style="width:22%">Terim</th><th>Anlam</th></tr>
+<tr><td>Offerwall</td><td>Kullanıcıya ödül karşılığı tamamlayabileceği teklifleri listeleyen arayüz.</td></tr>
+<tr><td>Postback</td><td>Bir dönüşümün sunucudan sunucuya (S2S) HTTP isteğiyle bildirilmesi.</td></tr>
+<tr><td>MMP</td><td>Mobile Measurement Partner: yükleme ve olayların hangi kaynağa ait olduğunu belirleyen bağımsız ölçüm şirketi.</td></tr>
+<tr><td>Attribution (atıf)</td><td>Bir yükleme/olayın hangi reklam kaynağına ait sayılacağı kararı.</td></tr>
+<tr><td>CTIT</td><td>Click-to-install time: tıklama ile ilk açılış arasındaki süre.</td></tr>
+<tr><td>Reversal / chargeback</td><td>Daha önce onaylanmış bir dönüşümün geri alınması.</td></tr>
+<tr><td>eCPM (offerwall)</td><td>1.000 offerwall görüntülemesi başına yayıncı geliri.</td></tr>
+<tr><td>ROAS</td><td>Return on ad spend: reklam harcamasının getirisi (gelir / harcama).</td></tr>
+<tr><td>KYB</td><td>Know your business: şirket kimlik doğrulaması.</td></tr>
+<tr><td>Ledger</td><td>Tüm para hareketlerinin değiştirilemez, çift kayıtlı defteri.</td></tr>
+<tr><td>Placement</td><td>Yayıncının offerwall'u gösterdiği yerleşim noktası.</td></tr>
+<tr><td>SKAdNetwork / AdAttributionKit</td><td>Apple'ın gizlilik korumalı, toplulaştırılmış atıf çerçeveleri.</td></tr>
+</table>
+<h2>Ek E — Kaynaklar</h2>
+<ul class="small">
+  <li>Unity Grow (Tapjoy) Offerwall — CPE kampanya kurulumu, çoklu ödül reklam seti, MMP entegrasyonları: docs.unity.com/grow/offerwall/user-acquisition</li>
+  <li>Digital Turbine — ACP Edge reklamveren paneli, kampanya kurulumu: docs.digitalturbine.com/dt-offer-wall/advertisers</li>
+  <li>Airbridge — Adscend Media postback entegrasyon rehberi: help.airbridge.io/en/guides/adscend-media</li>
+  <li>App Developer Magazine — AdscendMedia Offer Wall SDK ve geliştirici portalı</li>
+  <li>AppSamurai — ayeT-Studios profili; maf.ad — offerwall ağları karşılaştırması</li>
+  <li>PPC Land — Freecash'in App Store'dan kaldırılması (Nisan 2026), Google Play'e dönüşü, 500 M$ kullanıcı ödemesi / 1 Mr$ run-rate</li>
+  <li>Pocket Gamer.biz — Almedia şirket profili ve Almedia açıklamaları</li>
+  <li>Kiqro iç verileri: Platform Metrik Raporu KQ-MAU-2026-10-21 ve Business Finland başvuru metni (21 Ekim 2026)</li>
+</ul>
+<p class="small">Rakiplere ait rakamlar şirket beyanı ve basın kaynaklıdır, bağımsız olarak doğrulanmamıştır. Rakiplerin giriş gerektiren panel ekranları incelenmemiştir (K-12: F0'da reklamveren demo hesabı talep edilecek).</p>
+
+</body>
+</html>

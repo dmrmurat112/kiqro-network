@@ -1,0 +1,30 @@
+{
+  "name": "kiqro-network",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "db:up": "docker compose up -d --wait",
+    "db:down": "docker compose down",
+    "db:generate": "npm run generate -w @kiqro/db",
+    "db:migrate": "npm run migrate -w @kiqro/db",
+    "seed": "npm run seed -w @kiqro/tracking",
+    "dev": "npm run dev -w @kiqro/tracking",
+    "worker": "npm run worker -w @kiqro/tracking",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "drizzle-kit": "^0.31.11",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.7"
+  }
+}
