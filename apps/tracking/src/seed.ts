@@ -1,6 +1,6 @@
 import { sign } from '@kiqro/core';
 import { createDb } from '@kiqro/db';
-import { createDemoSetup } from './fixtures.ts';
+import { createDemoSetup } from '@kiqro/network';
 
 const { db, pool } = createDb();
 const setup = await createDemoSetup(db);

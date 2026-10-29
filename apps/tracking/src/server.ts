@@ -1,8 +1,6 @@
 import Fastify, { type FastifyInstance, type FastifyRequest } from 'fastify';
 import type { Db } from '@kiqro/db';
-import { handleClick } from './clicks.ts';
-import { handlePostback, reverseConversion } from './conversions.ts';
-import { listOffers } from './offers.ts';
+import { handleClick, handlePostback, listOffers, reverseConversion } from '@kiqro/network';
 
 export interface ServerOptions {
   db: Db;

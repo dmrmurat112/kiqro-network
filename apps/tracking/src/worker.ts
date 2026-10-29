@@ -1,6 +1,6 @@
 import { setTimeout as sleep } from 'node:timers/promises';
 import { createDb } from '@kiqro/db';
-import { deliverDuePostbacks } from './outbox.ts';
+import { deliverDuePostbacks } from '@kiqro/network';
 
 const POLL_INTERVAL_MS = 2_000;
 

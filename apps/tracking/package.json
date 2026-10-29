@@ -11,6 +11,7 @@
   "dependencies": {
     "@kiqro/core": "*",
     "@kiqro/db": "*",
+    "@kiqro/network": "*",
     "fastify": "^5.12.7",
     "ulid": "^3.0.2"
   }

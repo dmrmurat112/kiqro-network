@@ -1,20 +1,9 @@
-import { sql } from 'drizzle-orm';
-import { createDb, getAccountId, getBalance, runMigrations, type Db } from '@kiqro/db';
+import { getAccountId, getBalance, type Db } from '@kiqro/db';
 import { buildServer } from '../src/server.ts';
 
+export { resetTestDb as resetDb, setupTestDb as setupDb } from '@kiqro/db/testing';
+
 export const TRACKING_BASE = 'https://track.test';
-
-export async function setupDb(): Promise<{ db: Db; close: () => Promise<void> }> {
-  await runMigrations();
-  const { db, pool } = createDb();
-  return { db, close: () => pool.end() };
-}
-
-export async function resetDb(db: Db): Promise<void> {
-  await db.execute(sql`
-    truncate publisher_postbacks, ledger_entries, ledger_transactions, ledger_accounts, conversions,
-      postbacks_raw, clicks, placements, task_payouts, campaign_tasks, campaigns, products, organizations cascade`);
-}
 
 export function server(db: Db) {
   return buildServer({ db, trackingBaseUrl: TRACKING_BASE });

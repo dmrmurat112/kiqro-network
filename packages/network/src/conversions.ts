@@ -167,7 +167,8 @@ async function installTimeFor(tx: Tx, clickId: string, campaignId: string, click
   return install?.eventAt ?? null;
 }
 
-async function creditConversion(
+/** Moves the advertiser price into publisher payable and Kiqro revenue for one conversion. */
+export async function creditConversion(
   tx: Tx,
   c: { conversionId: string; advertiserAccount: string; publisherOrgId: string; advertiserPrice: bigint; publisherPayout: bigint },
 ): Promise<void> {

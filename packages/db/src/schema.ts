@@ -218,6 +218,44 @@ export const ledgerEntries = pgTable(
   (t) => [index('ledger_entries_account_idx').on(t.accountId)],
 );
 
+export const adminRole = pgEnum('admin_role', ['admin', 'operator', 'finance', 'viewer']);
+
+/** Kiqro staff who use the admin panel. Passwords are scrypt hashes ("scrypt$N$salt$hash"). */
+export const adminUsers = pgTable('admin_users', {
+  id: text('id').primaryKey(),
+  email: text('email').notNull().unique(),
+  name: text('name').notNull(),
+  role: adminRole('role').notNull().default('operator'),
+  passwordHash: text('password_hash').notNull(),
+  disabledAt: timestamp('disabled_at', { withTimezone: true }),
+  lastLoginAt: timestamp('last_login_at', { withTimezone: true }),
+  createdAt: createdAt(),
+});
+
+/** Only a SHA-256 of the session token is stored, so a database leak does not leak sessions. */
+export const adminSessions = pgTable('admin_sessions', {
+  tokenHash: text('token_hash').primaryKey(),
+  adminUserId: text('admin_user_id').notNull().references(() => adminUsers.id),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  ip: text('ip'),
+  createdAt: createdAt(),
+});
+
+/** Every admin action that changes data. Append-only. */
+export const auditLog = pgTable(
+  'audit_log',
+  {
+    id: text('id').primaryKey(),
+    adminUserId: text('admin_user_id').references(() => adminUsers.id),
+    action: text('action').notNull(),
+    entityType: text('entity_type').notNull(),
+    entityId: text('entity_id').notNull(),
+    details: jsonb('details').$type<Record<string, unknown>>().notNull().default({}),
+    createdAt: createdAt(),
+  },
+  (t) => [index('audit_log_entity_idx').on(t.entityType, t.entityId)],
+);
+
 /** Publisher postbacks waiting to be delivered, retried with backoff by the worker. */
 export const publisherPostbacks = pgTable(
   'publisher_postbacks',

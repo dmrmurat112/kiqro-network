@@ -14,6 +14,8 @@ const prefixes = {
   transaction: 'txn',
   entry: 'ent',
   outbox: 'pbo',
+  admin: 'adm',
+  audit: 'aud',
 } as const;
 
 /** Prefixed, time-sortable ids, e.g. "cnv_01JBX…". The prefix makes ids self-describing in logs. */

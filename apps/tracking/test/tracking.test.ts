@@ -2,10 +2,16 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { eq } from 'drizzle-orm';
 import { sign } from '@kiqro/core';
 import { postTransaction, getAccountId, schema, type Db } from '@kiqro/db';
-import { createDemoSetup, type DemoOptions, type DemoSetup } from '../src/fixtures.ts';
-import { handleClick } from '../src/clicks.ts';
-import { handlePostback, reverseConversion } from '../src/conversions.ts';
-import { deliverDuePostbacks, MAX_ATTEMPTS } from '../src/outbox.ts';
+import {
+  createDemoSetup,
+  deliverDuePostbacks,
+  handleClick,
+  handlePostback,
+  MAX_ATTEMPTS,
+  reverseConversion,
+  type DemoOptions,
+  type DemoSetup,
+} from '@kiqro/network';
 import { balanceOf, resetDb, server, setupDb } from './helpers.ts';
 
 const { conversions, publisherPostbacks } = schema;

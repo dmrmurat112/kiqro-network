@@ -1,0 +1,16 @@
+{
+  "name": "@kiqro/network",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./admin": "./src/admin/index.ts"
+  },
+  "dependencies": {
+    "@kiqro/core": "*",
+    "@kiqro/db": "*",
+    "drizzle-orm": "^0.45.4",
+    "zod": "^3.25.76"
+  }
+}

@@ -15,5 +15,5 @@
     "allowImportingTsExtensions": true,
     "noEmit": true
   },
-  "include": ["packages/*/src", "packages/*/drizzle.config.ts", "apps/*/src", "apps/*/test", "packages/*/test", "vitest.config.ts"]
+  "include": ["packages/*/src", "packages/*/drizzle.config.ts", "apps/*/src", "apps/*/test", "packages/*/test", "apps/*/next.config.ts", "vitest.config.ts"]
 }
