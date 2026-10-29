@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { desc, eq } from 'drizzle-orm';
-import { sign } from '@kiqro/core';
+import { sign, totp } from '@kiqro/core';
 import { schema, topUpAdvertiser, type Db } from '@kiqro/db';
 import { resetTestDb, setupTestDb } from '@kiqro/db/testing';
 import { createDemoSetup, deliverDueEmails, enqueueEmail, handleClick, handlePostback, renderEmail, sendgridMailer, type DemoSetup, type Mailer } from '../src/index.ts';
@@ -14,6 +14,13 @@ import {
   advertiserLogin,
   advertiserOverview,
   checkLowBalances,
+  confirmAdvertiserTotp,
+  disableAdvertiserTotp,
+  inviteTeamMember,
+  listTeam,
+  removeTeamMember,
+  setTeamRole,
+  startAdvertiserTotp,
   conversionsCsv,
   createAdvertiserUser,
   getAdvertiserSession,
@@ -234,5 +241,63 @@ describe('terms acceptance', () => {
     expect(after).toMatchObject({ termsAcceptedVersion: '1.0', termsAcceptedIp: '203.0.113.9', termsAcceptedAt: NOW });
     const [entry] = await db.select().from(schema.auditLog).where(eq(schema.auditLog.action, 'advertiser_user.accept_terms'));
     expect(entry).toMatchObject({ entityId: id, details: { version: '1.0', ip: '203.0.113.9' } });
+  });
+});
+
+describe('advertiser team and two-factor authentication', () => {
+  async function signIn(email: string) {
+    const login = await advertiserLogin(db, { email, password: 'long enough password', ip: null });
+    if (login.status !== 'ok') throw new Error(login.status);
+    return (await getAdvertiserSession(db, login.token))!;
+  }
+
+  async function owner() {
+    const s = await createDemoSetup(db);
+    await createAdvertiserUser(db, await staff(), s.advertiserId, { email: 'owner@studio.test', name: 'Owner' }, LINKS);
+    await setPasswordWithToken(db, await tokenFromInbox('owner@studio.test'), 'long enough password');
+    return signIn('owner@studio.test');
+  }
+
+  it('lets admins invite, promote and remove teammates, keeping at least one admin', async () => {
+    const me = await owner();
+    expect(me.user.role).toBe('admin');
+    expect(await inviteTeamMember(db, me, { email: 'ua@studio.test', name: 'UA Manager', role: 'member' }, LINKS, 'en')).toEqual({ ok: true });
+    expect(await inviteTeamMember(db, me, { email: 'ua@studio.test', name: 'Again' }, LINKS, 'en')).toMatchObject({ ok: false, issues: [{ path: 'email' }] });
+    await setPasswordWithToken(db, await tokenFromInbox('ua@studio.test'), 'long enough password');
+    const ua = await signIn('ua@studio.test');
+    expect(ua.user).toMatchObject({ role: 'member', invitedBy: me.user.id, orgId: me.org.id });
+
+    // Members cannot manage the team; the last admin cannot step down or be removed.
+    expect(await inviteTeamMember(db, ua, { email: 'x@studio.test', name: 'X' }, LINKS, 'en')).toMatchObject({ ok: false });
+    expect(await setTeamRole(db, me, me.user.id, 'member', 'tr')).toMatchObject({ ok: false, issues: [{ message: 'ekipte en az bir yönetici kalmalı' }] });
+    expect(await removeTeamMember(db, me, me.user.id, 'en')).toMatchObject({ ok: false });
+
+    expect(await setTeamRole(db, me, ua.user.id, 'admin', 'en')).toEqual({ ok: true });
+    expect((await listTeam(db, me.org.id)).map((u) => [u.email, u.role])).toEqual([['owner@studio.test', 'admin'], ['ua@studio.test', 'admin']]);
+
+    // Removing signs the teammate out and blocks new sign-ins.
+    const login = await advertiserLogin(db, { email: 'ua@studio.test', password: 'long enough password', ip: null });
+    expect(await removeTeamMember(db, me, ua.user.id, 'en')).toEqual({ ok: true });
+    expect(await getAdvertiserSession(db, (login as { token: string }).token)).toBeNull();
+    expect((await advertiserLogin(db, { email: 'ua@studio.test', password: 'long enough password', ip: null })).status).toBe('invalid');
+    expect(await listTeam(db, me.org.id)).toHaveLength(1);
+  });
+
+  it('asks for an authenticator code once 2FA is on, and needs password and code to turn it off', async () => {
+    const me = await owner();
+    const { secret, uri } = (await startAdvertiserTotp(db, me.user))!;
+    expect(uri).toContain('otpauth://totp/');
+    expect(await confirmAdvertiserTotp(db, me, '000000', 'en', NOW)).toMatchObject({ ok: false });
+    expect(await confirmAdvertiserTotp(db, me, totp(secret, new Date()), 'en')).toEqual({ ok: true });
+
+    expect((await advertiserLogin(db, { email: 'owner@studio.test', password: 'long enough password', ip: null })).status).toBe('totp_required');
+    expect((await advertiserLogin(db, { email: 'owner@studio.test', password: 'long enough password', totpCode: '123456', ip: null })).status).toBe('invalid');
+    expect((await advertiserLogin(db, { email: 'owner@studio.test', password: 'long enough password', totpCode: totp(secret, new Date()), ip: null })).status).toBe('ok');
+    expect((await listTeam(db, me.org.id))[0]!.twoFactor).toBe(true);
+    expect(await startAdvertiserTotp(db, me.user)).toBeNull(); // cannot be reset without password and code
+
+    expect(await disableAdvertiserTotp(db, me, 'wrong password!!', totp(secret, new Date()), 'en')).toMatchObject({ ok: false, issues: [{ path: 'password' }] });
+    expect(await disableAdvertiserTotp(db, me, 'long enough password', totp(secret, new Date()), 'en')).toEqual({ ok: true });
+    expect((await advertiserLogin(db, { email: 'owner@studio.test', password: 'long enough password', ip: null })).status).toBe('ok');
   });
 });

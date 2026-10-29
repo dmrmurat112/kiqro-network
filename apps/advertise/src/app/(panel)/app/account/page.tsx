@@ -3,6 +3,7 @@ import { PANEL } from '@/lib/i18n';
 import { panelLocale, requireAdvertiser } from '@/lib/session';
 import { BillingDetailsForm } from './BillingDetailsForm';
 import { PasswordForm } from './PasswordForm';
+import { TwoFactorCard } from './TwoFactorCard';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,6 +41,10 @@ export default async function AccountPage() {
           <PasswordForm t={t} />
         </Card>
       </div>
+      <Card className="mt-4 p-6">
+        <h2 className="mb-4 font-semibold">{t.twofaTitle}</h2>
+        <TwoFactorCard t={t} enabled={Boolean(user.totpEnabledAt)} />
+      </Card>
       <Card className="mt-4 p-6">
         <div id="billing-details" className="mb-5 scroll-mt-8">
           <h2 className="font-semibold">{t.billingTitle}</h2>

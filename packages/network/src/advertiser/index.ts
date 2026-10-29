@@ -4,3 +4,4 @@ export * from './reports.ts';
 export * from './alerts.ts';
 export * from './campaigns.ts';
 export * from './billing.ts';
+export * from './team.ts';

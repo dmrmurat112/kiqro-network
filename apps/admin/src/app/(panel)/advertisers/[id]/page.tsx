@@ -7,7 +7,7 @@ import { ActionForm } from '@/components/ActionForm';
 import { Badge } from '@/components/Badge';
 import { db } from '@/lib/db';
 import { dateTime, PAYMENT_METHOD_LABELS, usd } from '@/lib/format';
-import { createAdvertiserUserAction, createProductAction, creditTermsAction, resendInviteAction, topUpAction } from '../actions';
+import { createAdvertiserUserAction, createProductAction, creditTermsAction, resendInviteAction, resetAdvertiserTotpAction, topUpAction } from '../actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -201,6 +201,8 @@ export default async function AdvertiserPage({ params }: { params: Promise<{ id:
                 <th>Ad</th>
                 <th>E-posta</th>
                 <th>Son giriş</th>
+                <th>Rol</th>
+                <th>2FA</th>
                 <th>Şartlar</th>
                 <th></th>
               </tr>
@@ -211,10 +213,22 @@ export default async function AdvertiserPage({ params }: { params: Promise<{ id:
                   <td>{u.name}</td>
                   <td>{u.email}</td>
                   <td>{u.lastLoginAt ? dateTime(u.lastLoginAt) : 'Henüz giriş yapmadı'}</td>
-                  <td>{u.termsAcceptedVersion ? `${u.termsAcceptedVersion} · ${dateTime(u.termsAcceptedAt)}` : 'Kabul edilmedi'}</td>
+                  <td>{u.role === 'admin' ? 'Yönetici' : 'Üye'}</td>
                   <td>
-                    <ActionForm action={resendInviteAction.bind(null, id, u.id)} submitLabel="Daveti yeniden gönder" className="row" buttonClass="secondary small" />
+                    {u.totpEnabledAt ? (
+                      <ActionForm
+                        action={resetAdvertiserTotpAction.bind(null, id, u.id)}
+                        submitLabel="2FA sıfırla"
+                        className="row"
+                        buttonClass="secondary small"
+                        confirm="Kimliği doğrulandı mı? 2FA kapatılır ve kullanıcının oturumları sonlandırılır."
+                      />
+                    ) : (
+                      'Kapalı'
+                    )}
                   </td>
+                  <td>{u.termsAcceptedVersion ? `${u.termsAcceptedVersion} · ${dateTime(u.termsAcceptedAt)}` : 'Kabul edilmedi'}</td>
+                  <td>{u.disabledAt ? 'Ekipten çıkarıldı' : <ActionForm action={resendInviteAction.bind(null, id, u.id)} submitLabel="Daveti yeniden gönder" className="row" buttonClass="secondary small" />}</td>
                 </tr>
               ))}
             </tbody>

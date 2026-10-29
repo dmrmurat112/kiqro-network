@@ -281,6 +281,9 @@ export const adminSessions = pgTable('admin_sessions', {
   createdAt: createdAt(),
 });
 
+/** Team role in the advertiser panel: admins also manage the team. */
+export const advertiserRole = pgEnum('advertiser_role', ['admin', 'member']);
+
 /** People at an advertiser who can sign in to the advertiser panel (advertise.kiqro.com/app). */
 export const advertiserUsers = pgTable('advertiser_users', {
   id: text('id').primaryKey(),
@@ -289,6 +292,12 @@ export const advertiserUsers = pgTable('advertiser_users', {
   name: text('name').notNull(),
   passwordHash: text('password_hash').notNull(),
   locale: text('locale').notNull().default('en'),
+  role: advertiserRole('role').notNull().default('admin'),
+  /** Teammate who invited this user (null when Kiqro staff created the login). */
+  invitedBy: text('invited_by'),
+  /** Optional two-factor authentication (TOTP), set up by the user in Account. */
+  totpSecret: text('totp_secret'),
+  totpEnabledAt: timestamp('totp_enabled_at', { withTimezone: true }),
   /** Version of the Advertiser Terms this user accepted, with time and IP (proof of acceptance). */
   termsAcceptedVersion: text('terms_accepted_version'),
   termsAcceptedAt: timestamp('terms_accepted_at', { withTimezone: true }),

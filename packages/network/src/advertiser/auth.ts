@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { and, count, eq, gt, isNull } from 'drizzle-orm';
 import { z } from 'zod';
+import { verifyTotp } from '@kiqro/core';
 import { newId, schema, type Db, type DbOrTx } from '@kiqro/db';
 import { audit } from '../admin/audit.ts';
 import { hashPassword, verifyPassword, type AdminUser } from '../admin/auth.ts';
@@ -41,7 +42,7 @@ export interface LinkOptions {
 }
 
 /** Creates a single-use token (invite or reset) and returns the raw value for the link. */
-async function issueToken(tx: DbOrTx, userId: string, purpose: 'invite' | 'reset', ttlMs: number, now: Date): Promise<string> {
+export async function issueToken(tx: DbOrTx, userId: string, purpose: 'invite' | 'reset', ttlMs: number, now: Date): Promise<string> {
   // Only the newest link of a kind works: older unused ones are retired.
   await tx
     .update(advertiserTokens)
@@ -53,7 +54,7 @@ async function issueToken(tx: DbOrTx, userId: string, purpose: 'invite' | 'reset
 }
 
 const asLocale = (locale: string): EmailLocale => (locale === 'tr' ? 'tr' : 'en');
-const passwordLink = (opts: LinkOptions, token: string) => `${opts.advertiseBaseUrl.replace(/\/$/, '')}/set-password?token=${token}`;
+export const passwordLink = (opts: LinkOptions, token: string) => `${opts.advertiseBaseUrl.replace(/\/$/, '')}/set-password?token=${token}`;
 
 /**
  * Kiqro staff create advertiser logins (Phase 1 has no self sign-up). The advertiser receives
@@ -168,6 +169,8 @@ export async function listAdvertiserUsers(db: Db, orgId: string) {
       disabledAt: advertiserUsers.disabledAt,
       termsAcceptedVersion: advertiserUsers.termsAcceptedVersion,
       termsAcceptedAt: advertiserUsers.termsAcceptedAt,
+      role: advertiserUsers.role,
+      totpEnabledAt: advertiserUsers.totpEnabledAt,
     })
     .from(advertiserUsers)
     .where(eq(advertiserUsers.orgId, orgId));
@@ -181,9 +184,13 @@ async function failures(db: Db, column: typeof advertiserLoginAttempts.email | t
   return row!.n;
 }
 
-export type AdvertiserLoginResult = { status: 'ok'; token: string; locale: string } | { status: 'invalid' } | { status: 'locked' };
+export type AdvertiserLoginResult = { status: 'ok'; token: string; locale: string } | { status: 'invalid' } | { status: 'locked' } | { status: 'totp_required' };
 
-export async function advertiserLogin(db: Db, input: { email: string; password: string; ip: string | null }, now = new Date()): Promise<AdvertiserLoginResult> {
+/**
+ * Password sign-in. Users who turned on two-factor authentication must also send the
+ * authenticator code; without one the result is "totp_required" so the form can ask for it.
+ */
+export async function advertiserLogin(db: Db, input: { email: string; password: string; totpCode?: string; ip: string | null }, now = new Date()): Promise<AdvertiserLoginResult> {
   const email = input.email.trim().toLowerCase();
   if ((await failures(db, advertiserLoginAttempts.email, email, now)) >= MAX_FAILURES_PER_EMAIL) return { status: 'locked' };
   if (input.ip && (await failures(db, advertiserLoginAttempts.ip, input.ip, now)) >= MAX_FAILURES_PER_IP) return { status: 'locked' };
@@ -191,7 +198,12 @@ export async function advertiserLogin(db: Db, input: { email: string; password: 
   const user = await db.query.advertiserUsers.findFirst({ where: eq(advertiserUsers.email, email) });
   const valid = await verifyPassword(input.password, user?.passwordHash ?? (await DUMMY_HASH));
   const org = user && (await db.query.organizations.findFirst({ where: eq(organizations.id, user.orgId) }));
-  const ok = Boolean(user && valid && !user.disabledAt && org?.status === 'active');
+  let ok = Boolean(user && valid && !user.disabledAt && org?.status === 'active');
+  if (ok && user!.totpEnabledAt && user!.totpSecret) {
+    // The password alone is not recorded as an attempt; the code decides.
+    if (!input.totpCode) return { status: 'totp_required' };
+    ok = verifyTotp(user!.totpSecret, input.totpCode, now);
+  }
   await db.insert(advertiserLoginAttempts).values({ id: newId('loginAttempt'), email, ip: input.ip, success: ok, createdAt: now });
   if (!ok || !user) return { status: 'invalid' };
 
@@ -222,4 +234,16 @@ export async function changeAdvertiserPassword(db: Db, user: AdvertiserUser, cur
   if (!(await verifyPassword(current, user.passwordHash))) throw new AdminError('Current password is incorrect.');
   if (next.length < 12) throw new AdminError('The new password must be at least 12 characters.');
   await db.update(advertiserUsers).set({ passwordHash: await hashPassword(next) }).where(eq(advertiserUsers.id, user.id));
+}
+
+/** Kiqro staff turn off an advertiser user's 2FA (lost phone), after checking who is asking. */
+export async function resetAdvertiserTotp(db: Db, actor: AdminUser, userId: string): Promise<void> {
+  requirePermission(actor, 'manage_campaigns');
+  await db.transaction(async (tx) => {
+    const user = await tx.query.advertiserUsers.findFirst({ where: eq(advertiserUsers.id, userId) });
+    if (!user) throw new AdminError('Kullanıcı bulunamadı.');
+    await tx.update(advertiserUsers).set({ totpSecret: null, totpEnabledAt: null }).where(eq(advertiserUsers.id, userId));
+    await tx.delete(advertiserSessions).where(eq(advertiserSessions.advertiserUserId, userId));
+    await audit(tx, actor.id, 'advertiser_user.totp_reset', 'advertiser_user', userId);
+  });
 }

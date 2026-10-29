@@ -37,6 +37,10 @@ Admin roles: `admin` (everything), `operator` (advertisers, campaigns, conversio
 
 Admin security: two-factor authentication (TOTP, any authenticator app) is mandatory — a new admin is sent to `/security` to enroll on first login. Five wrong attempts lock an e-mail for 15 minutes. If an admin loses their phone: `npm run reset-2fa -w @kiqro/admin -- email`. For local test accounts, `npm run dev-totp-code -w @kiqro/admin -- email` prints the current code (refuses to run against a non-local database).
 
+## Advertiser team and 2FA
+
+Kiqro staff create the first login of an advertiser (role `admin`). Advertiser admins invite teammates themselves on **Team** (`/app/team`) as `admin` (also manages the team) or `member`, change roles and remove people (removal disables the login and ends its sessions; a team always keeps one admin). Every user can turn on two-factor authentication (TOTP) in **Account**; turning it off needs the password and a current code. If a user loses their phone, staff reset it on the advertiser page in the admin panel.
+
 ## E-mail
 
 E-mail goes through SendGrid's v3 API. Messages are written to `email_messages` in the same transaction as the change that causes them, then delivered (with retries) by the worker; without `SENDGRID_API_KEY` the worker prints them to its console instead. Configure `MAIL_FROM` with an address on a domain authenticated in SendGrid (Settings → Sender Authentication), otherwise SendGrid rejects the messages.

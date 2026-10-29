@@ -71,6 +71,13 @@
       "when": 1793314543640,
       "tag": "0009_billing_details",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793314789846,
+      "tag": "0010_advertiser_team_2fa",
+      "breakpoints": true
     }
   ]
 }

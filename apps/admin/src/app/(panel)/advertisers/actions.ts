@@ -1,7 +1,7 @@
 'use server';
 
 import { createAdvertiser, createProduct, recordTopUp, setCreditTerms } from '@kiqro/network/admin';
-import { createAdvertiserUser, resendAdvertiserInvite } from '@kiqro/network/advertiser';
+import { createAdvertiserUser, resendAdvertiserInvite, resetAdvertiserTotp } from '@kiqro/network/advertiser';
 import { field, runAction, type ActionState } from '@/lib/action';
 import { db } from '@/lib/db';
 
@@ -33,6 +33,13 @@ export async function resendInviteAction(orgId: string, userId: string, _: Actio
   return runAction(async (actor) => {
     await resendAdvertiserInvite(db, actor, userId, links());
     return 'Yeni davet bağlantısı gönderiliyor; öncekiler geçersiz oldu.';
+  }, `/advertisers/${orgId}`);
+}
+
+export async function resetAdvertiserTotpAction(orgId: string, userId: string, _: ActionState): Promise<ActionState> {
+  return runAction(async (actor) => {
+    await resetAdvertiserTotp(db, actor, userId);
+    return 'İki aşamalı doğrulama kapatıldı; kullanıcının oturumları sonlandırıldı.';
   }, `/advertisers/${orgId}`);
 }
 

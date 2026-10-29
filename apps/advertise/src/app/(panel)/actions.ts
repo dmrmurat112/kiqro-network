@@ -11,13 +11,15 @@ import { ADV_COOKIE, LANG_COOKIE, requireAdvertiser, setAdvertiserCookie, THEME_
 
 const YEAR = 365 * 24 * 3600;
 
-export type FormState = { error?: 'invalid' | 'locked' | string; ok?: boolean } | undefined;
+/** `codeSent`: the attempt included an authenticator code, so the form stays on the code step. */
+export type FormState = { error?: 'invalid' | 'locked' | string; ok?: boolean; codeSent?: boolean } | undefined;
 
 export async function loginAction(_: FormState, form: FormData): Promise<FormState> {
   const h = await headers();
   const ip = h.get('cf-connecting-ip') ?? h.get('x-forwarded-for')?.split(',')[0]?.trim() ?? null;
-  const result = await advertiserLogin(db, { email: String(form.get('email') ?? ''), password: String(form.get('password') ?? ''), ip });
-  if (result.status !== 'ok') return { error: result.status };
+  const totpCode = String(form.get('code') ?? '').replace(/\s/g, '') || undefined;
+  const result = await advertiserLogin(db, { email: String(form.get('email') ?? ''), password: String(form.get('password') ?? ''), totpCode, ip });
+  if (result.status !== 'ok') return { error: result.status, codeSent: Boolean(totpCode) };
   await setAdvertiserCookie(result.token);
   const jar = await cookies();
   if (!jar.has(LANG_COOKIE)) jar.set(LANG_COOKIE, result.locale, { path: '/', maxAge: YEAR, sameSite: 'lax' });
