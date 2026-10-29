@@ -1,11 +1,12 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getOrganization, listCampaigns, listProducts } from '@kiqro/network/admin';
+import { listAdvertiserUsers } from '@kiqro/network/advertiser';
 import { ActionForm } from '@/components/ActionForm';
 import { Badge } from '@/components/Badge';
 import { db } from '@/lib/db';
-import { usd } from '@/lib/format';
-import { createProductAction, topUpAction } from '../actions';
+import { dateTime, usd } from '@/lib/format';
+import { createAdvertiserUserAction, createProductAction, topUpAction } from '../actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,7 +14,7 @@ export default async function AdvertiserPage({ params }: { params: Promise<{ id:
   const { id } = await params;
   const org = await getOrganization(db, id);
   if (!org || org.type !== 'advertiser') notFound();
-  const [products, campaigns] = await Promise.all([listProducts(db, id), listCampaigns(db, { orgId: id })]);
+  const [products, campaigns, users] = await Promise.all([listProducts(db, id), listCampaigns(db, { orgId: id }), listAdvertiserUsers(db, id)]);
   const trackingBase = process.env.TRACKING_BASE_URL ?? 'https://track.kiqro.com';
 
   return (
@@ -62,6 +63,50 @@ export default async function AdvertiserPage({ params }: { params: Promise<{ id:
           </ActionForm>
           <p className="muted">Yalnızca tahsil edilmiş ödemeleri kaydedin. Kayıt denetim günlüğüne yazılır.</p>
         </div>
+      </div>
+
+      <div className="card">
+        <h2>Reklamveren paneli kullanıcıları</h2>
+        {users.length > 0 && (
+          <table>
+            <thead>
+              <tr>
+                <th>Ad</th>
+                <th>E-posta</th>
+                <th>Son giriş</th>
+              </tr>
+            </thead>
+            <tbody>
+              {users.map((u) => (
+                <tr key={u.id}>
+                  <td>{u.name}</td>
+                  <td>{u.email}</td>
+                  <td>{dateTime(u.lastLoginAt)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+        <ActionForm action={createAdvertiserUserAction.bind(null, id)} submitLabel="Kullanıcı oluştur" resetOnSuccess>
+          <div className="fields">
+            <label>
+              Ad soyad
+              <input name="name" required />
+            </label>
+            <label>
+              E-posta
+              <input name="email" type="email" required />
+            </label>
+            <label>
+              Panel dili
+              <select name="locale" defaultValue="en">
+                <option value="en">English</option>
+                <option value="tr">Türkçe</option>
+              </select>
+            </label>
+          </div>
+        </ActionForm>
+        <p className="muted">Reklamveren advertise.kiqro.com/login adresinden giriş yapar ve yalnızca kendi kampanya ve dönüşüm verilerini görür.</p>
       </div>
 
       <div className="card">

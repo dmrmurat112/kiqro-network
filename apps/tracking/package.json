@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "tsx watch --env-file-if-exists=../../.env src/main.ts",
     "worker": "tsx --env-file-if-exists=../../.env src/worker.ts",
-    "seed": "tsx --env-file-if-exists=../../.env src/seed.ts"
+    "seed": "tsx --env-file-if-exists=../../.env src/seed.ts",
+    "seed:demo-advertiser": "tsx --env-file-if-exists=../../.env src/seed-demo-advertiser.ts"
   },
   "dependencies": {
     "@kiqro/core": "*",

@@ -17,6 +17,8 @@ const prefixes = {
   admin: 'adm',
   audit: 'aud',
   loginAttempt: 'lga',
+  advertiserUser: 'adu',
+  lead: 'led',
 } as const;
 
 /** Prefixed, time-sortable ids, e.g. "cnv_01JBX…". The prefix makes ids self-describing in logs. */

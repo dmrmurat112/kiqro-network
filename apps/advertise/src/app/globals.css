@@ -1,0 +1,145 @@
+@import "tailwindcss";
+
+/* ---------- Theme tokens ----------
+   Brand: Kiqro indigo (#13111F), violet K-mark (#6C57F0), Kiqro Ads orange (#FF6B2C).
+   Semantic colors switch with [data-theme]; the marketing site is always dark. */
+:root,
+[data-theme="dark"] {
+  --bg: #0b0a14;
+  --bg-elevated: #13111f;
+  --surface: rgb(255 255 255 / 0.035);
+  --surface-strong: rgb(255 255 255 / 0.06);
+  --line: rgb(255 255 255 / 0.08);
+  --line-strong: rgb(255 255 255 / 0.14);
+  --fg: #f4f3ff;
+  --fg-muted: #a7a3c2;
+  --fg-subtle: #6f6a8e;
+  --grid: rgb(255 255 255 / 0.035);
+  color-scheme: dark;
+}
+
+[data-theme="light"] {
+  --bg: #f7f6fc;
+  --bg-elevated: #ffffff;
+  --surface: #ffffff;
+  --surface-strong: #f1effa;
+  --line: #e7e4f3;
+  --line-strong: #d6d1ea;
+  --fg: #16142a;
+  --fg-muted: #5c5878;
+  --fg-subtle: #8d88a8;
+  --grid: rgb(19 17 31 / 0.04);
+  color-scheme: light;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-elevated: var(--bg-elevated);
+  --color-surface: var(--surface);
+  --color-surface-strong: var(--surface-strong);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-fg: var(--fg);
+  --color-muted: var(--fg-muted);
+  --color-subtle: var(--fg-subtle);
+
+  --color-violet-300: #b3a8ff;
+  --color-violet-400: #8c7bff;
+  --color-violet-500: #6c57f0;
+  --color-violet-600: #5641d6;
+  --color-orange-400: #ff8a4c;
+  --color-orange-500: #ff6b2c;
+  --color-good: #34d399;
+  --color-bad: #fb7185;
+  --color-warn: #fbbf24;
+
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  --animate-fade-up: fade-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-float: float 7s ease-in-out infinite;
+  --animate-pulse-dot: pulse-dot 2s ease-in-out infinite;
+  --animate-ticker: ticker 28s linear infinite;
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+@keyframes pulse-dot {
+  0%, 100% { box-shadow: 0 0 0 0 rgb(52 211 153 / 0.55); }
+  50% { box-shadow: 0 0 0 6px rgb(52 211 153 / 0); }
+}
+@keyframes ticker {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+html { background: var(--bg); color: var(--fg); }
+body { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
+::selection { background: rgb(108 87 240 / 0.45); color: #fff; }
+
+/* ---------- Reusable pieces ---------- */
+@layer components {
+  .text-gradient {
+    background: linear-gradient(100deg, #b3a8ff 0%, #8c7bff 35%, #ff8a4c 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .bg-grid {
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 56px 56px;
+  }
+  .glass {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    backdrop-filter: blur(14px);
+  }
+  /* Card with a 1px gradient border that lights up on hover. */
+  .card-glow {
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    transition: border-color 0.3s, transform 0.3s;
+  }
+  .card-glow:hover { border-color: rgb(140 123 255 / 0.45); transform: translateY(-2px); }
+  .btn-primary {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    border-radius: 0.75rem; padding: 0.7rem 1.15rem; font-weight: 600; font-size: 0.925rem;
+    color: #fff; background: linear-gradient(135deg, #7a66ff 0%, #6c57f0 45%, #5641d6 100%);
+    box-shadow: 0 8px 30px -8px rgb(108 87 240 / 0.7), inset 0 1px 0 rgb(255 255 255 / 0.18);
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 12px 36px -8px rgb(108 87 240 / 0.85), inset 0 1px 0 rgb(255 255 255 / 0.22); }
+  .btn-primary:disabled { opacity: 0.6; transform: none; cursor: progress; }
+  .btn-ghost {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    border-radius: 0.75rem; padding: 0.7rem 1.15rem; font-weight: 600; font-size: 0.925rem;
+    color: var(--fg); background: var(--surface); border: 1px solid var(--line-strong);
+    transition: background 0.2s, border-color 0.2s;
+  }
+  .btn-ghost:hover { background: var(--surface-strong); border-color: rgb(140 123 255 / 0.5); }
+  .field {
+    width: 100%; border-radius: 0.7rem; padding: 0.7rem 0.85rem; font-size: 0.925rem;
+    background: var(--surface); border: 1px solid var(--line-strong); color: var(--fg);
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .field::placeholder { color: var(--fg-subtle); }
+  .field:focus { outline: none; border-color: #8c7bff; box-shadow: 0 0 0 4px rgb(108 87 240 / 0.18); }
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    border-radius: 999px; padding: 0.35rem 0.8rem; font-size: 0.78rem; font-weight: 500;
+    color: var(--fg-muted); background: var(--surface); border: 1px solid var(--line);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}

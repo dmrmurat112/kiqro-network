@@ -10,7 +10,8 @@ Kiqro's own offerwall / performance ad network. Product and technical spec: [doc
 | `packages/db` | Drizzle schema, migrations, ids, double-entry ledger |
 | `packages/network` | Business rules shared by both apps: offers, clicks, postbacks, reversals, outbox; `./admin` holds admin auth, audit log and admin operations |
 | `apps/tracking` | Fastify service: Offers API, click redirects, MMP/S2S postbacks, reversals, publisher postback worker |
-| `apps/admin` | Next.js admin panel (Turkish UI): advertisers, top-ups, products, campaigns, publishers/placements, held-conversion review, postback logs |
+| `apps/admin` | Next.js admin panel (Turkish UI): advertisers, top-ups, products, campaigns, publishers/placements, held-conversion review, postback logs, demo requests, advertiser logins |
+| `apps/advertise` | advertise.kiqro.com — marketing site (EN/TR, demo request form) and the advertiser panel (`/app`: overview, campaign funnels, conversion log with CSV export, integration URLs; light/dark, EN/TR). Tailwind 4 + Geist |
 
 ## Local setup
 
@@ -26,6 +27,8 @@ npm run dev          # http://localhost:4000
 npm run worker       # delivers publisher postbacks
 npm run create-admin -- you@kiqro.com "Ad Soyad" admin   # prints a one-time password
 npm run dev:admin    # admin panel on http://localhost:4100
+npm run dev:advertise                # site + advertiser panel on http://localhost:4200
+npm run seed:demo-advertiser         # dev only: 30 days of demo traffic + panel login (password in .env)
 npm test
 npm run typecheck
 ```

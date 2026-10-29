@@ -260,6 +260,61 @@ export const adminSessions = pgTable('admin_sessions', {
   createdAt: createdAt(),
 });
 
+/** People at an advertiser who can sign in to the advertiser panel (advertise.kiqro.com/app). */
+export const advertiserUsers = pgTable('advertiser_users', {
+  id: text('id').primaryKey(),
+  orgId: text('org_id').notNull().references(() => organizations.id),
+  email: text('email').notNull().unique(),
+  name: text('name').notNull(),
+  passwordHash: text('password_hash').notNull(),
+  locale: text('locale').notNull().default('en'),
+  disabledAt: timestamp('disabled_at', { withTimezone: true }),
+  lastLoginAt: timestamp('last_login_at', { withTimezone: true }),
+  createdAt: createdAt(),
+});
+
+export const advertiserSessions = pgTable('advertiser_sessions', {
+  tokenHash: text('token_hash').primaryKey(),
+  advertiserUserId: text('advertiser_user_id').notNull().references(() => advertiserUsers.id),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  ip: text('ip'),
+  createdAt: createdAt(),
+});
+
+export const advertiserLoginAttempts = pgTable(
+  'advertiser_login_attempts',
+  {
+    id: text('id').primaryKey(),
+    email: text('email').notNull(),
+    ip: text('ip'),
+    success: boolean('success').notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [index('advertiser_login_attempts_email_idx').on(t.email, t.createdAt), index('advertiser_login_attempts_ip_idx').on(t.ip, t.createdAt)],
+);
+
+export const leadStatus = pgEnum('lead_status', ['new', 'contacted', 'qualified', 'won', 'lost']);
+
+/** Demo requests from the marketing site. */
+export const leads = pgTable(
+  'leads',
+  {
+    id: text('id').primaryKey(),
+    name: text('name').notNull(),
+    email: text('email').notNull(),
+    company: text('company').notNull(),
+    website: text('website'),
+    vertical: text('vertical'),
+    monthlyBudget: text('monthly_budget'),
+    message: text('message'),
+    locale: text('locale').notNull(),
+    ip: text('ip'),
+    status: leadStatus('status').notNull().default('new'),
+    createdAt: createdAt(),
+  },
+  (t) => [index('leads_created_idx').on(t.createdAt), index('leads_ip_idx').on(t.ip, t.createdAt)],
+);
+
 /** Admin login attempts, used to lock out password guessing. */
 export const adminLoginAttempts = pgTable(
   'admin_login_attempts',

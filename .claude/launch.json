@@ -1,7 +1,32 @@
 {
   "version": "0.0.1",
   "configurations": [
-    { "name": "admin", "runtimeExecutable": "npm", "runtimeArgs": ["run", "dev:admin"], "port": 4100 },
-    { "name": "tracking", "runtimeExecutable": "npm", "runtimeArgs": ["run", "dev"], "port": 4000 }
+    {
+      "name": "admin",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev:admin"
+      ],
+      "port": 4100
+    },
+    {
+      "name": "tracking",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
+      "port": 4000
+    },
+    {
+      "name": "advertise",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev:advertise"
+      ],
+      "port": 4200
+    }
   ]
 }

@@ -1,6 +1,7 @@
 'use server';
 
 import { createAdvertiser, createProduct, recordTopUp } from '@kiqro/network/admin';
+import { createAdvertiserUser } from '@kiqro/network/advertiser';
 import { field, runAction, type ActionState } from '@/lib/action';
 import { db } from '@/lib/db';
 
@@ -16,6 +17,17 @@ export async function createAdvertiserAction(_: ActionState, form: FormData): Pr
     });
     return 'Reklamveren oluşturuldu.';
   }, '/advertisers');
+}
+
+export async function createAdvertiserUserAction(orgId: string, _: ActionState, form: FormData): Promise<ActionState> {
+  return runAction(async (actor) => {
+    const { password } = await createAdvertiserUser(db, actor, orgId, {
+      email: field(form, 'email'),
+      name: field(form, 'name'),
+      locale: field(form, 'locale') as 'en',
+    });
+    return `Hesap oluşturuldu. Tek seferlik parola: ${password} — reklamverene güvenli bir kanalla iletin, bu ekrandan çıkınca tekrar gösterilmez.`;
+  }, `/advertisers/${orgId}`);
 }
 
 export async function topUpAction(orgId: string, _: ActionState, form: FormData): Promise<ActionState> {

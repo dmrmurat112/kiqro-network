@@ -22,6 +22,13 @@
       "when": 1793301820071,
       "tag": "0002_fraud_2fa",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1793302492021,
+      "tag": "0003_advertiser_panel",
+      "breakpoints": true
     }
   ]
 }
