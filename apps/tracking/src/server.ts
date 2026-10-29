@@ -21,6 +21,35 @@ function requestCountry(req: FastifyRequest): string | null {
   return country && /^[A-Z]{2}$/.test(country) && country !== 'XX' ? country : null;
 }
 
+const CLICK_ERRORS: Record<'en' | 'tr', Record<string, string>> = {
+  en: {
+    anonymizer: 'Please turn off your VPN or proxy and try again.',
+    datacenter_ip: 'Please turn off your VPN or proxy and try again.',
+    ip_country_mismatch: 'Please turn off your VPN or proxy and try again.',
+    country_not_targeted: 'This offer is not available in your country.',
+    ip_click_velocity: 'Too many attempts from your network. Please try again later.',
+    default: 'This offer is not available right now. Please go back and choose another one.',
+  },
+  tr: {
+    anonymizer: 'Lütfen VPN veya proxy bağlantınızı kapatıp tekrar deneyin.',
+    datacenter_ip: 'Lütfen VPN veya proxy bağlantınızı kapatıp tekrar deneyin.',
+    ip_country_mismatch: 'Lütfen VPN veya proxy bağlantınızı kapatıp tekrar deneyin.',
+    country_not_targeted: 'Bu teklif ülkenizde geçerli değil.',
+    ip_click_velocity: 'Ağınızdan çok fazla deneme yapıldı. Lütfen daha sonra tekrar deneyin.',
+    default: 'Bu teklif şu anda kullanılamıyor. Lütfen geri dönüp başka bir teklif seçin.',
+  },
+};
+
+/** Minimal page for refused clicks. Fraud reasons are deliberately not spelled out. */
+function clickErrorPage(reason: string, lang: 'en' | 'tr'): string {
+  const text = CLICK_ERRORS[lang][reason] ?? CLICK_ERRORS[lang].default!;
+  const title = lang === 'tr' ? 'Teklif açılamadı' : 'Offer unavailable';
+  return `<!doctype html><html lang="${lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title>
+<style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#0b0a14;color:#f4f3ff;font-family:-apple-system,'Segoe UI',Roboto,sans-serif}
+main{max-width:340px;padding:28px;text-align:center}h1{font-size:20px;margin:0 0 10px}p{color:#a7a3c2;line-height:1.5;margin:0}b{color:#8c7bff}</style></head>
+<body><main><div style="font-size:22px;font-weight:700;margin-bottom:22px"><b>K</b> kiqro</div><h1>${title}</h1><p>${text}</p></main></body></html>`;
+}
+
 export function buildServer(opts: ServerOptions): FastifyInstance {
   const app = Fastify({ logger: opts.logger ?? false, trustProxy: true });
   const fraud = opts.fraud ?? defaultFraudContext;
@@ -40,7 +69,14 @@ export function buildServer(opts: ServerOptions): FastifyInstance {
       publisherRisk: req.query.risk,
       fraud,
     });
-    if (!result.ok) return reply.code(result.status).send({ error: result.reason });
+    if (!result.ok) {
+      // Users reach this URL in a browser: show a readable page; API clients still get JSON.
+      if (req.headers.accept?.includes('text/html')) {
+        const tr = /^tr\b|,\s*tr\b/i.test(req.headers['accept-language'] ?? '');
+        return reply.code(result.status).type('text/html; charset=utf-8').send(clickErrorPage(result.reason, tr ? 'tr' : 'en'));
+      }
+      return reply.code(result.status).send({ error: result.reason });
+    }
     return reply.redirect(result.redirectUrl, 302);
   });
 

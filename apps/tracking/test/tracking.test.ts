@@ -98,6 +98,32 @@ describe('clicks', () => {
     expect(new URL(second.headers.location as string).searchParams.get('clickid')).toBe(clickId);
   });
 
+  it('shows browsers a readable page in their language when a click is refused', async () => {
+    const s = await setup();
+    const url = `/c/${s.campaignId}?app_key=${s.appKey}&uid=u1&sig=${sign(s.placementSecret, [s.campaignId, 'u1'])}`;
+    const res = await server(db).inject({ url, headers: { 'cf-ipcountry': 'US', accept: 'text/html', 'accept-language': 'tr-TR,tr;q=0.9' } });
+    expect(res.statusCode).toBe(409);
+    expect(res.headers['content-type']).toContain('text/html');
+    expect(res.body).toContain('Bu teklif ülkenizde geçerli değil.');
+  });
+
+  it('reports progress per step and keeps started offers listed', async () => {
+    const s = await setup({ totalBudgetUsd: '0.40' });
+    const clickId = await click(s);
+    await postback(s, clickId, 'install', at(60));
+    const res = await server(db).inject({
+      url: `/v1/offers?app_key=${s.appKey}&user_id=user-1&country=TR&sig=${sign(s.placementSecret, [s.appKey, 'user-1'])}`,
+    });
+    const [offer] = res.json().offers;
+    // The budget is spent, so new users no longer see it — but this user started it.
+    expect(offer).toMatchObject({ offerId: s.campaignId, started: true, completed: false });
+    expect(offer.tasks.map((t: { state: string }) => t.state)).toEqual(['credited', 'open', 'open']);
+    const other = await server(db).inject({
+      url: `/v1/offers?app_key=${s.appKey}&user_id=user-2&country=TR&sig=${sign(s.placementSecret, [s.appKey, 'user-2'])}`,
+    });
+    expect(other.json().offers).toEqual([]);
+  });
+
   it('refuses untargeted countries, unknown countries and bad signatures', async () => {
     const s = await setup();
     const sig = sign(s.placementSecret, [s.campaignId, 'u1']);

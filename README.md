@@ -64,6 +64,10 @@ IP checks use IPQualityScore when `IPQS_API_KEY` is set (results cached for 6 h;
 
 After changing `packages/db/src/schema.ts`, run `npm run db:generate` and commit the new migration.
 
+## Publisher integration guide
+
+The guide for the Kiqro app's developers (Offers API, click URLs, postbacks, signatures with test vectors, test plan) is [docs/kiqro-direct-entegrasyon.md](docs/kiqro-direct-entegrasyon.md), also as [PDF](docs/kiqro-direct-entegrasyon.pdf). Keep it in sync when the Offers API, click or postback contracts change.
+
 ## Endpoints (tracking service)
 
 | Method | Path | Purpose |
