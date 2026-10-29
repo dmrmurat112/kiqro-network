@@ -273,7 +273,7 @@ export type SiteDict = Dict;
 
 /* ---------- Advertiser panel ---------- */
 const panelEn = {
-  nav: { overview: 'Overview', campaigns: 'Campaigns', conversions: 'Conversions', integration: 'Integration', billing: 'Billing', team: 'Team', account: 'Account', logout: 'Log out' },
+  nav: { overview: 'Overview', campaigns: 'Campaigns', conversions: 'Conversions', claims: 'Claims', integration: 'Integration', billing: 'Billing', team: 'Team', account: 'Account', logout: 'Log out' },
   login: { title: 'Welcome back', sub: 'Sign in to your advertiser account', email: 'E-mail', password: 'Password', submit: 'Sign in', invalid: 'Wrong e-mail or password.', locked: 'Too many attempts. Try again in 15 minutes.', noAccount: 'No account yet?', demo: 'Book a demo', forgot: 'Forgot password?', passwordSet: 'Your password is set. Sign in with it.', code: 'Authenticator code', codeHint: 'Enter the 6-digit code from your authenticator app.', verify: 'Verify', back: 'Use another account' },
   forgot: { title: 'Reset your password', sub: 'Enter the e-mail you sign in with. If it belongs to an account, we will send a link to choose a new password.', submit: 'Send reset link', sent: 'If an account exists for that address, a reset link is on its way. It is valid for 60 minutes.', back: 'Back to sign in' },
   setPassword: {
@@ -525,6 +525,37 @@ const panelEn = {
       back: 'Billing',
     },
   },
+  claims: {
+    title: 'Missing-credit claims',
+    sub: 'Users who say they completed a step but were not rewarded. Check the click ID in your MMP, then approve (billed like a normal conversion) or reject with a reason.',
+    open: 'Open',
+    decided: 'Decided',
+    empty: 'No open claims.',
+    emptyDecided: 'No decided claims yet.',
+    user: 'User',
+    step: 'Step',
+    clicked: 'Clicked',
+    claimed: 'Claimed',
+    clickId: 'Click ID',
+    userNote: 'User’s note',
+    approve: 'Approve and pay',
+    reject: 'Reject',
+    reason: 'Reason (shown to the user)',
+    reasonPlaceholder: 'e.g. no level-10 event in our MMP for this click ID',
+    note: 'Note (optional)',
+    confirmApprove: 'Approve this claim? The step is billed at its price and the user is rewarded.',
+    statuses: { open: 'Open', approved: 'Approved', rejected: 'Rejected' } as Record<string, string>,
+    errors: {
+      claim_not_found: 'Claim not found.',
+      claim_not_open: 'This claim was already decided.',
+      claim_note_required: 'Give a reason for rejecting.',
+      claim_no_price: 'This step has no price for the user’s country.',
+      claim_balance: 'Not enough balance. Top up first.',
+      claim_reversed: 'This conversion was reversed earlier and cannot be approved.',
+    } as Record<string, string>,
+    banner: '{n} missing-credit claims are waiting for your decision.',
+    view: 'Review',
+  },
   team: {
     title: 'Team',
     sub: 'Invite colleagues to the panel. Admins also manage the team; members work with campaigns, reports and billing.',
@@ -574,7 +605,7 @@ const panelEn = {
 type PanelDict = typeof panelEn;
 
 const panelTr: PanelDict = {
-  nav: { overview: 'Genel bakış', campaigns: 'Kampanyalar', conversions: 'Dönüşümler', integration: 'Entegrasyon', billing: 'Ödemeler', team: 'Ekip', account: 'Hesap', logout: 'Çıkış' },
+  nav: { overview: 'Genel bakış', campaigns: 'Kampanyalar', conversions: 'Dönüşümler', claims: 'Talepler', integration: 'Entegrasyon', billing: 'Ödemeler', team: 'Ekip', account: 'Hesap', logout: 'Çıkış' },
   login: { title: 'Tekrar hoş geldiniz', sub: 'Reklamveren hesabınıza giriş yapın', email: 'E-posta', password: 'Parola', submit: 'Giriş yap', invalid: 'E-posta veya parola hatalı.', locked: 'Çok fazla deneme. 15 dakika sonra tekrar deneyin.', noAccount: 'Hesabınız yok mu?', demo: 'Demo talep edin', forgot: 'Parolamı unuttum', passwordSet: 'Parolanız kaydedildi. Bu parolayla giriş yapabilirsiniz.', code: 'Doğrulama kodu', codeHint: 'Doğrulama uygulamanızdaki 6 haneli kodu girin.', verify: 'Doğrula', back: 'Başka hesapla giriş' },
   forgot: { title: 'Parolanızı sıfırlayın', sub: 'Giriş yaptığınız e-postayı yazın. Bir hesaba aitse yeni parola belirleme bağlantısı göndereceğiz.', submit: 'Sıfırlama bağlantısı gönder', sent: 'Bu adrese ait bir hesap varsa sıfırlama bağlantısı gönderildi. Bağlantı 60 dakika geçerlidir.', back: 'Girişe dön' },
   setPassword: {
@@ -825,6 +856,37 @@ const panelTr: PanelDict = {
       print: 'PDF indir',
       back: 'Ödemeler',
     },
+  },
+  claims: {
+    title: 'Kayıp ödül talepleri',
+    sub: 'Bir adımı tamamladığını ama ödül almadığını söyleyen kullanıcılar. Tıklama ID’sini MMP’nizde kontrol edin; onaylayın (normal dönüşüm gibi faturalanır) ya da gerekçeyle reddedin.',
+    open: 'Açık',
+    decided: 'Sonuçlanan',
+    empty: 'Açık talep yok.',
+    emptyDecided: 'Henüz sonuçlanan talep yok.',
+    user: 'Kullanıcı',
+    step: 'Adım',
+    clicked: 'Tıklama',
+    claimed: 'Talep',
+    clickId: 'Tıklama ID',
+    userNote: 'Kullanıcının notu',
+    approve: 'Onayla ve öde',
+    reject: 'Reddet',
+    reason: 'Gerekçe (kullanıcıya gösterilir)',
+    reasonPlaceholder: 'ör. bu tıklama ID için MMP’de 10. seviye olayı yok',
+    note: 'Not (isteğe bağlı)',
+    confirmApprove: 'Talep onaylansın mı? Adım fiyatı üzerinden faturalanır ve kullanıcı ödülünü alır.',
+    statuses: { open: 'Açık', approved: 'Onaylandı', rejected: 'Reddedildi' },
+    errors: {
+      claim_not_found: 'Talep bulunamadı.',
+      claim_not_open: 'Bu talep zaten sonuçlandırıldı.',
+      claim_note_required: 'Reddetmek için gerekçe yazın.',
+      claim_no_price: 'Bu adımın kullanıcının ülkesi için fiyatı yok.',
+      claim_balance: 'Bakiye yetersiz. Önce bakiye yükleyin.',
+      claim_reversed: 'Bu dönüşüm daha önce geri alındığı için onaylanamaz.',
+    },
+    banner: '{n} kayıp ödül talebi kararınızı bekliyor.',
+    view: 'İncele',
   },
   team: {
     title: 'Ekip',

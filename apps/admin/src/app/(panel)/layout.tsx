@@ -14,6 +14,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
         <Link href="/advertisers">Reklamverenler</Link>
         <Link href="/campaigns">Kampanyalar</Link>
         <Link href="/conversions?status=held">Dönüşüm inceleme</Link>
+        <Link href="/claims">Kayıp ödül talepleri</Link>
         <Link href="/leads">Demo talepleri</Link>
         <Link href="/publishers">Yayıncılar</Link>
         <Link href="/postbacks">Postback'ler</Link>

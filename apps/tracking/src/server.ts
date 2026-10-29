@@ -1,7 +1,7 @@
 import { timingSafeEqual } from 'node:crypto';
 import Fastify, { type FastifyInstance, type FastifyRequest } from 'fastify';
 import type { Db } from '@kiqro/db';
-import { defaultFraudContext, handleClick, handlePostback, listOffers, reverseConversion, type FraudContext } from '@kiqro/network';
+import { defaultFraudContext, fileClaim, handleClick, handlePostback, listOffers, listUserClaims, reverseConversion, type FraudContext } from '@kiqro/network';
 
 export interface ServerOptions {
   db: Db;
@@ -66,6 +66,10 @@ main{max-width:340px;padding:28px;text-align:center}h1{font-size:20px;margin:0 0
 export function buildServer(opts: ServerOptions): FastifyInstance {
   const app = Fastify({ logger: opts.logger ?? false, trustProxy: true });
   const fraud = opts.fraud ?? defaultFraudContext;
+  // HTML-form style bodies (S2S postbacks, claims); Fastify parses only JSON by default.
+  app.addContentTypeParser('application/x-www-form-urlencoded', { parseAs: 'string' }, (_req, body, done) => {
+    done(null, Object.fromEntries(new URLSearchParams(body as string)));
+  });
 
   if (opts.originSecret) {
     const expected = Buffer.from(opts.originSecret);
@@ -115,6 +119,37 @@ export function buildServer(opts: ServerOptions): FastifyInstance {
     });
     if (!result.ok) return reply.code(result.status).send({ error: result.reason });
     return { offers: result.offers };
+  });
+
+  // Missing-credit claims, filed by the publisher for its user (form or JSON body).
+  app.post<{ Body: Query | undefined }>('/v1/claims', async (req, reply) => {
+    const b = req.body && typeof req.body === 'object' ? req.body : {};
+    const result = await fileClaim(opts.db, {
+      appKey: b.app_key ?? '',
+      publisherUserId: b.user_id ?? '',
+      campaignId: b.offer_id ?? '',
+      taskId: b.task_id ?? '',
+      note: b.note,
+      signature: b.sig ?? '',
+    });
+    if (!result.ok) return reply.code(result.status).send({ error: result.reason });
+    return { claim_id: result.claimId, status: result.status };
+  });
+
+  app.get<{ Querystring: Query }>('/v1/claims', async (req, reply) => {
+    const list = await listUserClaims(opts.db, { appKey: req.query.app_key ?? '', publisherUserId: req.query.user_id ?? '', signature: req.query.sig ?? '' });
+    if (!list) return reply.code(403).send({ error: 'invalid_signature' });
+    return {
+      claims: list.map((c) => ({
+        claim_id: c.id,
+        offer_id: c.campaignId,
+        task_id: c.taskId,
+        status: c.status,
+        note: c.decisionNote,
+        created_at: c.createdAt.toISOString(),
+        decided_at: c.decidedAt?.toISOString() ?? null,
+      })),
+    };
   });
 
   // MMPs call this with GET; S2S integrations may POST a form or JSON body instead.

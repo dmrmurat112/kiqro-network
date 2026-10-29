@@ -1,6 +1,6 @@
 import Link from 'next/link';
-import { AlertTriangle, MousePointerClick, ShieldCheck, Wallet } from 'lucide-react';
-import { creditPosition } from '@kiqro/network';
+import { AlertTriangle, LifeBuoy, MousePointerClick, ShieldCheck, Wallet } from 'lucide-react';
+import { creditPosition, listClaims } from '@kiqro/network';
 import { advertiserCountries, advertiserDailySeries, advertiserOverview } from '@kiqro/network/advertiser';
 import { Card, Delta, Empty, PageHeader, Segmented } from '@/components/panel/ui';
 import { TrendChart } from '@/components/panel/TrendChart';
@@ -19,11 +19,12 @@ export default async function OverviewPage({ searchParams }: { searchParams: Pro
   const t = PANEL[lang];
   const days = PERIODS.find((p) => String(p) === sp.days) ?? 30;
 
-  const [overview, series, countries, credit] = await Promise.all([
+  const [overview, series, countries, credit, openClaims] = await Promise.all([
     advertiserOverview(db, org.id, days),
     advertiserDailySeries(db, org.id, days),
     advertiserCountries(db, org.id, days),
     creditPosition(db, org.id),
+    listClaims(db, { orgId: org.id, status: 'open', limit: 100 }),
   ]);
   const { current: c, previous: p } = overview;
   const ecpi = c.installs > 0 ? c.spend / BigInt(c.installs) : 0n;
@@ -50,6 +51,16 @@ export default async function OverviewPage({ searchParams }: { searchParams: Pro
           <span className="flex-1">{credit.creditSuspended ? t.overview.creditSuspended : t.overview.lowBalance}</span>
           <Link href="/app/billing" className="shrink-0 rounded-lg bg-violet-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-400">
             {t.overview.topUp}
+          </Link>
+        </div>
+      )}
+
+      {openClaims.length > 0 && (
+        <div className="mb-6 flex items-center gap-3 rounded-xl border border-violet-500/30 bg-violet-500/8 px-4 py-3 text-sm">
+          <LifeBuoy size={18} className="shrink-0 text-violet-400" />
+          <span className="flex-1">{t.claims.banner.replace('{n}', String(openClaims.length))}</span>
+          <Link href="/app/claims" className="shrink-0 rounded-lg bg-violet-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-400">
+            {t.claims.view}
           </Link>
         </div>
       )}

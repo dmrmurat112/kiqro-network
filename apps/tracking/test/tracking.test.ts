@@ -4,6 +4,8 @@ import { sign } from '@kiqro/core';
 import { postTransaction, getAccountId, schema, type Db } from '@kiqro/db';
 import {
   createDemoSetup,
+  decideClaim,
+  fileClaim,
   deliverDuePostbacks,
   handleClick,
   handlePostback,
@@ -348,3 +350,72 @@ describe('ledger', () => {
     await expect(postTransaction(db, { type: 'test', entries: [{ accountId: a, amount: 5n }, { accountId: b, amount: -4n }] })).rejects.toThrow('Unbalanced');
   });
 });
+
+describe('missing-credit claims', () => {
+  const claimBody = (s: DemoSetup, user: string, taskId: string, note = 'Reached level 10 yesterday') => ({
+    app_key: s.appKey,
+    user_id: user,
+    offer_id: s.campaignId,
+    task_id: taskId,
+    note,
+    sig: sign(s.placementSecret, [s.appKey, user, s.campaignId, taskId]),
+  });
+
+  async function taskIds(s: DemoSetup) {
+    const tasks = await db.select().from(schema.campaignTasks).where(eq(schema.campaignTasks.campaignId, s.campaignId));
+    return Object.fromEntries(tasks.map((t) => [t.mmpEventName, t.id]));
+  }
+
+  it('files a claim for a clicked offer, lets the advertiser approve it, and rewards the user once', async () => {
+    const s = await setup();
+    const tasks = await taskIds(s);
+    const clickId = await click(s);
+    await postback(s, clickId, 'install', at(60));
+    const app = server(db);
+
+    // Offers expose task ids; form and JSON bodies both work; a second filing returns the same claim.
+    const offers = await app.inject({ url: `/v1/offers?app_key=${s.appKey}&user_id=user-1&country=TR&sig=${sign(s.placementSecret, [s.appKey, 'user-1'])}` });
+    expect(offers.json().offers[0].tasks[1].taskId).toBe(tasks.af_level_achieved_10);
+    const filed = await app.inject({ method: 'POST', url: '/v1/claims', payload: new URLSearchParams(claimBody(s, 'user-1', tasks.af_level_achieved_10!)).toString(), headers: { 'content-type': 'application/x-www-form-urlencoded' } });
+    expect(filed.statusCode).toBe(200);
+    const { claim_id: claimId } = filed.json();
+    expect((await app.inject({ method: 'POST', url: '/v1/claims', payload: claimBody(s, 'user-1', tasks.af_level_achieved_10!) })).json().claim_id).toBe(claimId);
+
+    // Refused: bad signature, no click, already rewarded.
+    expect((await app.inject({ method: 'POST', url: '/v1/claims', payload: { ...claimBody(s, 'user-1', tasks.af_level_achieved_10!), sig: 'x' } })).statusCode).toBe(403);
+    expect((await app.inject({ method: 'POST', url: '/v1/claims', payload: claimBody(s, 'never-clicked', tasks.install!) })).json()).toEqual({ error: 'no_click' });
+    expect((await app.inject({ method: 'POST', url: '/v1/claims', payload: claimBody(s, 'user-1', tasks.install!) })).json()).toEqual({ error: 'already_rewarded' });
+
+    const before = await balanceOf(db, 'advertiser_balance', s.advertiserId);
+    expect(await decideClaim(db, claimId, { approve: true, note: '', orgId: 'org_someone_else' })).toEqual({ ok: false, reason: 'claim_not_found' });
+    expect(await decideClaim(db, claimId, { approve: true, note: 'Confirmed in AppsFlyer raw data', orgId: s.advertiserId })).toEqual({ ok: true });
+    expect(await decideClaim(db, claimId, { approve: true, note: '', orgId: s.advertiserId })).toEqual({ ok: false, reason: 'claim_not_open' });
+    expect(before - (await balanceOf(db, 'advertiser_balance', s.advertiserId))).toBe(2_200_000n); // level-10 price
+    const credited = await db.select().from(conversions).where(eq(conversions.taskId, tasks.af_level_achieved_10!));
+    expect(credited).toMatchObject([{ status: 'approved', reasons: ['claim_approved'], publisherUserId: 'user-1' }]);
+    expect(await db.select().from(publisherPostbacks).where(eq(publisherPostbacks.conversionId, credited[0]!.id))).toHaveLength(1);
+
+    const list = await app.inject({ url: `/v1/claims?app_key=${s.appKey}&user_id=user-1&sig=${sign(s.placementSecret, [s.appKey, 'user-1'])}` });
+    expect(list.json().claims).toMatchObject([{ claim_id: claimId, status: 'approved', task_id: tasks.af_level_achieved_10 }]);
+  });
+
+  it('turns a rejected postback into a billed conversion on approval, and needs a reason to reject', async () => {
+    const s = await setup();
+    const tasks = await taskIds(s);
+    const clickId = await click(s);
+    await postback(s, clickId, 'install', at(60));
+    // Level 10 reported after the 7-day limit: rejected, so the user claims it.
+    expect((await postback(s, clickId, 'af_level_achieved_10', at(9 * DAY))).outcome).toBe('rejected');
+    const filed = await fileClaim(db, { ...camel(claimBody(s, 'user-1', tasks.af_level_achieved_10!)), now: at(9 * DAY + 60) });
+    if (!filed.ok) throw new Error(filed.reason);
+    expect(await decideClaim(db, filed.claimId, { approve: false, note: '', orgId: s.advertiserId })).toEqual({ ok: false, reason: 'claim_note_required' });
+    expect((await decideClaim(db, filed.claimId, { approve: true, note: 'Late MMP event, OK', orgId: s.advertiserId })).ok).toBe(true);
+    const rows = await db.select().from(conversions).where(eq(conversions.taskId, tasks.af_level_achieved_10!));
+    expect(rows).toMatchObject([{ status: 'approved', reasons: ['task_time_limit_exceeded', 'claim_approved'] }]);
+  });
+});
+
+/** The API's snake_case claim body as fileClaim input. */
+function camel(b: { app_key: string; user_id: string; offer_id: string; task_id: string; note: string; sig: string }) {
+  return { appKey: b.app_key, publisherUserId: b.user_id, campaignId: b.offer_id, taskId: b.task_id, note: b.note, signature: b.sig };
+}

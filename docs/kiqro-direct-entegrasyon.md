@@ -138,9 +138,9 @@ export async function kiqroDirectOffers(userId, country, lang, risk) {
       "started": true,
       "completed": false,
       "tasks": [
-        { "seq": 1, "name": "Yükle ve aç",       "timeLimitDays": 1,  "payoutUsd": "0.28", "rewardPoints": "280",  "state": "credited" },
-        { "seq": 2, "name": "10. seviyeye ulaş", "timeLimitDays": 7,  "payoutUsd": "1.54", "rewardPoints": "1540", "state": "open" },
-        { "seq": 3, "name": "Satın alma yap",    "timeLimitDays": 14, "payoutUsd": "4.20", "rewardPoints": "4200", "state": "open" }
+        { "taskId": "tsk_01JTASKINSTALL000000000", "seq": 1, "name": "Yükle ve aç",       "timeLimitDays": 1,  "payoutUsd": "0.28", "rewardPoints": "280",  "state": "credited" },
+        { "taskId": "tsk_01JTASKLEVEL10000000000", "seq": 2, "name": "10. seviyeye ulaş", "timeLimitDays": 7,  "payoutUsd": "1.54", "rewardPoints": "1540", "state": "open" },
+        { "taskId": "tsk_01JTASKPURCHASE00000000", "seq": 3, "name": "Satın alma yap",    "timeLimitDays": 14, "payoutUsd": "4.20", "rewardPoints": "4200", "state": "open" }
       ]
     }
   ]
@@ -156,6 +156,7 @@ export async function kiqroDirectOffers(userId, country, lang, risk) {
 | `totalRewardPoints` | Tüm adımların toplam ödülü (puan). Sayı **string** olarak gelir. |
 | `started` | Kullanıcı bu teklife daha önce tıkladı mı. Başlanmış teklifler, kampanya yeni kullanıcı almayı durdursa bile süreleri bitene kadar listede kalır. |
 | `completed` | Tüm adımlar ödüllendirildi. Bu teklifleri "tamamlananlar" bölümüne taşıyabilirsiniz. |
+| `tasks[].taskId` | Adımın kimliği. Kayıp ödül talebinde kullanılır (bölüm 8). |
 | `tasks[].name`, `timeLimitDays` | Kullanıcıya gösterilecek adım adı ve kurulumdan itibaren tamamlama süresi (gün). |
 | `tasks[].rewardPoints` | Bu adımın kullanıcıya ödülü (puan). |
 | `tasks[].payoutUsd` | Kiqro uygulamasının bu adımdan aldığı USD payı. **Kullanıcıya gösterilmez**; muhasebe / kâr hesabı içindir. |
@@ -306,7 +307,46 @@ Kiqro'nun bugün kullandığı kullanıcı fraud skoru Kiqro Direct'e iletilebil
 
 ---
 
-## 8. Güvenlik kontrol listesi
+## 8. Kayıp ödül talepleri
+
+Kullanıcı bir adımı tamamladığını ama ödül almadığını söylerse, uygulama içinden talep açtırın. Kiqro Network talebi kullanıcının tıklamasıyla eşleştirir ve reklamverene iletir. Reklamveren onaylarsa ödül normal postback ile gelir (`status=1`, yeni `transaction_id`). Reddederse gerekçe talep listesinde görünür.
+
+**Talep açma** (backend'den):
+
+```
+POST {TRACK}/v1/claims
+Content-Type: application/json   (veya application/x-www-form-urlencoded)
+
+{ "app_key": "…", "user_id": "u_102938", "offer_id": "cmp_…", "task_id": "tsk_…", "note": "10. seviyeye dün ulaştım", "sig": "…" }
+```
+
+- İmza: `sig = HMAC_SHA256(secret, "app_key|user_id|offer_id|task_id")`, hex.
+- `note` isteğe bağlı; en fazla 1000 karakter, reklamverene gösterilir.
+- Cevap: `{ "claim_id": "clm_…", "status": "open" }`. Aynı kullanıcı ve adım için tekrar gönderilirse mevcut talep döner.
+
+| HTTP | `error` | Anlamı |
+|---|---|---|
+| 400 | `missing_parameters` | Alan eksik |
+| 403 | `invalid_signature` | İmza hatalı |
+| 404 | `unknown_placement`, `unknown_task` | `app_key` ya da adım tanımsız |
+| 409 | `no_click` | Kullanıcının son 30 günde bu teklife tıklaması yok |
+| 409 | `already_rewarded` | Bu adım zaten ödüllendirilmiş |
+
+**Kullanıcının talepleri** (uygulamada "Taleplerim" ekranı için):
+
+```
+GET {TRACK}/v1/claims?app_key=…&user_id=…&sig=HMAC(secret, "app_key|user_id")
+```
+
+Cevap: `{ "claims": [ { "claim_id", "offer_id", "task_id", "status": "open" | "approved" | "rejected", "note", "created_at", "decided_at" } ] }`. `note`, ret gerekçesidir.
+
+Öneriler:
+- Talep butonunu yalnızca `state` değeri `open` ya da `rejected` olan adımlarda, kullanıcı teklife tıkladıktan sonra gösterin.
+- Kullanıcıya bekleme süresini söyleyin: reklamveren genelde 3–7 iş günü içinde karar verir.
+
+---
+
+## 9. Güvenlik kontrol listesi
 
 - [ ] `secret` yalnızca backend ortam değişkeninde; repoda, uygulamada, loglarda yok.
 - [ ] Offers API yalnızca backend'den çağrılıyor.
@@ -318,7 +358,7 @@ Kiqro'nun bugün kullandığı kullanıcı fraud skoru Kiqro Direct'e iletilebil
 
 ---
 
-## 9. Test planı
+## 10. Test planı
 
 Kiqro ekibi test ortamında, test reklamvereni ve test kampanyasıyla bir placement hazırlar.
 
@@ -331,6 +371,7 @@ Kiqro ekibi test ortamında, test reklamvereni ve test kampanyasıyla bir placem
 | `cmp_01JTESTCAMPAIGN0000000000\|u_102938` | `516c6a8195f1028cf5ed73ec2e29f9ab8509fde25e08dd9e1f44e797b626972f` |
 | `u_102938\|2800\|cnv_01JTESTCONVERSION00000000\|1` | `8a472354508121e17ea9a525bb57992c4f70e273395a20a2985a7c748465007b` |
 | `u_102938\|2800\|cnv_01JTESTCONVERSION00000000\|2` | `fd36c857cea610e3af1b65277a560c610914d9a768206154511656c92cca7e97` |
+| `app_8f2c1d9e0a7b3c45\|u_102938\|cmp_01JTESTCAMPAIGN0000000000\|tsk_01JTASKLEVEL10000000000` | `550c1abe8607314b6d6f25648c5532483650e15957149d6c0a4a7449015563c1` |
 
 **2. Liste** — Test kullanıcısıyla offerwall'u açın; test teklifi "Kiqro Direct" altında doğru dilde, doğru ödüllerle görünmeli.
 
@@ -346,9 +387,11 @@ Kiqro ekibi test ortamında, test reklamvereni ve test kampanyasıyla bir placem
 
 **8. VPN** — VPN açıkken tıklandığında kullanıcı açıklama sayfası görmeli.
 
+**9. Kayıp ödül talebi** — Test kullanıcısı, tıkladığı ama ödül almadığı bir adım için talep açar; talep "Taleplerim" ekranında `open` görünmeli. Kiqro ekibi talebi onaylayınca ödül postback'i gelmeli ve talep `approved` olmalı; reddedilen talepte gerekçe görünmeli.
+
 ---
 
-## 10. Hata kodları
+## 11. Hata kodları
 
 **Offers API**
 
@@ -371,7 +414,7 @@ Kiqro ekibi test ortamında, test reklamvereni ve test kampanyasıyla bir placem
 
 ---
 
-## 11. Tamamlanma kriterleri
+## 12. Tamamlanma kriterleri
 
 - [ ] Offerwall'da Kiqro Direct teklifleri diğer sağlayıcılarla birlikte görünüyor; Kiqro Direct cevap vermediğinde offerwall yine açılıyor.
 - [ ] Teklif detayında adımlar, ödüller, süreler ve adım durumları görünüyor.
@@ -379,10 +422,11 @@ Kiqro ekibi test ortamında, test reklamvereni ve test kampanyasıyla bir placem
 - [ ] Postback uç noktası imzayı doğruluyor, tekrarları yok sayıyor, ödülü anında veriyor.
 - [ ] Geri alma bakiyeyi düşüyor; eksi bakiyede para çekme kapalı.
 - [ ] Risk skoru gönderiliyor (önerilir).
-- [ ] Bölüm 9'daki test planı test ortamında baştan sona geçti.
+- [ ] Kullanıcı uygulama içinden kayıp ödül talebi açabiliyor ve taleplerinin durumunu görebiliyor.
+- [ ] Bölüm 10'daki test planı test ortamında baştan sona geçti.
 
 ---
 
-## 12. İletişim
+## 13. İletişim
 
 Teknik sorular ve test postback'leri için Kiqro Network ekibi: **ads@kiqro.com**

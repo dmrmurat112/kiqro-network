@@ -490,3 +490,33 @@ export const payments = pgTable(
   },
   (t) => [index('payments_org_idx').on(t.orgId, t.createdAt)],
 );
+
+export const claimStatus = pgEnum('claim_status', ['open', 'approved', 'rejected']);
+
+/**
+ * Missing-credit claims: a publisher's user says they completed a task but got no reward.
+ * Filed through the publisher (Offers API), matched to the user's click, decided by the
+ * advertiser (or Kiqro). Approving one creates a billable conversion.
+ */
+export const claims = pgTable(
+  'claims',
+  {
+    id: text('id').primaryKey(),
+    placementId: text('placement_id').notNull().references(() => placements.id),
+    publisherUserId: text('publisher_user_id').notNull(),
+    campaignId: text('campaign_id').notNull().references(() => campaigns.id),
+    taskId: text('task_id').notNull().references(() => campaignTasks.id),
+    clickId: text('click_id').notNull().references(() => clicks.id),
+    status: claimStatus('status').notNull().default('open'),
+    /** What the user wrote (e.g. "reached level 10 on 3 Nov"). */
+    userNote: text('user_note'),
+    /** Reason shown to the publisher when rejected, or a note on approval. */
+    decisionNote: text('decision_note'),
+    decidedByAdvertiserUserId: text('decided_by_advertiser_user_id').references(() => advertiserUsers.id),
+    decidedByAdminUserId: text('decided_by_admin_user_id').references(() => adminUsers.id),
+    decidedAt: timestamp('decided_at', { withTimezone: true }),
+    conversionId: text('conversion_id').references(() => conversions.id),
+    createdAt: createdAt(),
+  },
+  (t) => [index('claims_campaign_idx').on(t.campaignId, t.status, t.createdAt), index('claims_user_idx').on(t.placementId, t.publisherUserId)],
+);

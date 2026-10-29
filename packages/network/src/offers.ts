@@ -22,6 +22,8 @@ export interface OffersInput {
 export type TaskState = 'open' | 'credited' | 'in_review' | 'rejected' | 'reversed';
 
 export interface OfferTask {
+  /** Identifies the step in missing-credit claims (POST /v1/claims). */
+  taskId: string;
   seq: number;
   name: string;
   timeLimitDays: number;
@@ -110,6 +112,7 @@ export async function listOffers(db: Db, input: OffersInput): Promise<{ ok: true
       total += points;
       const done = userConversions.find((c) => c.taskId === task.id);
       tasks.push({
+        taskId: task.id,
         seq: task.seq,
         name: pick(task.displayName, input.lang),
         timeLimitDays: task.timeLimitDays,
