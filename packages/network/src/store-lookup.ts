@@ -15,7 +15,7 @@ export interface StoreRef {
 }
 
 export interface StoreApp {
-  platform: StorePlatform;
+  platform: StorePlatform | 'web';
   storeId: string;
   name: string;
   iconUrl: string;
@@ -121,4 +121,23 @@ export async function lookupStoreApp(ref: StoreRef, fetcher: Fetcher = fetch as 
   if (cache.size > 2_000) cache.clear();
   cache.set(key, { at: now, app });
   return app;
+}
+
+const HOSTNAME = /^(?=.{4,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;
+
+/**
+ * A website "app": the domain from what the advertiser typed, with its favicon from Google's
+ * favicon service. Nothing is fetched from the advertiser's host itself (no server-side
+ * requests to arbitrary addresses).
+ */
+export function websiteApp(raw: string): StoreApp | null {
+  let host = raw.trim().toLowerCase();
+  try {
+    host = new URL(/^https?:\/\//.test(host) ? host : `https://${host}`).hostname;
+  } catch {
+    return null;
+  }
+  host = host.replace(/^www\./, '');
+  if (!HOSTNAME.test(host)) return null;
+  return { platform: 'web', storeId: host, name: host, iconUrl: `https://www.google.com/s2/favicons?domain=${host}&sz=128`, developer: null };
 }

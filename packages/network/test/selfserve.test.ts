@@ -6,6 +6,8 @@ import { approveCampaign, createAdminUser, createAdvertiser, returnCampaign, typ
 import {
   advertiserCampaignForm,
   advertiserCreateProduct,
+  advertiserDeleteProduct,
+  advertiserUpdateProduct,
   advertiserSaveCampaign,
   advertiserSetPaused,
   createAdvertiserUser,
@@ -114,6 +116,34 @@ describe('self-serve campaigns', () => {
     const badTr = await advertiserSaveCampaign(db, me, draft(p.id, { trackingUrl: 'https://app.adjust.com/abc' }), 'tr');
     expect(badTr).toMatchObject({ ok: false, issues: [{ message: 'takip linkinde {click_id} makrosu olmalı' }] });
     expect(await advertiserSaveCampaign(db, me, draft(p.id, { totalBudgetUsd: '50' }), 'en')).toMatchObject({ ok: false, issues: [{ path: 'totalBudgetUsd', message: 'the total budget must be at least $100' }] });
+  });
+
+  it('edits and deletes apps, protecting those that campaigns rely on', async () => {
+    const ops = await staff();
+    const me = await advertiser(ops, 'apps@studio.test');
+    const other = await advertiser(ops, 'other@studio.test');
+    const p = await advertiserCreateProduct(db, me, product, 'en');
+    if (!p.ok) throw new Error('product');
+    expect(await advertiserCreateProduct(db, me, { ...product, name: 'Again' }, 'en')).toMatchObject({ ok: false, issues: [{ path: 'storeId', message: 'this app is already in your list' }] });
+
+    // While unused, everything can change.
+    expect((await advertiserUpdateProduct(db, me, p.id, { ...product, storeId: 'fi.studio.game2', name: 'Aurora 2', mmp: 'adjust' }, 'en')).ok).toBe(true);
+    expect(await db.query.products.findFirst({ where: eq(schema.products.id, p.id) })).toMatchObject({ storeId: 'fi.studio.game2', name: 'Aurora 2', mmp: 'adjust' });
+    expect((await advertiserUpdateProduct(db, other, p.id, product, 'en')).ok).toBe(false);
+    expect((await advertiserDeleteProduct(db, other, p.id, 'en')).ok).toBe(false);
+
+    // A submitted campaign locks platform and store ID, and any campaign blocks deletion.
+    const c = await advertiserSaveCampaign(db, me, draft(p.id), 'en');
+    if (!c.ok) throw new Error('campaign');
+    expect(await advertiserDeleteProduct(db, me, p.id, 'tr')).toMatchObject({ ok: false, issues: [{ message: 'bu uygulamanın kampanyaları var; silinemez' }] });
+    await submitCampaignForReview(db, me, c.id, 'en', NOTIFY);
+    expect(await advertiserUpdateProduct(db, me, p.id, { ...product, storeId: 'fi.studio.other' }, 'en')).toMatchObject({ ok: false, issues: [{ path: 'storeId' }] });
+    expect((await advertiserUpdateProduct(db, me, p.id, { ...product, storeId: 'fi.studio.game2', name: 'Aurora Quest HD' }, 'en')).ok).toBe(true);
+
+    const spare = await advertiserCreateProduct(db, me, { ...product, storeId: 'fi.studio.spare' }, 'en');
+    if (!spare.ok) throw new Error('spare');
+    expect((await advertiserDeleteProduct(db, me, spare.id, 'en')).ok).toBe(true);
+    expect(await db.query.products.findFirst({ where: eq(schema.products.id, spare.id) })).toBeUndefined();
   });
 
   it('keeps advertisers out of each other’s apps and campaigns', async () => {

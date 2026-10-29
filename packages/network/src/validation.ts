@@ -35,6 +35,13 @@ const MESSAGES: Record<string, Record<UiLocale, (param: string) => string>> = {
   not_editable: { en: () => 'only draft campaigns can be edited; contact Kiqro to change a live campaign', tr: () => 'yalnızca taslak kampanyalar düzenlenebilir; yayındaki kampanya için Kiqro ile iletişime geçin' },
   not_submittable: { en: () => 'only draft campaigns can be submitted', tr: () => 'yalnızca taslak kampanyalar gönderilebilir' },
   not_pausable: { en: () => 'only live or paused campaigns can be paused or resumed', tr: () => 'yalnızca yayındaki veya duraklatılmış kampanyalar duraklatılıp devam ettirilebilir' },
+  app_exists: { en: () => 'this app is already in your list', tr: () => 'bu uygulama listenizde zaten var' },
+  app_not_found: { en: () => 'app not found', tr: () => 'uygulama bulunamadı' },
+  app_in_use: { en: () => 'this app has campaigns; it cannot be deleted', tr: () => 'bu uygulamanın kampanyaları var; silinemez' },
+  app_identity_locked: {
+    en: () => 'the platform and store ID cannot change once a campaign of this app has been submitted',
+    tr: () => 'bu uygulamanın gönderilmiş kampanyası olduğu için platform ve mağaza ID’si değiştirilemez',
+  },
   amount_cents: { en: () => 'enter an amount in dollars, such as 750 or 750.50', tr: () => 'dolar cinsinden bir tutar girin (ör. 750 veya 750.50)' },
   topup_minimum: { en: (m) => `the minimum top-up is $${m}`, tr: (m) => `en az ${m} $ yüklenebilir` },
   topup_maximum: { en: (m) => `card payments are limited to $${m}; contact Kiqro for a bank transfer`, tr: (m) => `kartla en fazla ${m} $ ödenebilir; daha yüksek tutarlar için havale bilgisi isteyin` },

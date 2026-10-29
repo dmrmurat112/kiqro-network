@@ -33,11 +33,58 @@ export async function advertiserCreateProduct(db: Db, session: AdvertiserSession
   if (!parsed.success) return { ok: false, issues: localizedIssues(parsed.error, locale) };
   const d = parsed.data;
   const id = newId('product');
-  await db.transaction(async (tx) => {
+  return db.transaction(async (tx) => {
+    const duplicate = await tx.query.products.findFirst({ where: and(eq(products.orgId, session.org.id), eq(products.platform, d.platform), eq(products.storeId, d.storeId)) });
+    if (duplicate) return fail('app_exists', locale, 'storeId');
     await tx.insert(products).values({ id, orgId: session.org.id, platform: d.platform, storeId: d.storeId, name: d.name, iconUrl: d.iconUrl ?? null, mmp: d.mmp });
     await auditAdvertiser(tx, session, 'advertiser.product.create', 'product', id, { name: d.name });
+    return { ok: true, id } as const;
   });
-  return { ok: true, id };
+}
+
+/** Campaigns of this app that are past the draft stage (submitted, live or finished). */
+async function liveCampaignCount(db: DbOrTx, productId: string): Promise<number> {
+  const rows = await db.select({ id: campaigns.id, status: campaigns.status }).from(campaigns).where(eq(campaigns.productId, productId));
+  return rows.filter((r) => r.status !== 'draft').length;
+}
+
+/**
+ * Edits an app. Name, icon and MMP can always change; the platform and store ID only while no
+ * campaign of the app has gone beyond draft, because live tracking links and payouts refer to them.
+ */
+export async function advertiserUpdateProduct(db: Db, session: AdvertiserSession, productId: string, input: unknown, locale: UiLocale): Promise<SaveResult> {
+  const parsed = productInput.safeParse(input);
+  if (!parsed.success) return { ok: false, issues: localizedIssues(parsed.error, locale) };
+  const d = parsed.data;
+  return db.transaction(async (tx) => {
+    const product = await tx.query.products.findFirst({ where: and(eq(products.id, productId), eq(products.orgId, session.org.id)) });
+    if (!product) return fail('app_not_found', locale);
+    const identityChanged = product.platform !== d.platform || product.storeId !== d.storeId;
+    if (identityChanged) {
+      if ((await liveCampaignCount(tx, productId)) > 0) return fail('app_identity_locked', locale, 'storeId');
+      const duplicate = await tx.query.products.findFirst({ where: and(eq(products.orgId, session.org.id), eq(products.platform, d.platform), eq(products.storeId, d.storeId)) });
+      if (duplicate && duplicate.id !== productId) return fail('app_exists', locale, 'storeId');
+    }
+    await tx.update(products).set({ platform: d.platform, storeId: d.storeId, name: d.name, iconUrl: d.iconUrl ?? null, mmp: d.mmp }).where(eq(products.id, productId));
+    await auditAdvertiser(tx, session, 'advertiser.product.update', 'product', productId, {
+      before: { platform: product.platform, storeId: product.storeId, name: product.name, mmp: product.mmp },
+      after: { platform: d.platform, storeId: d.storeId, name: d.name, mmp: d.mmp },
+    });
+    return { ok: true, id: productId } as const;
+  });
+}
+
+/** Deletes an app that no campaign uses (drafts included; delete those first). */
+export async function advertiserDeleteProduct(db: Db, session: AdvertiserSession, productId: string, locale: UiLocale): Promise<SaveResult> {
+  return db.transaction(async (tx) => {
+    const product = await tx.query.products.findFirst({ where: and(eq(products.id, productId), eq(products.orgId, session.org.id)) });
+    if (!product) return fail('app_not_found', locale);
+    const used = await tx.query.campaigns.findFirst({ where: eq(campaigns.productId, productId), columns: { id: true } });
+    if (used) return fail('app_in_use', locale);
+    await tx.delete(products).where(eq(products.id, productId));
+    await auditAdvertiser(tx, session, 'advertiser.product.delete', 'product', productId, { name: product.name, storeId: product.storeId });
+    return { ok: true, id: productId } as const;
+  });
 }
 
 /**

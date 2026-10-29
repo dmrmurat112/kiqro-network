@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { lookupStoreApp, parseStoreInput } from '../src/store-lookup.ts';
+import { lookupStoreApp, parseStoreInput, websiteApp } from '../src/store-lookup.ts';
 
 describe('store input', () => {
   it('reads links, IDs and package names', () => {
@@ -40,5 +40,14 @@ describe('store lookup', () => {
     expect(await lookupStoreApp({ platform: 'ios', storeId: '11111' }, respond('{"results":[]}'))).toBeNull();
     expect(await lookupStoreApp({ platform: 'android', storeId: 'fi.test.gone' }, respond('', false))).toBeNull();
     expect(await lookupStoreApp({ platform: 'android', storeId: 'fi.test.down' }, async () => Promise.reject(new Error('offline')))).toBeNull();
+  });
+});
+
+describe('websites', () => {
+  it('normalizes the domain and uses the favicon service', () => {
+    expect(websiteApp('https://www.Kiqro.com/tr?x=1')).toEqual({ platform: 'web', storeId: 'kiqro.com', name: 'kiqro.com', iconUrl: 'https://www.google.com/s2/favicons?domain=kiqro.com&sz=128', developer: null });
+    expect(websiteApp('shop.example.fi')).toMatchObject({ storeId: 'shop.example.fi' });
+    expect(websiteApp('localhost')).toBeNull();
+    expect(websiteApp('http://10.0.0.1')).toBeNull();
   });
 });

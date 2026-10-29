@@ -3,8 +3,8 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import type { CampaignInput } from '@kiqro/network/admin';
-import { advertiserCreateProduct, advertiserSaveCampaign, advertiserSetPaused, submitCampaignForReview } from '@kiqro/network/advertiser';
-import { lookupStoreApp, parseStoreInput, type FieldIssue, type StoreApp } from '@kiqro/network';
+import { advertiserCreateProduct, advertiserDeleteProduct, advertiserUpdateProduct, advertiserSaveCampaign, advertiserSetPaused, submitCampaignForReview } from '@kiqro/network/advertiser';
+import { lookupStoreApp, parseStoreInput, websiteApp, type FieldIssue, type StoreApp } from '@kiqro/network';
 import { db } from '@/lib/db';
 import { panelLocale, requireAdvertiser } from '@/lib/session';
 
@@ -17,22 +17,40 @@ export type ProductResult =
   | { ok: true; product: { id: string; name: string; platform: string; storeId: string; mmp: string | null; iconUrl: string | null } }
   | { ok: false; issues: FieldIssue[] };
 
-/** Store icons are only accepted from the stores' own image hosts. */
-const STORE_ICON = /^https:\/\/(play-lh\.googleusercontent\.com|is\d+-ssl\.mzstatic\.com)\//;
+/** Icons are only accepted from the stores' image hosts and the favicon service used for websites. */
+const STORE_ICON = /^https:\/\/(play-lh\.googleusercontent\.com\/|is\d+-ssl\.mzstatic\.com\/|www\.google\.com\/s2\/favicons\?)/;
 
-/** Name, icon and developer of an app from Google Play or the App Store, for the wizard. */
+type ProductInput = { platform: string; storeId: string; name: string; mmp: string; iconUrl?: string };
+const safeIcon = (url?: string) => (url && STORE_ICON.test(url) ? url : '');
+
+/** Name, icon and developer of an app from Google Play or the App Store (or a website's favicon), for the wizard. */
 export async function lookupStoreAppAction(raw: string, platform: string): Promise<StoreApp | null> {
   await requireAdvertiser();
+  if (platform === 'web') return websiteApp(raw);
   const ref = parseStoreInput(raw, platform);
   return ref ? lookupStoreApp(ref) : null;
 }
 
-export async function createProductAction(input: { platform: string; storeId: string; name: string; mmp: string; iconUrl?: string }): Promise<ProductResult> {
+export async function createProductAction(input: ProductInput): Promise<ProductResult> {
   const [session, lang] = await Promise.all([requireAdvertiser(), panelLocale()]);
-  const iconUrl = input.iconUrl && STORE_ICON.test(input.iconUrl) ? input.iconUrl : '';
+  const iconUrl = safeIcon(input.iconUrl);
   const result = await advertiserCreateProduct(db, session, { ...input, iconUrl }, lang);
   if (!result.ok) return result;
   return { ok: true, product: { id: result.id, name: input.name, platform: input.platform, storeId: input.storeId, mmp: input.mmp, iconUrl: iconUrl || null } };
+}
+
+export async function updateProductAction(productId: string, input: ProductInput): Promise<ProductResult> {
+  const [session, lang] = await Promise.all([requireAdvertiser(), panelLocale()]);
+  const iconUrl = safeIcon(input.iconUrl);
+  const result = await advertiserUpdateProduct(db, session, productId, { ...input, iconUrl }, lang);
+  if (!result.ok) return result;
+  return { ok: true, product: { id: productId, name: input.name, platform: input.platform, storeId: input.storeId, mmp: input.mmp, iconUrl: iconUrl || null } };
+}
+
+export async function deleteProductAction(productId: string): Promise<{ ok: boolean; issues?: FieldIssue[] }> {
+  const [session, lang] = await Promise.all([requireAdvertiser(), panelLocale()]);
+  const result = await advertiserDeleteProduct(db, session, productId, lang);
+  return result.ok ? { ok: true } : result;
 }
 
 /** Saves the wizard; with intent "submit" it also sends the draft to Kiqro for review. */

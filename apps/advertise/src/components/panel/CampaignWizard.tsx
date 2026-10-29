@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
-import { AlertCircle, Apple, Check, CheckCircle2, ChevronDown, Globe, Loader2, Plus, SearchX, Smartphone, Trash2, X } from 'lucide-react';
+import { AlertCircle, Apple, Check, CheckCircle2, ChevronDown, Globe, Loader2, Pencil, Plus, SearchX, Smartphone, Trash2, X } from 'lucide-react';
 import type { CampaignInput } from '@kiqro/network/admin';
 import type { FieldIssue, StoreApp } from '@kiqro/network';
-import { createProductAction, lookupStoreAppAction, saveCampaignAction } from '@/app/(panel)/app/campaigns/actions';
+import { createProductAction, deleteProductAction, lookupStoreAppAction, saveCampaignAction, updateProductAction } from '@/app/(panel)/app/campaigns/actions';
 import type { PanelDictT } from '@/lib/i18n';
 
 type Task = CampaignInput['tasks'][number];
@@ -103,12 +103,14 @@ export function CampaignWizard({ t, lang, products: initialProducts, initial, ca
   const [lookup, setLookup] = useState<{ state: 'idle' | 'loading' | 'found' | 'missing'; app?: StoreApp }>({ state: 'idle' });
   const lookupSeq = useRef(0);
   const [appIssues, setAppIssues] = useState<FieldIssue[]>([]);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [listError, setListError] = useState('');
 
   // Look the app up in Google Play / the App Store as the advertiser types or pastes a link.
   useEffect(() => {
     const raw = newApp.storeId.trim();
-    if (newApp.platform === 'web' || raw.length < 4 || (lookup.app && raw === lookup.app.storeId)) {
-      if (newApp.platform === 'web' || raw.length < 4) setLookup({ state: 'idle' });
+    if (raw.length < 4 || (lookup.app && raw === lookup.app.storeId && newApp.platform === lookup.app.platform)) {
+      if (raw.length < 4) setLookup({ state: 'idle' });
       return;
     }
     const seq = ++lookupSeq.current;
@@ -168,17 +170,50 @@ export function CampaignWizard({ t, lang, products: initialProducts, initial, ca
     });
   }
 
-  function addApp() {
+  function closeAppForm() {
+    setAdding(false);
+    setEditingId(null);
+    setNewApp(emptyApp);
+    setNameTouched(false);
+    setLookup({ state: 'idle' });
+    setAppIssues([]);
+  }
+
+  function saveApp() {
     setAppIssues([]);
     startTransition(async () => {
-      const result = await createProductAction(newApp);
+      const result = editingId ? await updateProductAction(editingId, newApp) : await createProductAction(newApp);
       if (!result.ok) return setAppIssues(result.issues);
-      setProducts((list) => [...list, result.product]);
-      set({ productId: result.product.id, titleEn: c.titleEn || result.product.name, name: c.name || `${result.product.name} – launch` });
-      setAdding(false);
-      setNewApp(emptyApp);
-      setNameTouched(false);
-      setLookup({ state: 'idle' });
+      if (editingId) {
+        setProducts((list) => list.map((p) => (p.id === editingId ? result.product : p)));
+      } else {
+        setProducts((list) => [...list, result.product]);
+        set({ productId: result.product.id, titleEn: c.titleEn || result.product.name, name: c.name || `${result.product.name} – launch` });
+      }
+      closeAppForm();
+    });
+  }
+
+  function startEdit(p: Product) {
+    setListError('');
+    setAppIssues([]);
+    setEditingId(p.id);
+    setAdding(true);
+    setNameTouched(true); // keep the advertiser's own name
+    setNewApp({ platform: p.platform, storeId: p.storeId, name: p.name, mmp: p.mmp ?? 'none', iconUrl: p.iconUrl ?? '' });
+    // With an icon there is nothing to look up; without one the store is asked again.
+    setLookup(p.iconUrl ? { state: 'found', app: { platform: p.platform as StoreApp['platform'], storeId: p.storeId, name: p.name, iconUrl: p.iconUrl, developer: null } } : { state: 'idle' });
+  }
+
+  function deleteApp(p: Product) {
+    if (!window.confirm(t.app.deleteConfirm.replace('{name}', p.name))) return;
+    setListError('');
+    startTransition(async () => {
+      const result = await deleteProductAction(p.id);
+      if (!result.ok) return setListError(result.issues?.map((x) => x.message).join(' · ') ?? '');
+      setProducts((list) => list.filter((x) => x.id !== p.id));
+      if (c.productId === p.id) set({ productId: '' });
+      if (editingId === p.id) closeAppForm();
     });
   }
 
@@ -235,30 +270,46 @@ export function CampaignWizard({ t, lang, products: initialProducts, initial, ca
               {products.length > 0 && (
                 <div className="grid gap-3 sm:grid-cols-2">
                   {products.map((p) => (
-                    <button
+                    <div
                       key={p.id}
-                      type="button"
-                      onClick={() => set({ productId: p.id, titleEn: c.titleEn || p.name, name: c.name || `${p.name} – launch` })}
-                      className={`flex items-center gap-3 rounded-xl border p-4 text-left transition-colors ${c.productId === p.id ? 'border-violet-500 bg-violet-500/10' : 'border-line hover:border-line-strong'}`}
+                      className={`group flex items-center rounded-xl border transition-colors ${
+                        editingId === p.id ? 'border-violet-400 border-dashed' : c.productId === p.id ? 'border-violet-500 bg-violet-500/10' : 'border-line hover:border-line-strong'
+                      }`}
                     >
-                      <AppIcon iconUrl={p.iconUrl} platform={p.platform} />
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate font-medium">{p.name}</span>
-                        <span className="block truncate font-mono text-xs text-subtle">{p.storeId}</span>
-                      </span>
-                      {c.productId === p.id && <CheckCircle2 size={18} className="text-violet-400" />}
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => set({ productId: p.id, titleEn: c.titleEn || p.name, name: c.name || `${p.name} – launch` })}
+                        className="flex min-w-0 flex-1 items-center gap-3 p-4 text-left"
+                      >
+                        <AppIcon iconUrl={p.iconUrl} platform={p.platform} />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate font-medium">{p.name}</span>
+                          <span className="block truncate font-mono text-xs text-subtle">{p.storeId}</span>
+                        </span>
+                        {c.productId === p.id && <CheckCircle2 size={18} className="shrink-0 text-violet-400" />}
+                      </button>
+                      <div className="flex shrink-0 gap-0.5 pr-2 transition-opacity sm:opacity-0 sm:group-focus-within:opacity-100 sm:group-hover:opacity-100">
+                        <button type="button" onClick={() => startEdit(p)} className="grid h-8 w-8 place-items-center rounded-lg text-subtle hover:bg-surface-strong hover:text-fg" aria-label={t.app.edit} title={t.app.edit}>
+                          <Pencil size={15} />
+                        </button>
+                        <button type="button" onClick={() => deleteApp(p)} disabled={pending} className="grid h-8 w-8 place-items-center rounded-lg text-subtle hover:bg-bad/10 hover:text-bad" aria-label={t.app.delete} title={t.app.delete}>
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+                    </div>
                   ))}
                 </div>
               )}
+              {listError && <p className="-mt-2 text-sm text-bad">{listError}</p>}
               {adding ? (
                 <div className="grid gap-4 rounded-xl border border-dashed border-line-strong p-4">
+                  {editingId && <h3 className="font-semibold">{t.app.editTitle}</h3>}
                   <div className="flex gap-2">
                     {['android', 'ios', 'web'].map((pl) => (
                       <button
                         key={pl}
                         type="button"
-                        onClick={() => setNewApp({ ...newApp, platform: pl, iconUrl: pl === 'web' ? '' : newApp.iconUrl })}
+                        onClick={() => setNewApp({ ...newApp, platform: pl, iconUrl: '' })}
                         className={`flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm capitalize ${newApp.platform === pl ? 'border-violet-500 bg-violet-500/10' : 'border-line text-muted'}`}
                       >
                         <PlatformIcon platform={pl} /> {pl === 'ios' ? 'iOS' : pl}
@@ -275,7 +326,10 @@ export function CampaignWizard({ t, lang, products: initialProducts, initial, ca
                         autoComplete="off"
                         placeholder={newApp.platform === 'web' ? 'example.com' : t.app.storeLinkHint}
                         value={newApp.storeId}
-                        onChange={(e) => setNewApp({ ...newApp, storeId: e.target.value, iconUrl: '' })}
+                        onChange={(e) => {
+                          setLookup({ state: 'idle' });
+                          setNewApp({ ...newApp, storeId: e.target.value, iconUrl: '' });
+                        }}
                       />
                       <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
                         {lookup.state === 'loading' && <Loader2 size={16} className="animate-spin text-subtle" />}
@@ -284,7 +338,7 @@ export function CampaignWizard({ t, lang, products: initialProducts, initial, ca
                       </span>
                     </div>
                     {lookup.state === 'missing' && <span className="text-xs text-warn">{t.app.notFound}</span>}
-                    {newApp.platform !== 'web' && lookup.state === 'idle' && <span className="text-xs text-subtle">{t.app.storeLinkSub}</span>}
+                    {lookup.state === 'idle' && <span className="text-xs text-subtle">{newApp.platform === 'web' ? t.app.siteSub : t.app.storeLinkSub}</span>}
                   </label>
 
                   {lookup.state === 'found' && lookup.app && (
@@ -294,8 +348,8 @@ export function CampaignWizard({ t, lang, products: initialProducts, initial, ca
                         <div className="truncate font-semibold">{lookup.app.name}</div>
                         {lookup.app.developer && <div className="truncate text-sm text-muted">{lookup.app.developer}</div>}
                         <div className="mt-1 flex items-center gap-1.5 text-xs text-subtle">
-                          {lookup.app.platform === 'ios' ? <Apple size={12} /> : <Smartphone size={12} />}
-                          {lookup.app.platform === 'ios' ? 'App Store' : 'Google Play'} · <span className="truncate font-mono">{lookup.app.storeId}</span>
+                          {lookup.app.platform === 'ios' ? <Apple size={12} /> : lookup.app.platform === 'web' ? <Globe size={12} /> : <Smartphone size={12} />}
+                          {lookup.app.platform === 'ios' ? 'App Store' : lookup.app.platform === 'web' ? 'Web' : 'Google Play'} · <span className="truncate font-mono">{lookup.app.storeId}</span>
                         </div>
                       </div>
                     </div>
@@ -344,18 +398,26 @@ export function CampaignWizard({ t, lang, products: initialProducts, initial, ca
                   </fieldset>
                   {appIssues.length > 0 && <p className="text-sm text-bad">{appIssues.map((x) => x.message).join(' · ')}</p>}
                   <div className="flex gap-2">
-                    <button type="button" className="btn-primary !py-2 text-sm" onClick={addApp} disabled={pending}>
-                      <Plus size={15} /> {t.app.addSubmit}
+                    <button type="button" className="btn-primary !py-2 text-sm" onClick={saveApp} disabled={pending}>
+                      {editingId ? (
+                        <>
+                          <Check size={15} /> {t.app.save}
+                        </>
+                      ) : (
+                        <>
+                          <Plus size={15} /> {t.app.addSubmit}
+                        </>
+                      )}
                     </button>
-                    {products.length > 0 && (
-                      <button type="button" className="btn-ghost !py-2 text-sm" onClick={() => setAdding(false)}>
+                    {(products.length > 0 || editingId) && (
+                      <button type="button" className="btn-ghost !py-2 text-sm" onClick={closeAppForm}>
                         {t.app.cancel}
                       </button>
                     )}
                   </div>
                 </div>
               ) : (
-                <button type="button" onClick={() => setAdding(true)} className="flex items-center gap-2 self-start text-sm font-medium text-violet-400 hover:text-violet-300">
+                <button type="button" onClick={() => (closeAppForm(), setAdding(true))} className="flex items-center gap-2 self-start text-sm font-medium text-violet-400 hover:text-violet-300">
                   <Plus size={16} /> {t.app.add}
                 </button>
               )}
