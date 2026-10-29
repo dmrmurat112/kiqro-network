@@ -1,14 +1,14 @@
 'use client';
 
-import { useMemo, useState, useTransition } from 'react';
-import { AlertCircle, Apple, Check, CheckCircle2, ChevronDown, Globe, Plus, Smartphone, Trash2, X } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
+import { AlertCircle, Apple, Check, CheckCircle2, ChevronDown, Globe, Loader2, Plus, SearchX, Smartphone, Trash2, X } from 'lucide-react';
 import type { CampaignInput } from '@kiqro/network/admin';
-import type { FieldIssue } from '@kiqro/network';
-import { createProductAction, saveCampaignAction } from '@/app/(panel)/app/campaigns/actions';
+import type { FieldIssue, StoreApp } from '@kiqro/network';
+import { createProductAction, lookupStoreAppAction, saveCampaignAction } from '@/app/(panel)/app/campaigns/actions';
 import type { PanelDictT } from '@/lib/i18n';
 
 type Task = CampaignInput['tasks'][number];
-type Product = { id: string; name: string; platform: string; storeId: string; mmp: string | null };
+type Product = { id: string; name: string; platform: string; storeId: string; mmp: string | null; iconUrl?: string | null };
 
 interface Props {
   t: PanelDictT['wizard'];
@@ -23,6 +23,30 @@ interface Props {
 const POPULAR = ['FI', 'SE', 'NO', 'DK', 'DE', 'AT', 'CH', 'NL', 'GB', 'US', 'TR', 'PL'];
 const MMPS = ['appsflyer', 'adjust', 'singular', 'kochava', 'branch', 'tenjin', 'none'];
 const MMP_LABEL: Record<string, string> = { appsflyer: 'AppsFlyer', adjust: 'Adjust', singular: 'Singular', kochava: 'Kochava', branch: 'Branch', tenjin: 'Tenjin', none: 'S2S / none' };
+/** Monogram tiles for the MMP picker (letters and colours only, no third-party logos). */
+const MMP_TILE: Record<string, { mark: string; tone: string }> = {
+  appsflyer: { mark: 'AF', tone: 'from-emerald-400 to-sky-500' },
+  adjust: { mark: 'Aj', tone: 'from-blue-500 to-indigo-600' },
+  singular: { mark: 'Si', tone: 'from-violet-500 to-fuchsia-500' },
+  kochava: { mark: 'Ko', tone: 'from-orange-400 to-rose-500' },
+  branch: { mark: 'Br', tone: 'from-teal-400 to-emerald-600' },
+  tenjin: { mark: 'Tj', tone: 'from-amber-400 to-orange-500' },
+  none: { mark: 'S2S', tone: 'from-slate-500 to-slate-700' },
+};
+
+/** App icon from the store, or the platform glyph when there is none. */
+function AppIcon({ iconUrl, platform, size = 40 }: { iconUrl?: string | null; platform: string; size?: number }) {
+  if (iconUrl) {
+    // eslint-disable-next-line @next/next/no-img-element -- remote store icons, no image optimizer needed
+    return <img src={iconUrl} alt="" width={size} height={size} className="shrink-0 rounded-xl border border-line object-cover" style={{ width: size, height: size }} referrerPolicy="no-referrer" />;
+  }
+  const Icon = platform === 'ios' ? Apple : platform === 'web' ? Globe : Smartphone;
+  return (
+    <span className="grid shrink-0 place-items-center rounded-xl bg-surface-strong text-muted" style={{ width: size, height: size }}>
+      <Icon size={size * 0.45} />
+    </span>
+  );
+}
 
 /** Suggested MMP event names per preset; Adjust uses per-app event tokens, so it gets none. */
 const PRESETS: { key: string; en: string; tr: string; days: number; price: string; events: Record<string, string> }[] = [
@@ -73,8 +97,32 @@ export function CampaignWizard({ t, lang, products: initialProducts, initial, ca
   const [issues, setIssues] = useState<FieldIssue[]>([]);
   const [pending, startTransition] = useTransition();
   const [adding, setAdding] = useState(initialProducts.length === 0);
-  const [newApp, setNewApp] = useState({ platform: 'android', storeId: '', name: '', mmp: 'appsflyer' });
+  const emptyApp = { platform: 'android', storeId: '', name: '', mmp: 'appsflyer', iconUrl: '' };
+  const [newApp, setNewApp] = useState(emptyApp);
+  const [nameTouched, setNameTouched] = useState(false);
+  const [lookup, setLookup] = useState<{ state: 'idle' | 'loading' | 'found' | 'missing'; app?: StoreApp }>({ state: 'idle' });
+  const lookupSeq = useRef(0);
   const [appIssues, setAppIssues] = useState<FieldIssue[]>([]);
+
+  // Look the app up in Google Play / the App Store as the advertiser types or pastes a link.
+  useEffect(() => {
+    const raw = newApp.storeId.trim();
+    if (newApp.platform === 'web' || raw.length < 4 || (lookup.app && raw === lookup.app.storeId)) {
+      if (newApp.platform === 'web' || raw.length < 4) setLookup({ state: 'idle' });
+      return;
+    }
+    const seq = ++lookupSeq.current;
+    setLookup({ state: 'loading' });
+    const timer = setTimeout(async () => {
+      const app = await lookupStoreAppAction(raw, newApp.platform).catch(() => null);
+      if (seq !== lookupSeq.current) return; // a newer input superseded this one
+      if (!app) return setLookup({ state: 'missing' });
+      setLookup({ state: 'found', app });
+      setNewApp((prev) => ({ ...prev, platform: app.platform, storeId: app.storeId, iconUrl: app.iconUrl, name: nameTouched && prev.name ? prev.name : app.name }));
+    }, 550);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- re-run only when the store input changes
+  }, [newApp.storeId, newApp.platform]);
   const [code, setCode] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
 
@@ -128,7 +176,9 @@ export function CampaignWizard({ t, lang, products: initialProducts, initial, ca
       setProducts((list) => [...list, result.product]);
       set({ productId: result.product.id, titleEn: c.titleEn || result.product.name, name: c.name || `${result.product.name} – launch` });
       setAdding(false);
-      setNewApp({ platform: 'android', storeId: '', name: '', mmp: 'appsflyer' });
+      setNewApp(emptyApp);
+      setNameTouched(false);
+      setLookup({ state: 'idle' });
     });
   }
 
@@ -191,9 +241,7 @@ export function CampaignWizard({ t, lang, products: initialProducts, initial, ca
                       onClick={() => set({ productId: p.id, titleEn: c.titleEn || p.name, name: c.name || `${p.name} – launch` })}
                       className={`flex items-center gap-3 rounded-xl border p-4 text-left transition-colors ${c.productId === p.id ? 'border-violet-500 bg-violet-500/10' : 'border-line hover:border-line-strong'}`}
                     >
-                      <span className="grid h-10 w-10 place-items-center rounded-xl bg-surface-strong text-muted">
-                        <PlatformIcon platform={p.platform} />
-                      </span>
+                      <AppIcon iconUrl={p.iconUrl} platform={p.platform} />
                       <span className="min-w-0 flex-1">
                         <span className="block truncate font-medium">{p.name}</span>
                         <span className="block truncate font-mono text-xs text-subtle">{p.storeId}</span>
@@ -210,33 +258,90 @@ export function CampaignWizard({ t, lang, products: initialProducts, initial, ca
                       <button
                         key={pl}
                         type="button"
-                        onClick={() => setNewApp({ ...newApp, platform: pl })}
+                        onClick={() => setNewApp({ ...newApp, platform: pl, iconUrl: pl === 'web' ? '' : newApp.iconUrl })}
                         className={`flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm capitalize ${newApp.platform === pl ? 'border-violet-500 bg-violet-500/10' : 'border-line text-muted'}`}
                       >
                         <PlatformIcon platform={pl} /> {pl === 'ios' ? 'iOS' : pl}
                       </button>
                     ))}
                   </div>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <label className="grid gap-1.5 text-sm">
-                      <span className="text-muted">{t.app.name}</span>
-                      <input className="field" value={newApp.name} onChange={(e) => setNewApp({ ...newApp, name: e.target.value })} />
-                    </label>
-                    <label className="grid gap-1.5 text-sm">
-                      <span className="text-muted">{t.app.storeId}</span>
-                      <input className="field font-mono" placeholder={t.app.storeIdHint} value={newApp.storeId} onChange={(e) => setNewApp({ ...newApp, storeId: e.target.value })} />
-                    </label>
-                    <label className="grid gap-1.5 text-sm">
-                      <span className="text-muted">{t.app.mmp}</span>
-                      <select className="field" value={newApp.mmp} onChange={(e) => setNewApp({ ...newApp, mmp: e.target.value })}>
-                        {MMPS.map((m) => (
-                          <option key={m} value={m}>
-                            {MMP_LABEL[m]}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  </div>
+
+                  <label className="grid gap-1.5 text-sm">
+                    <span className="text-muted">{newApp.platform === 'web' ? t.app.storeId : t.app.storeLink}</span>
+                    <div className="relative">
+                      <input
+                        className="field !pr-10 font-mono"
+                        spellCheck={false}
+                        autoComplete="off"
+                        placeholder={newApp.platform === 'web' ? 'example.com' : t.app.storeLinkHint}
+                        value={newApp.storeId}
+                        onChange={(e) => setNewApp({ ...newApp, storeId: e.target.value, iconUrl: '' })}
+                      />
+                      <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+                        {lookup.state === 'loading' && <Loader2 size={16} className="animate-spin text-subtle" />}
+                        {lookup.state === 'found' && <CheckCircle2 size={16} className="text-good" />}
+                        {lookup.state === 'missing' && <SearchX size={16} className="text-warn" />}
+                      </span>
+                    </div>
+                    {lookup.state === 'missing' && <span className="text-xs text-warn">{t.app.notFound}</span>}
+                    {newApp.platform !== 'web' && lookup.state === 'idle' && <span className="text-xs text-subtle">{t.app.storeLinkSub}</span>}
+                  </label>
+
+                  {lookup.state === 'found' && lookup.app && (
+                    <div className="flex items-center gap-4 rounded-xl border border-violet-500/30 bg-violet-500/8 p-3">
+                      <AppIcon iconUrl={lookup.app.iconUrl} platform={lookup.app.platform} size={56} />
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate font-semibold">{lookup.app.name}</div>
+                        {lookup.app.developer && <div className="truncate text-sm text-muted">{lookup.app.developer}</div>}
+                        <div className="mt-1 flex items-center gap-1.5 text-xs text-subtle">
+                          {lookup.app.platform === 'ios' ? <Apple size={12} /> : <Smartphone size={12} />}
+                          {lookup.app.platform === 'ios' ? 'App Store' : 'Google Play'} · <span className="truncate font-mono">{lookup.app.storeId}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <label className="grid gap-1.5 text-sm">
+                    <span className="text-muted">{t.app.name}</span>
+                    <input
+                      className="field"
+                      value={newApp.name}
+                      onChange={(e) => {
+                        setNameTouched(true);
+                        setNewApp({ ...newApp, name: e.target.value });
+                      }}
+                    />
+                  </label>
+
+                  <fieldset className="grid gap-2 text-sm">
+                    <legend className="mb-1.5 text-muted">{t.app.mmp}</legend>
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4" role="radiogroup">
+                      {MMPS.map((m) => {
+                        const on = newApp.mmp === m;
+                        return (
+                          <button
+                            key={m}
+                            type="button"
+                            role="radio"
+                            aria-checked={on}
+                            onClick={() => setNewApp({ ...newApp, mmp: m })}
+                            className={`group relative flex items-center gap-2.5 rounded-xl border p-2.5 text-left transition-all ${
+                              on ? 'border-violet-500 bg-violet-500/12 shadow-[0_0_0_3px_rgb(108_87_240/0.15)]' : 'border-line bg-surface hover:-translate-y-px hover:border-line-strong'
+                            }`}
+                          >
+                            <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-gradient-to-br text-[0.7rem] font-bold tracking-tight text-white shadow-sm ${MMP_TILE[m]!.tone}`}>
+                              {MMP_TILE[m]!.mark}
+                            </span>
+                            <span className="min-w-0">
+                              <span className="block truncate font-medium">{m === 'none' ? 'S2S' : MMP_LABEL[m]}</span>
+                              {m === 'none' && <span className="block truncate text-[0.7rem] text-subtle">{t.app.mmpNone}</span>}
+                            </span>
+                            {on && <Check size={14} strokeWidth={3} className="absolute top-2 right-2 text-violet-400" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </fieldset>
                   {appIssues.length > 0 && <p className="text-sm text-bad">{appIssues.map((x) => x.message).join(' · ')}</p>}
                   <div className="flex gap-2">
                     <button type="button" className="btn-primary !py-2 text-sm" onClick={addApp} disabled={pending}>
@@ -563,9 +668,13 @@ export function CampaignWizard({ t, lang, products: initialProducts, initial, ca
       <aside className="hidden lg:block">
         <div className="sticky top-8 grid gap-4 rounded-2xl border border-line bg-surface p-5">
           <div className="flex items-center gap-3">
-            <span className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-violet-500 to-orange-400 text-white">
-              <PlatformIcon platform={product?.platform ?? 'android'} />
-            </span>
+            {product?.iconUrl ? (
+              <AppIcon iconUrl={product.iconUrl} platform={product.platform} />
+            ) : (
+              <span className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-violet-500 to-orange-400 text-white">
+                <PlatformIcon platform={product?.platform ?? 'android'} />
+              </span>
+            )}
             <div className="min-w-0">
               <div className="truncate font-semibold">{c.titleEn || product?.name || '—'}</div>
               <div className="truncate text-xs text-subtle">{product?.storeId ?? ''}</div>

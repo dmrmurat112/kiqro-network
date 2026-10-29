@@ -132,6 +132,8 @@ body { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
     transition: border-color 0.2s, box-shadow 0.2s;
   }
   .field::placeholder { color: var(--fg-subtle); }
+  /* The field background is translucent; native option lists need a solid one or they render light-on-white. */
+  select.field option { background-color: var(--bg-elevated); color: var(--fg); }
   .field:focus { outline: none; border-color: #8c7bff; box-shadow: 0 0 0 4px rgb(108 87 240 / 0.18); }
   .eyebrow {
     display: inline-flex; align-items: center; gap: 0.5rem;

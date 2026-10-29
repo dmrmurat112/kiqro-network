@@ -24,7 +24,7 @@ export default async function NewCampaignPage() {
         t={t.wizard}
         lang={lang}
         returnedTitle={t.campaigns.returnedTitle}
-        products={products.map((p) => ({ id: p.id, name: p.name, platform: p.platform, storeId: p.storeId, mmp: p.mmp }))}
+        products={products.map((p) => ({ id: p.id, name: p.name, platform: p.platform, storeId: p.storeId, mmp: p.mmp, iconUrl: p.iconUrl }))}
       />
     </>
   );

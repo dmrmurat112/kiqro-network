@@ -33,7 +33,7 @@ export default async function EditCampaignPage({ params }: { params: Promise<{ i
         initial={data.form}
         reviewNote={data.campaign.reviewNote}
         returnedTitle={t.campaigns.returnedTitle}
-        products={products.map((p) => ({ id: p.id, name: p.name, platform: p.platform, storeId: p.storeId, mmp: p.mmp }))}
+        products={products.map((p) => ({ id: p.id, name: p.name, platform: p.platform, storeId: p.storeId, mmp: p.mmp, iconUrl: p.iconUrl }))}
       />
     </>
   );
