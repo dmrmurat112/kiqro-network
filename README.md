@@ -64,6 +64,12 @@ IP checks use IPQualityScore when `IPQS_API_KEY` is set (results cached for 6 h;
 
 After changing `packages/db/src/schema.ts`, run `npm run db:generate` and commit the new migration.
 
+## Deployment
+
+Staging runs on Render (Frankfurt) behind Cloudflare, defined in [`render.yaml`](render.yaml); images are built from `infra/docker/` (`node.Dockerfile` for tracking, worker and migrations; `next.Dockerfile` with `APP=admin|advertise`). GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs typecheck, tests and a "migrations committed" check; Render deploys `main` only when CI passes, running migrations before each deploy. Step-by-step setup (accounts, DNS, Cloudflare origin lock, first admin): [docs/test-ortami-kurulumu.md](docs/test-ortami-kurulumu.md).
+
+Behind Cloudflare the tracking service reads the client IP from `CF-Connecting-IP` and the country from `CF-IPCountry`; with `ORIGIN_SECRET` set it refuses requests without the matching `X-Origin-Auth` header, which a Cloudflare Transform Rule adds.
+
 ## Publisher integration guide
 
 The guide for the Kiqro app's developers (Offers API, click URLs, postbacks, signatures with test vectors, test plan) is [docs/kiqro-direct-entegrasyon.md](docs/kiqro-direct-entegrasyon.md), also as [PDF](docs/kiqro-direct-entegrasyon.pdf). Keep it in sync when the Offers API, click or postback contracts change.

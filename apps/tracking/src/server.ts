@@ -1,3 +1,4 @@
+import { timingSafeEqual } from 'node:crypto';
 import Fastify, { type FastifyInstance, type FastifyRequest } from 'fastify';
 import type { Db } from '@kiqro/db';
 import { defaultFraudContext, handleClick, handlePostback, listOffers, reverseConversion, type FraudContext } from '@kiqro/network';
@@ -7,9 +8,21 @@ export interface ServerOptions {
   trackingBaseUrl: string;
   fraud?: FraudContext;
   logger?: boolean;
+  /**
+   * When set, every request except /health must carry `X-Origin-Auth: <secret>`. Cloudflare adds
+   * this header (Transform Rule), so traffic that bypasses Cloudflare — and could forge its
+   * country and IP headers — is refused.
+   */
+  originSecret?: string;
 }
 
 type Query = Record<string, string | undefined>;
+
+/** The visitor's IP: Cloudflare's CF-Connecting-IP (trusted only behind the origin check), else the socket/proxy IP. */
+function clientIp(req: FastifyRequest): string {
+  const value = req.headers['cf-connecting-ip'];
+  return (Array.isArray(value) ? value[0] : value) ?? req.ip;
+}
 
 /**
  * Visitor country for clicks. In production the service sits behind Cloudflare, which sets
@@ -54,6 +67,15 @@ export function buildServer(opts: ServerOptions): FastifyInstance {
   const app = Fastify({ logger: opts.logger ?? false, trustProxy: true });
   const fraud = opts.fraud ?? defaultFraudContext;
 
+  if (opts.originSecret) {
+    const expected = Buffer.from(opts.originSecret);
+    app.addHook('onRequest', async (req, reply) => {
+      if (req.url === '/health') return;
+      const given = Buffer.from(String(req.headers['x-origin-auth'] ?? ''));
+      if (given.length !== expected.length || !timingSafeEqual(given, expected)) return reply.code(403).send({ error: 'forbidden' });
+    });
+  }
+
   app.get('/health', async () => ({ ok: true }));
 
   app.get<{ Params: { campaignId: string }; Querystring: Query }>('/c/:campaignId', async (req, reply) => {
@@ -63,7 +85,7 @@ export function buildServer(opts: ServerOptions): FastifyInstance {
       publisherUserId: req.query.uid ?? '',
       signature: req.query.sig,
       country: requestCountry(req),
-      ip: req.ip,
+      ip: clientIp(req),
       userAgent: req.headers['user-agent'] ?? null,
       query: req.query,
       publisherRisk: req.query.risk,
@@ -98,7 +120,7 @@ export function buildServer(opts: ServerOptions): FastifyInstance {
   // MMPs call this with GET; S2S integrations may POST a form or JSON body instead.
   const postback = async (req: FastifyRequest<{ Params: { key: string }; Querystring: Query; Body: Query | undefined }>) => {
     const body = req.body && typeof req.body === 'object' ? req.body : {};
-    return handlePostback(opts.db, { advertiserKey: req.params.key, query: { ...body, ...req.query }, url: req.url, ip: req.ip, fraud });
+    return handlePostback(opts.db, { advertiserKey: req.params.key, query: { ...body, ...req.query }, url: req.url, ip: clientIp(req), fraud });
   };
   app.route<{ Params: { key: string }; Querystring: Query; Body: Query | undefined }>({
     method: ['GET', 'POST'],

@@ -13,6 +13,7 @@ import {
   type DemoSetup,
 } from '@kiqro/network';
 import { balanceOf, resetDb, server, setupDb } from './helpers.ts';
+import { buildServer } from '../src/server.ts';
 
 const { conversions, publisherPostbacks } = schema;
 
@@ -96,6 +97,18 @@ describe('clicks', () => {
 
     const second = await server(db).inject({ url, headers: { 'cf-ipcountry': 'TR' } });
     expect(new URL(second.headers.location as string).searchParams.get('clickid')).toBe(clickId);
+  });
+
+  it('refuses requests that bypass Cloudflare when an origin secret is set, and uses CF-Connecting-IP', async () => {
+    const s = await setup();
+    const app = buildServer({ db, trackingBaseUrl: 'https://t.test', originSecret: 'origin-secret' });
+    const url = `/c/${s.campaignId}?app_key=${s.appKey}&uid=u1&sig=${sign(s.placementSecret, [s.campaignId, 'u1'])}`;
+    expect((await app.inject({ url, headers: { 'cf-ipcountry': 'TR' } })).statusCode).toBe(403);
+    expect((await app.inject({ url: '/health' })).statusCode).toBe(200);
+    const ok = await app.inject({ url, headers: { 'cf-ipcountry': 'TR', 'x-origin-auth': 'origin-secret', 'cf-connecting-ip': '203.0.113.50' } });
+    expect(ok.statusCode).toBe(302);
+    const [stored] = await db.select().from(schema.clicks);
+    expect(stored!.ip).toBe('203.0.113.50');
   });
 
   it('shows browsers a readable page in their language when a click is refused', async () => {

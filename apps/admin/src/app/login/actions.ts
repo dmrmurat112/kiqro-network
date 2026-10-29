@@ -9,7 +9,7 @@ import { SESSION_COOKIE, setSessionCookie } from '@/lib/session';
 export type LoginState = { error?: string; needCode?: boolean; email?: string } | undefined;
 
 export async function loginAction(_: LoginState, form: FormData): Promise<LoginState> {
-  const ip = (await headers()).get('x-forwarded-for')?.split(',')[0]?.trim() ?? null;
+  const ip = (await headers()).get('cf-connecting-ip') ?? (await headers()).get('x-forwarded-for')?.split(',')[0]?.trim() ?? null;
   const email = String(form.get('email') ?? '');
   const totpCode = String(form.get('code') ?? '').trim() || undefined;
   const result = await login(db, { email, password: String(form.get('password') ?? ''), totpCode, ip });

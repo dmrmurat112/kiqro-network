@@ -1,3 +1,4 @@
+import path from 'node:path';
 import type { NextConfig } from 'next';
 
 // The monorepo keeps one .env at the root; Next only reads .env files from the app folder.
@@ -18,6 +19,9 @@ const config: NextConfig = {
   transpilePackages: ['@kiqro/core', '@kiqro/db', '@kiqro/network'],
   serverExternalPackages: ['pg'],
   poweredByHeader: false,
+  // Self-contained server bundle for the Docker image; tracing starts at the monorepo root.
+  output: 'standalone',
+  outputFileTracingRoot: path.join(import.meta.dirname, '../..'),
   devIndicators: { position: 'bottom-right' },
   async headers() {
     return [

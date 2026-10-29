@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: kiqro
+          POSTGRES_PASSWORD: kiqro_dev
+          POSTGRES_DB: kiqro_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U kiqro -d kiqro_test"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 30
+    env:
+      TEST_DATABASE_URL: postgres://kiqro:kiqro_dev@localhost:5432/kiqro_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Tests (migrations run against the CI database)
+        run: npm test
+      - name: Migrations are up to date with the schema
+        run: |
+          npm run generate -w @kiqro/db > /tmp/generate.log 2>&1 || (cat /tmp/generate.log; exit 1)
+          if ! git diff --quiet --exit-code packages/db/migrations || [ -n "$(git ls-files --others --exclude-standard packages/db/migrations)" ]; then
+            echo "Schema changed without a committed migration. Run: npm run db:generate"
+            cat /tmp/generate.log
+            exit 1
+          fi

@@ -10,8 +10,14 @@ function getDb(): Db {
   const cached = globalForDb.kiqroAdminDb;
   if (cached?.schema === schema) return cached.db;
   const { db } = createDb();
-  if (process.env.NODE_ENV !== 'production') globalForDb.kiqroAdminDb = { db, schema };
+  globalForDb.kiqroAdminDb = { db, schema };
   return db;
 }
 
-export const db: Db = getDb();
+/**
+ * Created on first use, not at import: `next build` imports server modules without a
+ * DATABASE_URL (e.g. in the Docker build), and must not fail there.
+ */
+export const db: Db = new Proxy({} as Db, {
+  get: (_, prop) => Reflect.get(getDb(), prop),
+});
