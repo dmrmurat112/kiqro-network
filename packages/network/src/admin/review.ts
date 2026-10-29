@@ -4,6 +4,7 @@ import { getAccountId, lockAccount, schema, type Db } from '@kiqro/db';
 import { creditPosition } from '../billing/credit.ts';
 import { creditConversion } from '../conversions.ts';
 import { enqueuePublisherPostback, retryFailedPostback } from '../outbox.ts';
+import { conversionEventData, emitWebhook } from '../webhooks.ts';
 import { audit } from './audit.ts';
 import type { AdminUser } from './auth.ts';
 import { AdminError, requirePermission } from './errors.ts';
@@ -47,6 +48,7 @@ export async function approveHeldConversion(db: Db, actor: AdminUser, conversion
     });
     await tx.update(conversions).set({ status: 'approved' }).where(eq(conversions.id, conversionId));
     await enqueuePublisherPostback(tx, conversionId, 'credit', now);
+    await emitWebhook(tx, campaign.orgId, 'conversion.approved', await conversionEventData(tx, conversionId), now);
     await audit(tx, actor.id, 'conversion.approve', 'conversion', conversionId, { note: reason, reasons: conversion.reasons });
   });
 }

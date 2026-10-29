@@ -23,6 +23,9 @@ const prefixes = {
   payment: 'pay',
   invoice: 'inv',
   claim: 'clm',
+  apiKey: 'key',
+  webhook: 'whe',
+  delivery: 'whd',
 } as const;
 
 /** Prefixed, time-sortable ids, e.g. "cnv_01JBX…". The prefix makes ids self-describing in logs. */

@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
-import { CreditCard, LayoutDashboard, LifeBuoy, LogOut, Users, Megaphone, Menu, Moon, Plug, Sun, UserRound, X, ListChecks } from 'lucide-react';
+import { Code2, CreditCard, LayoutDashboard, LifeBuoy, LogOut, Users, Megaphone, Menu, Moon, Plug, Sun, UserRound, X, ListChecks } from 'lucide-react';
 import type { Locale, PanelDictT } from '@/lib/i18n';
 import { logoutAction, setPreferenceAction } from '@/app/(panel)/actions';
 import { Logo } from '../Logo';
@@ -24,6 +24,7 @@ const ITEMS = [
   { href: '/app/integration', key: 'integration', icon: Plug },
   { href: '/app/billing', key: 'billing', icon: CreditCard },
   { href: '/app/team', key: 'team', icon: Users },
+  { href: '/app/developers', key: 'developers', icon: Code2 },
   { href: '/app/account', key: 'account', icon: UserRound },
 ] as const;
 

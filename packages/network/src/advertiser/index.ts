@@ -5,3 +5,4 @@ export * from './alerts.ts';
 export * from './campaigns.ts';
 export * from './billing.ts';
 export * from './team.ts';
+export * from './developers.ts';

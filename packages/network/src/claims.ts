@@ -5,6 +5,7 @@ import { creditPosition } from './billing/credit.ts';
 import { priceFor } from './campaigns.ts';
 import { creditConversion } from './conversions.ts';
 import { enqueuePublisherPostback } from './outbox.ts';
+import { conversionEventData, emitWebhook } from './webhooks.ts';
 
 const { auditLog, campaignTasks, campaigns, claims, clicks, conversions, placements } = schema;
 
@@ -64,15 +65,25 @@ export async function fileClaim(
   if (existing) return { ok: true, claimId: existing.id, status: existing.status };
 
   const claimId = newId('claim');
-  await db.insert(claims).values({
-    id: claimId,
-    placementId: placement.id,
-    publisherUserId: input.publisherUserId,
-    campaignId: input.campaignId,
-    taskId: task.id,
-    clickId: click.id,
-    userNote: input.note?.trim().slice(0, 1000) || null,
-    createdAt: now,
+  const campaign = (await db.query.campaigns.findFirst({ where: eq(campaigns.id, input.campaignId), columns: { orgId: true } }))!;
+  await db.transaction(async (tx) => {
+    await tx.insert(claims).values({
+      id: claimId,
+      placementId: placement.id,
+      publisherUserId: input.publisherUserId,
+      campaignId: input.campaignId,
+      taskId: task.id,
+      clickId: click.id,
+      userNote: input.note?.trim().slice(0, 1000) || null,
+      createdAt: now,
+    });
+    await emitWebhook(tx, campaign.orgId, 'claim.created', {
+      claim_id: claimId,
+      campaign_id: input.campaignId,
+      task_event: task.mmpEventName,
+      click_id: click.id,
+      user_note: input.note?.trim() || null,
+    }, now);
   });
   return { ok: true, claimId, status: 'open' };
 }
@@ -134,6 +145,7 @@ export async function decideClaim(
         conversionId,
       })
       .where(eq(claims.id, claimId));
+    await emitWebhook(tx, row.campaign.orgId, 'claim.decided', { claim_id: claimId, status: decision.approve ? 'approved' : 'rejected', note: note || null, conversion_id: conversionId }, now);
     await tx.insert(auditLog).values({
       id: newId('audit'),
       adminUserId: decision.adminUserId ?? null,
@@ -188,6 +200,7 @@ async function creditClaim(tx: Tx, { claim, campaign, click, placement }: ClaimR
   }
   await creditConversion(tx, { conversionId, advertiserAccount, publisherOrgId: placement.publisherOrgId, advertiserPrice: price, publisherPayout });
   await enqueuePublisherPostback(tx, conversionId, 'credit', now);
+  await emitWebhook(tx, campaign.orgId, 'conversion.approved', await conversionEventData(tx, conversionId), now);
   return conversionId;
 }
 

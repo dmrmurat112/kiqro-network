@@ -41,6 +41,10 @@ Admin security: two-factor authentication (TOTP, any authenticator app) is manda
 
 Kiqro staff create the first login of an advertiser (role `admin`). Advertiser admins invite teammates themselves on **Team** (`/app/team`) as `admin` (also manages the team) or `member`, change roles and remove people (removal disables the login and ends its sessions; a team always keeps one admin). Every user can turn on two-factor authentication (TOTP) in **Account**; turning it off needs the password and a current code. If a user loses their phone, staff reset it on the advertiser page in the admin panel.
 
+## Advertiser API and webhooks
+
+REST API at `/v1/advertiser/*` on the tracking service (Bearer keys created by team admins on **API & webhooks**; only a hash is stored) and signed webhooks (`Kiqro-Signature`, Stripe-style HMAC) for conversions, refunds, claims, payments, invoices and low balance, delivered with retries by the worker. Reference for advertisers: [docs/advertiser-api.md](docs/advertiser-api.md).
+
 ## E-mail
 
 E-mail goes through SendGrid's v3 API. Messages are written to `email_messages` in the same transaction as the change that causes them, then delivered (with retries) by the worker; without `SENDGRID_API_KEY` the worker prints them to its console instead. Configure `MAIL_FROM` with an address on a domain authenticated in SendGrid (Settings → Sender Authentication), otherwise SendGrid rejects the messages.

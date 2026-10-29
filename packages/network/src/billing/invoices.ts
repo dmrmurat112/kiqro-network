@@ -3,6 +3,7 @@ import { formatMicros } from '@kiqro/core';
 import { getAccountId, getBalance, lockAccount, newId, schema, type Db, type DbOrTx } from '@kiqro/db';
 import { enqueueEmail } from '../email/queue.ts';
 import type { EmailTemplate } from '../email/templates.ts';
+import { emitWebhook } from '../webhooks.ts';
 
 const { advertiserUsers, invoices, ledgerEntries, ledgerTransactions, organizations } = schema;
 
@@ -90,6 +91,7 @@ export async function issueMonthlyInvoices(db: Db, opts: { advertiseBaseUrl: str
         issuedAt: now,
         dueAt,
       });
+      await emitWebhook(tx, org.id, 'invoice.issued', { invoice_id: id, number, amount_usd: formatMicros(amount), due_at: dueAt.toISOString(), period: isoDate(period.start).slice(0, 7) }, now);
       const payLink = `${opts.advertiseBaseUrl.replace(/\/$/, '')}/app/billing`;
       await mailOrgUsers(
         tx,

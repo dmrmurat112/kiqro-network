@@ -2,6 +2,7 @@ import { and, asc, desc, eq, isNull } from 'drizzle-orm';
 import { formatMicros } from '@kiqro/core';
 import { getAccountId, newId, postTransaction, schema, topUpAdvertiser, type Db, type DbOrTx } from '@kiqro/db';
 import { enqueueEmail } from '../email/queue.ts';
+import { emitWebhook } from '../webhooks.ts';
 
 const { advertiserUsers, invoices, organizations, payments } = schema;
 
@@ -68,6 +69,7 @@ async function settle(tx: DbOrTx, payment: Payment, advertiseBaseUrl: string, no
   const ledgerTransactionId = await topUpAdvertiser(tx, payment.orgId, payment.amount, `${payment.method} ${payment.id}`);
   await tx.update(payments).set({ status: 'succeeded', ledgerTransactionId, completedAt: now }).where(eq(payments.id, payment.id));
   await applyToInvoices(tx, payment.orgId, payment.amount, now);
+  await emitWebhook(tx, payment.orgId, 'payment.succeeded', { payment_id: payment.id, method: payment.method, amount_usd: formatMicros(payment.amount) }, now);
   await notifyPaymentReceived(tx, { ...payment, status: 'succeeded' }, advertiseBaseUrl, now);
 }
 

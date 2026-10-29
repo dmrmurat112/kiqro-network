@@ -2,6 +2,7 @@ import { timingSafeEqual } from 'node:crypto';
 import Fastify, { type FastifyInstance, type FastifyRequest } from 'fastify';
 import type { Db } from '@kiqro/db';
 import { defaultFraudContext, fileClaim, handleClick, handlePostback, listOffers, listUserClaims, reverseConversion, type FraudContext } from '@kiqro/network';
+import { registerAdvertiserApi } from './advertiser-api.ts';
 
 export interface ServerOptions {
   db: Db;
@@ -173,6 +174,8 @@ export function buildServer(opts: ServerOptions): FastifyInstance {
     if (!result.ok) return reply.code(result.reason === 'unknown_advertiser' ? 403 : 409).send({ error: result.reason });
     return { outcome: 'reversed', conversion_id: result.conversionId };
   });
+
+  registerAdvertiserApi(app, opts.db);
 
   return app;
 }

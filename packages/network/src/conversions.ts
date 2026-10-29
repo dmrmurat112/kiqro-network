@@ -5,6 +5,7 @@ import { creditPosition } from './billing/credit.ts';
 import { priceFor } from './campaigns.ts';
 import { conversionHoldReasons, defaultFraudContext, type FraudContext } from './fraud/rules.ts';
 import { enqueuePublisherPostback } from './outbox.ts';
+import { conversionEventData, emitWebhook } from './webhooks.ts';
 
 const { campaignTasks, campaigns, clicks, conversions, organizations, placements, postbacksRaw } = schema;
 
@@ -156,6 +157,7 @@ async function evaluatePostback(db: Db, input: PostbackInput, rawId: string, now
     if (status === 'approved') {
       await creditConversion(tx, { conversionId, advertiserAccount, publisherOrgId: placement.publisherOrgId, advertiserPrice, publisherPayout });
       await enqueuePublisherPostback(tx, conversionId, 'credit', now);
+      await emitWebhook(tx, advertiser.id, 'conversion.approved', await conversionEventData(tx, conversionId), now);
     }
     return { httpStatus: 200, outcome: status, conversionId, reasons: [...rejectReasons, ...holdReasons] } as const;
   });
@@ -244,6 +246,7 @@ export async function reverseConversion(db: Db, input: ReversalInput): Promise<R
       .set({ status: 'reversed', reversedAt: now, reversalReason: input.reason.slice(0, 200) })
       .where(eq(conversions.id, conversion.id));
     await enqueuePublisherPostback(tx, conversion.id, 'reversal', now);
+    await emitWebhook(tx, advertiser.id, 'conversion.reversed', await conversionEventData(tx, conversion.id), now);
     return { ok: true, conversionId: conversion.id } as const;
   });
 }

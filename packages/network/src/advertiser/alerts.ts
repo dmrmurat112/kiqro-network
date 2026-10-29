@@ -2,6 +2,7 @@ import { and, eq, isNull, sql } from 'drizzle-orm';
 import { formatMicros } from '@kiqro/core';
 import { schema, type Db } from '@kiqro/db';
 import { enqueueEmail } from '../email/queue.ts';
+import { emitWebhook } from '../webhooks.ts';
 import type { LinkOptions } from './auth.ts';
 
 const { advertiserUsers, ledgerAccounts, ledgerEntries, organizations } = schema;
@@ -48,6 +49,7 @@ export async function checkLowBalances(db: Db, opts: LinkOptions, now = new Date
           now,
         );
       }
+      await emitWebhook(tx, org.id, 'balance.low', { available_usd: formatMicros(balance), threshold_usd: formatMicros(org.lowBalanceThreshold) }, now);
       await tx.update(organizations).set({ lowBalanceAlertedAt: now }).where(eq(organizations.id, org.id));
     });
     if (users.length) alerted++;

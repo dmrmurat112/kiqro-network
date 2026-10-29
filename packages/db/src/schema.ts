@@ -520,3 +520,59 @@ export const claims = pgTable(
   },
   (t) => [index('claims_campaign_idx').on(t.campaignId, t.status, t.createdAt), index('claims_user_idx').on(t.placementId, t.publisherUserId)],
 );
+
+/**
+ * Advertiser API keys. Only a SHA-256 hash is stored; the key is shown once when created.
+ * A key acts as the teammate who created it and stops working if that person is removed.
+ */
+export const advertiserApiKeys = pgTable(
+  'advertiser_api_keys',
+  {
+    id: text('id').primaryKey(),
+    orgId: text('org_id').notNull().references(() => organizations.id),
+    name: text('name').notNull(),
+    /** First characters of the key, to recognise it in the panel ("kq_live_ab12…"). */
+    prefix: text('prefix').notNull(),
+    keyHash: text('key_hash').notNull().unique(),
+    createdBy: text('created_by').notNull().references(() => advertiserUsers.id),
+    lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [index('advertiser_api_keys_org_idx').on(t.orgId)],
+);
+
+/** Advertiser webhook endpoints: Kiqro POSTs signed event notifications to `url`. */
+export const webhookEndpoints = pgTable(
+  'webhook_endpoints',
+  {
+    id: text('id').primaryKey(),
+    orgId: text('org_id').notNull().references(() => organizations.id),
+    url: text('url').notNull(),
+    /** Signing secret (whsec_…); kept readable because every delivery is signed with it. */
+    secret: text('secret').notNull(),
+    events: text('events').array().notNull(),
+    disabledAt: timestamp('disabled_at', { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [index('webhook_endpoints_org_idx').on(t.orgId)],
+);
+
+/** Webhook deliveries, retried with backoff by the worker (same lease pattern as postbacks). */
+export const webhookDeliveries = pgTable(
+  'webhook_deliveries',
+  {
+    id: text('id').primaryKey(),
+    endpointId: text('endpoint_id').notNull().references(() => webhookEndpoints.id, { onDelete: 'cascade' }),
+    event: text('event').notNull(),
+    payload: jsonb('payload').$type<Record<string, unknown>>().notNull(),
+    status: outboxStatus('status').notNull().default('pending'),
+    attempts: integer('attempts').notNull().default(0),
+    nextAttemptAt: timestamp('next_attempt_at', { withTimezone: true }).notNull().defaultNow(),
+    lastError: text('last_error'),
+    responseStatus: integer('response_status'),
+    sentAt: timestamp('sent_at', { withTimezone: true }),
+    createdAt: createdAt(),
+  },
+  (t) => [index('webhook_deliveries_due_idx').on(t.status, t.nextAttemptAt), index('webhook_deliveries_endpoint_idx').on(t.endpointId, t.createdAt)],
+);

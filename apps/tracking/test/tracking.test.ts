@@ -5,6 +5,9 @@ import { postTransaction, getAccountId, schema, type Db } from '@kiqro/db';
 import {
   createDemoSetup,
   decideClaim,
+  deliverDueWebhooks,
+  isAllowedWebhookUrl,
+  verifyWebhookSignature,
   fileClaim,
   deliverDuePostbacks,
   handleClick,
@@ -16,6 +19,8 @@ import {
 } from '@kiqro/network';
 import { balanceOf, resetDb, server, setupDb } from './helpers.ts';
 import { buildServer } from '../src/server.ts';
+import { createAdminUser } from '@kiqro/network/admin';
+import { advertiserLogin, createAdvertiserUser, createApiKey, createWebhookEndpoint, getAdvertiserSession, listApiKeys, revokeApiKey, setPasswordWithToken } from '@kiqro/network/advertiser';
 
 const { conversions, publisherPostbacks } = schema;
 
@@ -419,3 +424,76 @@ describe('missing-credit claims', () => {
 function camel(b: { app_key: string; user_id: string; offer_id: string; task_id: string; note: string; sig: string }) {
   return { appKey: b.app_key, publisherUserId: b.user_id, campaignId: b.offer_id, taskId: b.task_id, note: b.note, signature: b.sig };
 }
+
+describe('advertiser API and webhooks', () => {
+  /** A team admin of the demo advertiser, signed in, plus an API key it created. */
+  async function owner(s: DemoSetup) {
+    const actor = await createAdminUser(db, { email: `ops${Math.random()}@kiqro.test`, name: 'Ops', role: 'operator', password: 'correct horse battery' });
+    const staff = (await db.query.adminUsers.findFirst({ where: eq(schema.adminUsers.id, actor) }))!;
+    await createAdvertiserUser(db, staff, s.advertiserId, { email: 'dev@studio.test', name: 'Dev Lead' }, { advertiseBaseUrl: 'https://advertise.test' });
+    const mail = (await db.select().from(schema.emailMessages).where(eq(schema.emailMessages.to, 'dev@studio.test')))[0]!;
+    await setPasswordWithToken(db, /token=([\w-]+)/.exec(mail.text)![1]!, 'long enough password');
+    const login = await advertiserLogin(db, { email: 'dev@studio.test', password: 'long enough password', ip: null });
+    if (login.status !== 'ok') throw new Error(login.status);
+    return (await getAdvertiserSession(db, login.token))!;
+  }
+
+  it('serves reports and actions to API keys, and refuses revoked or foreign keys', async () => {
+    const s = await setup();
+    const me = await owner(s);
+    const created = await createApiKey(db, me, 'BI export', 'en');
+    if (!created.ok) throw new Error('key');
+    const app = server(db);
+    const get = (url: string, key = created.key) => app.inject({ url, headers: { authorization: `Bearer ${key}` } });
+
+    expect((await app.inject({ url: '/v1/advertiser/me' })).statusCode).toBe(401);
+    expect((await get('/v1/advertiser/me')).json()).toMatchObject({ organization: { id: s.advertiserId }, balance_usd: '1000.00', spendable_usd: '1000.00' });
+    expect((await get('/v1/advertiser/campaigns')).json().campaigns[0]).toMatchObject({ id: s.campaignId, status: 'active', steps: [{ event: 'install' }, {}, {}] });
+
+    await postback(s, await click(s), 'install', at(60));
+    const conv = (await get('/v1/advertiser/conversions?status=billed&limit=10')).json();
+    expect(conv.conversions).toMatchObject([{ event: 'install', status: 'billed', price_usd: '0.40' }]);
+
+    const paused = await app.inject({ method: 'POST', url: `/v1/advertiser/campaigns/${s.campaignId}/pause`, headers: { authorization: `Bearer ${created.key}` } });
+    expect(paused.json()).toEqual({ id: s.campaignId, status: 'paused' });
+
+    await revokeApiKey(db, me, (await listApiKeys(db, s.advertiserId))[0]!.id, 'en');
+    expect((await get('/v1/advertiser/me')).statusCode).toBe(401);
+    expect((await get('/v1/advertiser/me', 'kq_live_made_up')).statusCode).toBe(401);
+  });
+
+  it('sends signed events to subscribed endpoints and retries failures', async () => {
+    const s = await setup();
+    const me = await owner(s);
+    expect(await createWebhookEndpoint(db, me, { url: 'http://10.0.0.5/hook', events: ['conversion.approved'] }, 'en')).toMatchObject({ ok: false });
+    const endpoint = await createWebhookEndpoint(db, me, { url: 'https://hooks.studio.test/kiqro', events: ['conversion.approved', 'conversion.reversed'] }, 'en');
+    if (!endpoint.ok) throw new Error('endpoint');
+
+    const clickId = await click(s);
+    await postback(s, clickId, 'install', at(60));
+    await reverseConversion(db, { advertiserKey: s.postbackKey, clickId, eventName: 'install', reason: 'fraud', now: at(120) });
+
+    const sent: { url: string; headers: Record<string, string>; body: string }[] = [];
+    let fail = true;
+    const fetcher = async (url: string, init: { headers: Record<string, string>; body: string }) => {
+      sent.push({ url, headers: init.headers, body: init.body });
+      return { status: fail ? 500 : 200 };
+    };
+    expect(await deliverDueWebhooks(db, fetcher, at(130))).toBe(2);
+    fail = false;
+    expect(await deliverDueWebhooks(db, fetcher, at(130 + 3600))).toBe(2); // retried after the backoff
+
+    const last = sent.slice(-2);
+    expect(last.map((m) => JSON.parse(m.body).type)).toEqual(['conversion.approved', 'conversion.reversed']);
+    expect(JSON.parse(last[1]!.body).data).toMatchObject({ click_id: clickId, event: 'install', status: 'reversed', reason: 'fraud', price_usd: '0.40' });
+    expect(verifyWebhookSignature(last[0]!.body, last[0]!.headers['kiqro-signature']!, endpoint.secret, at(130 + 3600))).toBe(true);
+    expect(await db.select().from(schema.webhookDeliveries).where(eq(schema.webhookDeliveries.status, 'sent'))).toHaveLength(2);
+  });
+
+  it('only allows public https webhook URLs', () => {
+    expect(isAllowedWebhookUrl('https://api.studio.com/hooks')).toBe(true);
+    for (const bad of ['http://api.studio.com', 'https://localhost/x', 'https://127.0.0.1/x', 'https://192.168.1.4/x', 'https://[::1]/x', 'https://user:pw@api.studio.com', 'https://metadata.internal/']) {
+      expect(isAllowedWebhookUrl(bad)).toBe(false);
+    }
+  });
+});
