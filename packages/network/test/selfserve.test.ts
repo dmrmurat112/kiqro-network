@@ -2,6 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { eq } from 'drizzle-orm';
 import { schema, type Db } from '@kiqro/db';
 import { resetTestDb, setupTestDb } from '@kiqro/db/testing';
+import { backfillProductIcons } from '../src/product-icons.ts';
 import { approveCampaign, createAdminUser, createAdvertiser, returnCampaign, type AdminUser, type CampaignInput } from '../src/admin/index.ts';
 import {
   advertiserCampaignForm,
@@ -171,5 +172,20 @@ describe('self-serve campaigns', () => {
     await expect(approveCampaign(db, ops, c.id, LINKS)).rejects.toThrow('incelemedeki');
     await submitCampaignForReview(db, me, c.id, 'en', NOTIFY);
     await expect(returnCampaign(db, ops, c.id, 'no', LINKS)).rejects.toThrow('yazın');
+  });
+});
+
+describe('app icons', () => {
+  it('fills in missing icons and leaves apps it cannot find for a later run', async () => {
+    const me = await advertiser(await staff(), 'icons@studio.test');
+    const found = await advertiserCreateProduct(db, me, product, 'en');
+    const missing = await advertiserCreateProduct(db, me, { ...product, storeId: 'fi.studio.gone' }, 'en');
+    if (!found.ok || !missing.ok) throw new Error('product');
+    const skip = new Set<string>();
+    const lookup = async (raw: string) => (raw === 'fi.studio.game' ? { platform: 'android' as const, storeId: raw, name: 'Aurora', iconUrl: 'https://play-lh.googleusercontent.com/x=s256', developer: null } : null);
+    expect(await backfillProductIcons(db, { skip, lookup })).toBe(1);
+    expect((await db.query.products.findFirst({ where: eq(schema.products.id, found.id) }))!.iconUrl).toBe('https://play-lh.googleusercontent.com/x=s256');
+    expect(skip.has(missing.id)).toBe(true);
+    expect(await backfillProductIcons(db, { skip, lookup })).toBe(0);
   });
 });
