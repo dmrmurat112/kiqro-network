@@ -466,6 +466,8 @@ export const payments = pgTable(
     /** Bank transfer reference or note. */
     reference: text('reference'),
     ledgerTransactionId: text('ledger_transaction_id').references(() => ledgerTransactions.id),
+    /** Refunded through Stripe so far; already taken off the balance. */
+    refundedAmount: micros('refunded_amount').notNull().default(sql`0`),
     advertiserUserId: text('advertiser_user_id').references(() => advertiserUsers.id),
     adminUserId: text('admin_user_id').references(() => adminUsers.id),
     completedAt: timestamp('completed_at', { withTimezone: true }),

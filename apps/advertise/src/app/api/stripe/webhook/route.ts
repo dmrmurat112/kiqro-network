@@ -1,4 +1,4 @@
-import { closeStripeCheckout, completeStripeCheckout, verifyStripeSignature, type StripeCheckoutSession } from '@kiqro/network';
+import { applyStripeRefund, closeStripeCheckout, completeStripeCheckout, verifyStripeSignature, type StripeCheckoutSession, type StripeRefundedCharge } from '@kiqro/network';
 import { db } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 /**
  * Stripe webhook (Stripe Dashboard → Developers → Webhooks → https://advertise.kiqro.com/api/stripe/webhook).
  * Events: checkout.session.completed, checkout.session.async_payment_succeeded,
- * checkout.session.async_payment_failed, checkout.session.expired.
+ * checkout.session.async_payment_failed, checkout.session.expired, charge.refunded.
  * The balance changes only here, after the signature check; never on the browser redirect.
  */
 export async function POST(req: Request): Promise<Response> {
@@ -18,7 +18,7 @@ export async function POST(req: Request): Promise<Response> {
     return Response.json({ error: 'invalid_signature' }, { status: 400 });
   }
 
-  const event = JSON.parse(payload) as { id: string; type: string; data: { object: StripeCheckoutSession } };
+  const event = JSON.parse(payload) as { id: string; type: string; data: { object: StripeCheckoutSession & StripeRefundedCharge } };
   const session = event.data.object;
   const base = process.env.ADVERTISE_BASE_URL ?? 'http://localhost:4200';
 
@@ -36,6 +36,10 @@ export async function POST(req: Request): Promise<Response> {
       break;
     case 'checkout.session.expired':
       await closeStripeCheckout(db, session.id, 'expired');
+      break;
+    case 'charge.refunded':
+      // Refunds made in the Stripe Dashboard come off the balance (it may go below zero).
+      console.log(`stripe ${event.id}: refund ${await applyStripeRefund(db, event.data.object)}`);
       break;
   }
   return Response.json({ received: true });

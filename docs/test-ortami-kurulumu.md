@@ -111,7 +111,7 @@ Staging'de Stripe **test modu** kullanılır; gerçek para çekilmez.
 2. **Developers → API keys** → *Secret key* (`sk_test_…`) değerini Render'da `STRIPE_SECRET_KEY` olarak girin.
 3. **Developers → Webhooks → Add endpoint**:
    - URL: `https://advertise-staging.kiqro.com/api/stripe/webhook`
-   - Olaylar: `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`, `checkout.session.expired`
+   - Olaylar: `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`, `checkout.session.expired`, `charge.refunded`
 4. Endpoint'in **Signing secret** değerini (`whsec_…`) Render'da `STRIPE_WEBHOOK_SECRET` olarak girin.
 5. Test: reklamveren panelinde **Ödemeler → Bakiye yükle**, kart `4242 4242 4242 4242`, ileri bir tarih ve herhangi bir CVC. Birkaç saniye içinde bakiye artar ve ödeme geçmişinde "Ödendi" görünür.
 
@@ -142,10 +142,6 @@ Canlı ortamda aynı adımlar **live** anahtarlarla ve `https://advertise.kiqro.
   ```
   Render Shell'den çalıştırılır.
 
-## 11. Canlı ortam (sonra)
+## 11. Canlı ortam
 
-Canlı ortam aynı yapıyla, ayrı bir Blueprint ve ayrı bir veritabanıyla kurulacak:
-- Adresler: `track.kiqro.com`, `advertise.kiqro.com`, `admin.kiqro.com`.
-- Daha büyük planlar ve noktasal geri dönüş (PITR) destekli veritabanı.
-- `SENDGRID_SANDBOX=false`.
-- Hukuki metinler onaylanınca `TERMS_REQUIRED=true`.
+Ayrı Blueprint (`render.production.yaml`) ve ayrı veritabanıyla kurulur; adımlar [canli-ortam-kurulumu.md](canli-ortam-kurulumu.md) dosyasında.

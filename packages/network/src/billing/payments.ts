@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, isNull } from 'drizzle-orm';
 import { formatMicros } from '@kiqro/core';
-import { newId, schema, topUpAdvertiser, type Db, type DbOrTx } from '@kiqro/db';
+import { getAccountId, newId, postTransaction, schema, topUpAdvertiser, type Db, type DbOrTx } from '@kiqro/db';
 import { enqueueEmail } from '../email/queue.ts';
 
 const { advertiserUsers, invoices, organizations, payments } = schema;
@@ -112,6 +112,42 @@ export async function completeStripeCheckout(db: Db, session: StripeCheckoutSess
     await tx.update(payments).set({ stripePaymentIntentId: session.payment_intent ?? null }).where(eq(payments.id, payment.id));
     await settle(tx, payment, advertiseBaseUrl, now);
     return 'credited';
+  });
+}
+
+/** A refunded Stripe charge as delivered in "charge.refunded" events (fields Kiqro uses). */
+export interface StripeRefundedCharge {
+  payment_intent: string | null;
+  amount_refunded: number; // cumulative, cents
+  currency: string;
+}
+
+export type RefundOutcome = 'debited' | 'already_processed' | 'unknown_payment';
+
+/**
+ * Takes a Stripe refund off the advertiser's balance. Stripe reports the cumulative refunded
+ * amount, so partial refunds and webhook retries only ever debit the difference.
+ */
+export async function applyStripeRefund(db: Db, charge: StripeRefundedCharge): Promise<RefundOutcome> {
+  if (!charge.payment_intent || charge.currency !== 'usd') return 'unknown_payment';
+  return db.transaction(async (tx) => {
+    const [payment] = await tx.select().from(payments).where(eq(payments.stripePaymentIntentId, charge.payment_intent!)).for('update');
+    if (!payment || payment.status !== 'succeeded') return 'unknown_payment';
+    const refunded = BigInt(charge.amount_refunded) * 10_000n;
+    const delta = (refunded > payment.amount ? payment.amount : refunded) - payment.refundedAmount;
+    if (delta <= 0n) return 'already_processed';
+    await postTransaction(tx, {
+      type: 'advertiser_refund',
+      refType: 'payment',
+      refId: payment.id,
+      memo: `stripe refund ${payment.id}`,
+      entries: [
+        { accountId: await getAccountId(tx, 'advertiser_balance', payment.orgId), amount: -delta },
+        { accountId: await getAccountId(tx, 'external_cash', null), amount: delta },
+      ],
+    });
+    await tx.update(payments).set({ refundedAmount: payment.refundedAmount + delta }).where(eq(payments.id, payment.id));
+    return 'debited';
   });
 }
 

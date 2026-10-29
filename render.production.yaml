@@ -1,0 +1,139 @@
+# Render Blueprint — Kiqro Network PRODUCTION (Frankfurt).
+# Render → New → Blueprint → this repository, Blueprint path: render.production.yaml.
+# Deploys from the `production` branch: promote a tested staging build with
+#   git push origin main:production
+# Setup steps: docs/canli-ortam-kurulumu.md
+#
+# Same structure as render.yaml (staging) with separate names, database and secrets, so the two
+# environments can never share data or keys.
+
+databases:
+  - name: kiqro-prod-db
+    region: frankfurt
+    # Larger plan with point-in-time recovery; check the current plans on Render's pricing page.
+    plan: basic-1gb
+    databaseName: kiqro
+    user: kiqro
+    postgresMajorVersion: "17"
+    ipAllowList: []
+
+envVarGroups:
+  - name: kiqro-prod
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: TRACKING_BASE_URL
+        value: https://track.kiqro.com
+      - key: ADVERTISE_BASE_URL
+        value: https://advertise.kiqro.com
+      - key: ADMIN_BASE_URL
+        value: https://admin.kiqro.com
+      - key: MAIL_FROM
+        value: no-reply@kiqro.com
+      - key: MAIL_FROM_NAME
+        value: Kiqro Network
+      - key: MAIL_REPLY_TO
+        value: ads@kiqro.com
+      - key: LEADS_NOTIFY_EMAIL
+        value: ads@kiqro.com
+      - key: REVIEW_NOTIFY_EMAIL
+        value: ads@kiqro.com
+      # Switch to "true" once the lawyer-approved terms are published.
+      - key: TERMS_REQUIRED
+        value: "false"
+      - key: SENDGRID_SANDBOX
+        value: "false"
+      # Secrets — entered in the Render dashboard (live keys, never the staging ones).
+      - key: SENDGRID_API_KEY
+        sync: false
+      - key: IPQS_API_KEY
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: ORIGIN_SECRET
+        generateValue: true
+
+services:
+  - type: web
+    name: kiqro-prod-track
+    runtime: docker
+    region: frankfurt
+    plan: standard
+    # Two instances: a deploy or crash of one never stops clicks and postbacks.
+    numInstances: 2
+    branch: production
+    dockerfilePath: ./infra/docker/node.Dockerfile
+    dockerContext: .
+    dockerCommand: node_modules/.bin/tsx apps/tracking/src/main.ts
+    preDeployCommand: node_modules/.bin/tsx packages/db/src/migrate.ts
+    healthCheckPath: /health
+    autoDeployTrigger: checksPass
+    domains:
+      - track.kiqro.com
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: kiqro-prod-db
+          property: connectionString
+      - fromGroup: kiqro-prod
+
+  - type: worker
+    name: kiqro-prod-worker
+    runtime: docker
+    region: frankfurt
+    plan: starter
+    branch: production
+    dockerfilePath: ./infra/docker/node.Dockerfile
+    dockerContext: .
+    dockerCommand: node_modules/.bin/tsx apps/tracking/src/worker.ts
+    autoDeployTrigger: checksPass
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: kiqro-prod-db
+          property: connectionString
+      - fromGroup: kiqro-prod
+
+  - type: web
+    name: kiqro-prod-advertise
+    runtime: docker
+    region: frankfurt
+    plan: standard
+    branch: production
+    dockerfilePath: ./infra/docker/next.Dockerfile
+    dockerContext: .
+    healthCheckPath: /en
+    autoDeployTrigger: checksPass
+    domains:
+      - advertise.kiqro.com
+    envVars:
+      - key: APP
+        value: advertise
+      - key: DATABASE_URL
+        fromDatabase:
+          name: kiqro-prod-db
+          property: connectionString
+      - fromGroup: kiqro-prod
+
+  - type: web
+    name: kiqro-prod-admin
+    runtime: docker
+    region: frankfurt
+    plan: starter
+    branch: production
+    dockerfilePath: ./infra/docker/next.Dockerfile
+    dockerContext: .
+    healthCheckPath: /login
+    autoDeployTrigger: checksPass
+    domains:
+      - admin.kiqro.com
+    envVars:
+      - key: APP
+        value: admin
+      - key: DATABASE_URL
+        fromDatabase:
+          name: kiqro-prod-db
+          property: connectionString
+      - fromGroup: kiqro-prod

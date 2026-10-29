@@ -5,6 +5,7 @@ import { resetTestDb, setupTestDb } from '@kiqro/db/testing';
 import { createAdminUser, createAdvertiser, recordTopUp, setCreditTerms, AdminError, type AdminUser } from '../src/admin/index.ts';
 import { advertiserLogin, billingOverview, createAdvertiserUser, getAdvertiserSession, setPasswordWithToken, startTopUp, type AdvertiserSession } from '../src/advertiser/index.ts';
 import {
+  applyStripeRefund,
   closeStripeCheckout,
   completeStripeCheckout,
   creditPosition,
@@ -105,6 +106,22 @@ describe('Stripe top-ups', () => {
     expect(await completeStripeCheckout(db, paidSession('cs_unknown', 50_000), LINKS.advertiseBaseUrl)).toBe('unknown_payment');
     await closeStripeCheckout(db, 'cs_test_1', 'expired');
     expect((await db.select().from(payments))[0]!.status).toBe('expired');
+  });
+
+  it('takes Stripe refunds off the balance once, including partial refunds', async () => {
+    const s = await advertiser(await staff());
+    await startTopUp(db, s, { amountUsd: '1000' }, fakeGateway(), LINKS, 'en');
+    await completeStripeCheckout(db, paidSession('cs_test_1', 100_000), LINKS.advertiseBaseUrl);
+    const balance = () => getAccountId(db, 'advertiser_balance', s.org.id).then((id) => getBalance(db, id));
+    const refund = (cents: number) => applyStripeRefund(db, { payment_intent: 'pi_123', amount_refunded: cents, currency: 'usd' });
+
+    expect(await refund(30_000)).toBe('debited');
+    expect(await refund(30_000)).toBe('already_processed'); // webhook retry
+    expect(await balance()).toBe(700_000_000n);
+    expect(await refund(100_000)).toBe('debited'); // cumulative: the rest
+    expect(await balance()).toBe(0n);
+    expect((await db.select().from(payments))[0]!.refundedAmount).toBe(1_000_000_000n);
+    expect(await applyStripeRefund(db, { payment_intent: 'pi_other', amount_refunded: 100, currency: 'usd' })).toBe('unknown_payment');
   });
 
   it('marks the payment failed when Stripe rejects the checkout', async () => {

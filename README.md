@@ -57,7 +57,7 @@ Templates are in `packages/network/src/email/templates.ts` (English and Turkish,
 
 Advertisers are **prepaid** by default: campaigns spend the balance and stop taking new users when it runs out.
 
-- **Card top-ups** (advertiser panel → Billing, `/app/billing`): minimum $500, maximum $50,000 per payment, through Stripe Checkout under the billing entity's Stripe account. The panel records a pending payment; the balance changes only when Stripe's webhook (`POST /api/stripe/webhook` on the advertise app, events `checkout.session.completed`, `…async_payment_succeeded`, `…async_payment_failed`, `…expired`) confirms it, after checking the signature and that the charged amount matches. Webhooks are idempotent per Checkout Session. Without `STRIPE_SECRET_KEY`, development uses a stand-in checkout page; production shows card payments as unavailable.
+- **Card top-ups** (advertiser panel → Billing, `/app/billing`): minimum $500, maximum $50,000 per payment, through Stripe Checkout under the billing entity's Stripe account. The panel records a pending payment; the balance changes only when Stripe's webhook (`POST /api/stripe/webhook` on the advertise app, events `checkout.session.completed`, `…async_payment_succeeded`, `…async_payment_failed`, `…expired`) confirms it; `charge.refunded` takes Stripe refunds (also partial) off the balance, after checking the signature and that the charged amount matches. Webhooks are idempotent per Checkout Session. Without `STRIPE_SECRET_KEY`, development uses a stand-in checkout page; production shows card payments as unavailable.
 - **Bank transfers**: finance records them in the admin panel (advertiser page → "Havale / manuel ödeme kaydı").
 - **Credit terms (net-30)**: finance can give a credit-checked advertiser a credit line and payment term (admin → advertiser → "Kredi koşulları"). The balance may then go down to `-creditLimit`. In the first three days of each month the worker invoices the debt not covered by open invoices (numbers `KI-YYYY-NNNNN` for Kiqro Inc., `KO-…` for Kiqro Oy), due after the payment term. Any payment is applied to open invoices oldest first. When an invoice is overdue, the credit line is suspended automatically (only prepaid balance can be spent) until it is paid.
 
@@ -80,6 +80,8 @@ After changing `packages/db/src/schema.ts`, run `npm run db:generate` and commit
 ## Deployment
 
 Staging runs on Render (Frankfurt) behind Cloudflare, defined in [`render.yaml`](render.yaml); images are built from `infra/docker/` (`node.Dockerfile` for tracking, worker and migrations; `next.Dockerfile` with `APP=admin|advertise`). GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs typecheck, tests and a "migrations committed" check; Render deploys `main` only when CI passes, running migrations before each deploy. Step-by-step setup (accounts, DNS, Cloudflare origin lock, first admin): [docs/test-ortami-kurulumu.md](docs/test-ortami-kurulumu.md).
+
+Production is a separate Blueprint, [`render.production.yaml`](render.production.yaml), deployed from the `production` branch (`git push origin main:production` promotes what was tested on staging): [docs/canli-ortam-kurulumu.md](docs/canli-ortam-kurulumu.md).
 
 Behind Cloudflare the tracking service reads the client IP from `CF-Connecting-IP` and the country from `CF-IPCountry`; with `ORIGIN_SECRET` set it refuses requests without the matching `X-Origin-Auth` header, which a Cloudflare Transform Rule adds.
 

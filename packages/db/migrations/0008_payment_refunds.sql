@@ -1,0 +1,1 @@
+ALTER TABLE "payments" ADD COLUMN "refunded_amount" bigint DEFAULT 0 NOT NULL;

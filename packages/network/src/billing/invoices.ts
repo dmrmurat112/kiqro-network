@@ -1,4 +1,4 @@
-import { and, eq, gte, isNull, like, lt, ne, or, sql } from 'drizzle-orm';
+import { and, eq, gte, isNull, like, lt, notInArray, or, sql } from 'drizzle-orm';
 import { formatMicros } from '@kiqro/core';
 import { getAccountId, getBalance, lockAccount, newId, schema, type Db, type DbOrTx } from '@kiqro/db';
 import { enqueueEmail } from '../email/queue.ts';
@@ -24,13 +24,13 @@ async function nextInvoiceNumber(tx: DbOrTx, billingEntity: string, now: Date): 
   return `${prefix}${String(Number(row!.n) + 1).padStart(5, '0')}`;
 }
 
-/** Campaign spend minus reversals charged to the balance in [start, end). */
+/** Campaign spend minus reversals charged to the balance in [start, end) (payments and refunds excluded). */
 async function spendBetween(tx: DbOrTx, accountId: string, start: Date, end: Date): Promise<bigint> {
   const [row] = await tx
     .select({ total: sql<string>`coalesce(sum(${ledgerEntries.amount}), 0)` })
     .from(ledgerEntries)
     .innerJoin(ledgerTransactions, eq(ledgerTransactions.id, ledgerEntries.transactionId))
-    .where(and(eq(ledgerEntries.accountId, accountId), ne(ledgerTransactions.type, 'advertiser_topup'), gte(ledgerEntries.createdAt, start), lt(ledgerEntries.createdAt, end)));
+    .where(and(eq(ledgerEntries.accountId, accountId), notInArray(ledgerTransactions.type, ['advertiser_topup', 'advertiser_refund']), gte(ledgerEntries.createdAt, start), lt(ledgerEntries.createdAt, end)));
   return -BigInt(row!.total);
 }
 
