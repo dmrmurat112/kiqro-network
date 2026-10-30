@@ -4,7 +4,7 @@ Canlı ortam, test ortamıyla ([test-ortami-kurulumu.md](test-ortami-kurulumu.md
 
 | | Staging | Canlı |
 |---|---|---|
-| Adresler | `*-staging.kiqro.com` | `track.kiqro.com`, `advertise.kiqro.com`, `admin.kiqro.com` |
+| Adresler | `staging.`, `track-staging.`, `admin-staging.kiqronetwork.com` | `kiqronetwork.com` (+ `www` yönlendirmesi), `track.kiqronetwork.com`, `admin.kiqronetwork.com` |
 | Dağıtılan dal | `main` | `production` |
 | Takip servisi | 1 × Starter | 2 × Standard (biri yeniden başlarken diğeri çalışır) |
 | Veritabanı | basic-256mb | basic-1gb, noktasal geri dönüş (PITR) |
@@ -48,16 +48,19 @@ Sonraki her yayın aynı komutla yapılır. GitHub Actions bu dalda da testleri 
 
 Staging bölüm 3–5 ile aynı adımlar, canlı adlarla:
 
-| Ad | Hedef |
-|---|---|
-| `track` | `kiqro-prod-track.onrender.com` |
-| `advertise` | `kiqro-prod-advertise.onrender.com` |
-| `admin` | `kiqro-prod-admin.onrender.com` |
+| Tür | Ad | Hedef |
+|---|---|---|
+| CNAME | `@` (kök, `kiqronetwork.com`) | `kiqro-prod-advertise.onrender.com` |
+| CNAME | `www` | `kiqro-prod-advertise.onrender.com` |
+| CNAME | `track` | `kiqro-prod-track.onrender.com` |
+| CNAME | `admin` | `kiqro-prod-admin.onrender.com` |
 
+- Kök alan adına CNAME eklenebilir; Cloudflare bunu otomatik olarak düzleştirir (CNAME flattening).
+- Render'da kök alan adı (`kiqronetwork.com`) eklendiğinde `www.kiqronetwork.com` da eklenir ve köke yönlendirilir; `www` kaydı bunun için.
 - Sertifikalar çıkana kadar **DNS only**, sonra **Proxied**.
-- Transform Rule: `Kiqro origin auth (production)`, Hostname = `track.kiqro.com`, `X-Origin-Auth` = canlı `ORIGIN_SECRET`.
-- Cloudflare Access: `admin.kiqro.com` yalnızca ekip e-postalarına.
-- Önerilen: **Security → WAF → Rate limiting**: `track.kiqro.com/c/*` için IP başına dakikada 120 istek.
+- Transform Rule: `Kiqro origin auth (production)`, Hostname = `track.kiqronetwork.com`, `X-Origin-Auth` = canlı `ORIGIN_SECRET`.
+- Cloudflare Access: `admin.kiqronetwork.com` yalnızca ekip e-postalarına.
+- Önerilen: **Security → WAF → Rate limiting**: `track.kiqronetwork.com/c/*` için IP başına dakikada 120 istek.
 
 ## 4. İlk admin
 
@@ -72,7 +75,7 @@ Canlı ortamda yalnızca gereken kişilere admin hesabı açın; finans işlemle
 ## 5. Stripe (live)
 
 1. Stripe Dashboard → test modunu kapatın.
-2. **Developers → Webhooks → Add endpoint**: `https://advertise.kiqro.com/api/stripe/webhook`, olaylar staging'deki beşi.
+2. **Developers → Webhooks → Add endpoint**: `https://kiqronetwork.com/api/stripe/webhook`, olaylar staging'deki beşi.
 3. Signing secret'ı Render'da `STRIPE_WEBHOOK_SECRET` olarak girin; servis kendiliğinden yeniden başlar.
 4. **Settings → Customer emails → Successful payments** açık olsun (Stripe makbuzu).
 5. Küçük bir gerçek ödemeyle deneyin (ör. kendi test reklamvereniniz, 500 $), ardından Stripe'tan iade edin. İade, webhook ile bakiyeden otomatik düşülür (kısmi iadeler dahil).
@@ -86,7 +89,7 @@ Avukat onayından sonra:
 
 ## 7. Yayın kontrol listesi
 
-- [ ] `https://track.kiqro.com/health` → `{"ok":true}`
+- [ ] `https://track.kiqronetwork.com/health` → `{"ok":true}`
 - [ ] `https://kiqro-prod-track.onrender.com/v1/offers` → `{"error":"forbidden"}`
 - [ ] Admin girişi ve 2FA çalışıyor
 - [ ] Reklamveren daveti e-postası geliyor (SendGrid gerçek gönderim)

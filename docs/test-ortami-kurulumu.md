@@ -12,17 +12,31 @@ Aşağıdaki adımlar hesap ve erişim gerektirdiği için sizin tarafınızdan 
 
 | Servis | Render adı | Adres | Görev |
 |---|---|---|---|
-| Takip servisi | `kiqro-staging-track` | `https://track-staging.kiqro.com` | Offers API, tıklamalar, MMP postback'leri |
+| Takip servisi | `kiqro-staging-track` | `https://track-staging.kiqronetwork.com` | Offers API, tıklamalar, MMP postback'leri |
 | İşçi (worker) | `kiqro-staging-worker` | — | Yayıncı postback'leri, e-postalar, bakiye uyarıları |
-| Reklamveren sitesi ve paneli | `kiqro-staging-advertise` | `https://advertise-staging.kiqro.com` | Tanıtım sitesi, reklamveren paneli |
-| Admin paneli | `kiqro-staging-admin` | `https://admin-staging.kiqro.com` | Kiqro ekibi |
+| Reklamveren sitesi ve paneli | `kiqro-staging-advertise` | `https://staging.kiqronetwork.com` | Tanıtım sitesi, reklamveren paneli |
+| Admin paneli | `kiqro-staging-admin` | `https://admin-staging.kiqronetwork.com` | Kiqro ekibi |
 | Veritabanı | `kiqro-staging-db` | (yalnızca iç ağ) | PostgreSQL 17 |
 
 Hepsi Render **Frankfurt** bölgesinde çalışır. Tahmini maliyet ayda yaklaşık **35 $**: 4 × Starter servis ve küçük Postgres. Güncel fiyatlar için Render'ın fiyat sayfasına bakın.
 
-> Alan adları tek seviyeli (`track-staging.kiqro.com`). Cloudflare'in ücretsiz sertifikası `track.staging.kiqro.com` gibi iki seviyeli adları kapsamaz.
+> Alan adları tek seviyeli (`track-staging.kiqronetwork.com`). Cloudflare'in ücretsiz sertifikası `track.staging.kiqronetwork.com` gibi iki seviyeli adları kapsamaz.
+
+**Alan adı ve e-posta:** Ağın adresi `kiqronetwork.com` (GoDaddy'den alındı, DNS'i Cloudflare yönetir). E-postalar `kiqro.com` üzerinden gider: gönderici `noreply@kiqro.com`, cevaplar ve iletişim `contact@kiqro.com`.
 
 ---
+
+## 0. Alan adını Cloudflare'e taşıma (bir kez, ~15 dk + yayılma süresi)
+
+Sistem kullanıcının ülkesini ve gerçek IP'sini Cloudflare'den okur ve takip servisini Cloudflare arkasına kilitler. Bu yüzden `kiqronetwork.com`'un DNS'i Cloudflare'de olmalı.
+
+1. Cloudflare → **Add a domain** → `kiqronetwork.com` → **Free** plan. Cloudflare mevcut kayıtları tarar; GoDaddy'nin park sayfası kayıtları varsa (`A @`, `CNAME www`) silin.
+2. Cloudflare size iki nameserver verir (ör. `xxx.ns.cloudflare.com`).
+3. GoDaddy → **My Products → kiqronetwork.com → DNS → Nameservers → Change → I'll use my own nameservers** → Cloudflare'in iki adresini girin, kaydedin.
+4. Cloudflare'de alan adının durumu **Active** olana kadar bekleyin (genelde 15 dk – birkaç saat; Cloudflare e-posta gönderir).
+5. Cloudflare → **SSL/TLS → Overview** → **Full (strict)**. **SSL/TLS → Edge Certificates** → **Always Use HTTPS** açık.
+
+> GoDaddy'de alan adının otomatik yenilemesini açık tutun ve **Domain Privacy / Lock** açık kalsın; DNS'i taşımak alan adının GoDaddy'de kayıtlı olmasını değiştirmez.
 
 ## 1. Render hesabı ve GitHub bağlantısı
 
@@ -45,12 +59,12 @@ Hepsi Render **Frankfurt** bölgesinde çalışır. Tahmini maliyet ayda yaklaş
 
 ## 3. Cloudflare DNS
 
-Cloudflare'de `kiqro.com` → **DNS → Records**:
+Cloudflare'de `kiqronetwork.com` → **DNS → Records**:
 
 | Tür | Ad | Hedef | Proxy |
 |---|---|---|---|
 | CNAME | `track-staging` | `kiqro-staging-track.onrender.com` | önce **DNS only** (gri) |
-| CNAME | `advertise-staging` | `kiqro-staging-advertise.onrender.com` | önce **DNS only** (gri) |
+| CNAME | `staging` | `kiqro-staging-advertise.onrender.com` | önce **DNS only** (gri) |
 | CNAME | `admin-staging` | `kiqro-staging-admin.onrender.com` | önce **DNS only** (gri) |
 
 Hedef adları Render'daki her servisin sayfasında görünür. Farklıysa oradakini kullanın.
@@ -67,12 +81,12 @@ Bu adım, Cloudflare'i atlayıp doğrudan Render adresine istek atan birinin sah
 
 1. Cloudflare → **Rules → Transform Rules → Modify Request Header → Create rule**.
 2. Ad: `Kiqro origin auth (staging)`.
-3. Koşul: **Hostname** *equals* `track-staging.kiqro.com`.
+3. Koşul: **Hostname** *equals* `track-staging.kiqronetwork.com`.
 4. İşlem: **Set static** → başlık adı `X-Origin-Auth`, değer: Render'dan kopyaladığınız `ORIGIN_SECRET`.
 5. Kaydedin.
 
 **Kontrol:**
-- `https://track-staging.kiqro.com/health` → `{"ok":true}`
+- `https://track-staging.kiqronetwork.com/health` → `{"ok":true}`
 - `https://kiqro-staging-track.onrender.com/v1/offers` → `{"error":"forbidden"}`. Bu beklenen sonuç: Cloudflare'i atlayan istekler reddediliyor.
 
 ## 5. Admin paneline erişimi kısıtlama (önerilir)
@@ -80,7 +94,7 @@ Bu adım, Cloudflare'i atlayıp doğrudan Render adresine istek atan birinin sah
 Admin panelinde zaten parola ve zorunlu 2FA var. Ek bir kat olarak paneli yalnızca ekip e-postalarına açın:
 
 1. Cloudflare → **Zero Trust → Access → Applications → Add an application → Self-hosted**.
-2. Alan adı: `admin-staging.kiqro.com`.
+2. Alan adı: `admin-staging.kiqronetwork.com`.
 3. Politika: **Allow**, kural *Emails* → ekip adresleri (ör. `koray@kiqro.com`).
 4. Kaydedin. Panele girmeden önce Cloudflare, e-postanıza tek kullanımlık bir kod gönderir. 50 kullanıcıya kadar ücretsizdir.
 
@@ -92,16 +106,19 @@ Admin panelinde zaten parola ve zorunlu 2FA var. Ek bir kat olarak paneli yalnı
    node_modules/.bin/tsx apps/admin/scripts/create-admin.ts koray@kiqro.com "Koray" admin
    ```
 3. Ekranda bir kez gösterilen parolayı kaydedin.
-4. `https://admin-staging.kiqro.com` adresinden giriş yapın; ilk girişte 2FA kurulumu istenir.
+4. `https://admin-staging.kiqronetwork.com` adresinden giriş yapın; ilk girişte 2FA kurulumu istenir.
 
 Diğer ekip üyeleri için aynı komutu kendi e-postalarıyla çalıştırın. Roller: `admin`, `operator`, `finance`, `viewer`.
 
 ## 7. SendGrid
 
-1. SendGrid → **Settings → Sender Authentication → Authenticate Your Domain** → DNS sağlayıcısı olarak Cloudflare'i seçin, alan adı olarak `kiqro.com` yazın.
-2. SendGrid'in verdiği CNAME kayıtlarını Cloudflare'e **DNS only** (gri) olarak ekleyin ve SendGrid'de **Verify** deyin.
-3. **Settings → API Keys** bölümünden yalnızca **Mail Send** yetkili bir anahtar oluşturup Render'da `SENDGRID_API_KEY` olarak girin.
-4. Staging'de `SENDGRID_SANDBOX=true` ayarlı. Bu modda SendGrid isteği doğrular ama e-postayı **teslim etmez**. Test için gerçek gönderim isterseniz Render'da bu değeri `false` yapın.
+E-postalar `noreply@kiqro.com` adresinden gider; bu yüzden SendGrid'de doğrulanacak alan adı **`kiqro.com`**'dur (`kiqronetwork.com` değil).
+
+1. SendGrid → **Settings → Sender Authentication → Authenticate Your Domain** → alan adı olarak `kiqro.com` yazın; DNS sağlayıcısı olarak `kiqro.com`'un DNS'inin bulunduğu yeri seçin.
+2. SendGrid'in verdiği CNAME kayıtlarını `kiqro.com`'un DNS'ine ekleyin (Cloudflare'deyse **DNS only**, gri) ve SendGrid'de **Verify** deyin. `kiqro.com`'da zaten bir SPF kaydı varsa (ör. Google Workspace) SendGrid'in otomatik güvenlik ayarı (automated security) açıkken ek SPF gerekmez.
+3. `contact@kiqro.com` posta kutusunun (veya yönlendirmesinin) çalıştığından emin olun: reklamverenlerin cevapları, demo talepleri ve kampanya inceleme bildirimleri buraya gelir.
+4. **Settings → API Keys** bölümünden yalnızca **Mail Send** yetkili bir anahtar oluşturup Render'da `SENDGRID_API_KEY` olarak girin.
+5. Staging'de `SENDGRID_SANDBOX=true` ayarlı. Bu modda SendGrid isteği doğrular ama e-postayı **teslim etmez**. Test için gerçek gönderim isterseniz Render'da bu değeri `false` yapın.
 
 ## 8. Stripe (kartla bakiye yükleme)
 
@@ -110,12 +127,12 @@ Staging'de Stripe **test modu** kullanılır; gerçek para çekilmez.
 1. Stripe Dashboard'da (Kiqro Inc. hesabı) sağ üstten **Test mode**'u açın.
 2. **Developers → API keys** → *Secret key* (`sk_test_…`) değerini Render'da `STRIPE_SECRET_KEY` olarak girin.
 3. **Developers → Webhooks → Add endpoint**:
-   - URL: `https://advertise-staging.kiqro.com/api/stripe/webhook`
+   - URL: `https://staging.kiqronetwork.com/api/stripe/webhook`
    - Olaylar: `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`, `checkout.session.expired`, `charge.refunded`
 4. Endpoint'in **Signing secret** değerini (`whsec_…`) Render'da `STRIPE_WEBHOOK_SECRET` olarak girin.
 5. Test: reklamveren panelinde **Ödemeler → Bakiye yükle**, kart `4242 4242 4242 4242`, ileri bir tarih ve herhangi bir CVC. Birkaç saniye içinde bakiye artar ve ödeme geçmişinde "Ödendi" görünür.
 
-Canlı ortamda aynı adımlar **live** anahtarlarla ve `https://advertise.kiqro.com/api/stripe/webhook` adresiyle yapılır. Stripe **Settings → Customer emails** bölümünden "Successful payments" makbuzlarını açabilirsiniz.
+Canlı ortamda aynı adımlar **live** anahtarlarla ve `https://kiqronetwork.com/api/stripe/webhook` adresiyle yapılır. Stripe **Settings → Customer emails** bölümünden "Successful payments" makbuzlarını açabilirsiniz.
 
 ## 9. Kiqro uygulaması (yazılım firması) için hazırlık
 
@@ -126,7 +143,7 @@ Canlı ortamda aynı adımlar **live** anahtarlarla ve `https://advertise.kiqro.
    - Gelir payı: %70 (staging için örnek)
    - Postback URL: firmanın **staging** uç noktası (entegrasyon kılavuzu bölüm 6)
 3. Firmaya güvenli bir kanaldan iletin:
-   - `TRACK` adresi: `https://track-staging.kiqro.com`
+   - `TRACK` adresi: `https://track-staging.kiqronetwork.com`
    - `app_key` ve `secret`
    - Entegrasyon kılavuzu (`docs/kiqro-direct-entegrasyon.pdf`)
 4. Test reklamvereni ve test kampanyası oluşturun. Firma, kılavuzdaki test planını bu kampanyayla yürütür.

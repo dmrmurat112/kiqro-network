@@ -284,7 +284,7 @@ export const adminSessions = pgTable('admin_sessions', {
 /** Team role in the advertiser panel: admins also manage the team. */
 export const advertiserRole = pgEnum('advertiser_role', ['admin', 'member']);
 
-/** People at an advertiser who can sign in to the advertiser panel (advertise.kiqro.com/app). */
+/** People at an advertiser who can sign in to the advertiser panel (kiqronetwork.com/app). */
 export const advertiserUsers = pgTable('advertiser_users', {
   id: text('id').primaryKey(),
   orgId: text('org_id').notNull().references(() => organizations.id),

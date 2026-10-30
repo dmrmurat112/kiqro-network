@@ -4,7 +4,7 @@ For apps and sites that show Kiqro Network offers to their users and reward them
 
 ## What you get from Kiqro
 
-- A **publisher panel** login at `https://advertise.kiqro.com/login`: earnings, placements, rewards log.
+- A **publisher panel** login at `https://kiqronetwork.com/login`: earnings, placements, rewards log.
 - One **placement** per app: an `app_key` (public) and a `secret` (server only), your revenue share (set in your agreement), and your own currency name and points-per-USD rate.
 
 Never ship the `secret` inside an app. Everything signed is built on your server.
@@ -26,10 +26,10 @@ Never ship the `secret` inside an app. Everything signed is built on your server
 Open this URL in a WebView or the browser:
 
 ```
-https://track.kiqro.com/wall?app_key=APP_KEY&user_id=USER_ID&sig=SIG&lang=en
+https://track.kiqronetwork.com/wall?app_key=APP_KEY&user_id=USER_ID&sig=SIG&lang=en
 ```
 
-The page lists available, in-progress and completed offers with their steps and rewards in your currency, opens offers, and lets users report a missing reward. It uses no JavaScript and works inside any WebView. Open links to `track.kiqro.com/c/…` in the system browser so the store opens correctly:
+The page lists available, in-progress and completed offers with their steps and rewards in your currency, opens offers, and lets users report a missing reward. It uses no JavaScript and works inside any WebView. Open links to `track.kiqronetwork.com/c/…` in the system browser so the store opens correctly:
 
 ```kotlin
 // Android
@@ -55,7 +55,7 @@ On the web, the wall can also be shown in an `<iframe>`.
 ## Option 2 — Offers API (your own UI)
 
 ```
-GET https://track.kiqro.com/v1/offers?app_key&user_id&sig[&risk][&lang][&country]
+GET https://track.kiqronetwork.com/v1/offers?app_key&user_id&sig[&risk][&lang][&country]
 ```
 
 Returns `{ offers: [{ offerId, title, description, platform, iconUrl, clickUrl, totalRewardPoints, started, completed, tasks: [{ taskId, seq, name, timeLimitDays, payoutUsd, rewardPoints, state }] }] }`. Open `clickUrl` unchanged. `payoutUsd` is your earning, not for display. Call from your server; pass `country` (ISO code) since Kiqro sees your server's address.
@@ -89,7 +89,7 @@ Your endpoint must: verify `signature`; credit at most once per `transaction_id`
 
 ## Missing rewards — claims
 
-`POST https://track.kiqro.com/v1/claims` (JSON or form) with `app_key, user_id, offer_id, task_id, note, sig`; `GET /v1/claims?app_key&user_id&sig` lists a user's claims with `status` (`open`, `approved`, `rejected`) and the rejection `note`. Claims must follow a click on the offer in the last 30 days. The hosted wall includes this form already.
+`POST https://track.kiqronetwork.com/v1/claims` (JSON or form) with `app_key, user_id, offer_id, task_id, note, sig`; `GET /v1/claims?app_key&user_id&sig` lists a user's claims with `status` (`open`, `approved`, `rejected`) and the rejection `note`. Claims must follow a click on the offer in the last 30 days. The hosted wall includes this form already.
 
 ## Checklist before going live
 

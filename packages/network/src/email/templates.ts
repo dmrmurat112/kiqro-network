@@ -43,7 +43,7 @@ function layout(opts: { preheader: string; heading: string; paragraphs: string[]
     ${paragraphs}${button}
     <p style="margin:24px 0 0;padding-top:20px;border-top:1px solid #ece9f6;font-size:12px;line-height:18px;color:#8d88a8">${opts.footnote}</p>
   </td></tr>
-  <tr><td style="padding:18px 8px;text-align:center;font-size:11px;color:#8d88a8">Kiqro Network · advertise.kiqro.com</td></tr>
+  <tr><td style="padding:18px 8px;text-align:center;font-size:11px;color:#8d88a8">Kiqro Network · kiqronetwork.com</td></tr>
 </table></td></tr></table></body></html>`;
 }
 
@@ -114,7 +114,7 @@ export function renderEmail(template: EmailTemplate, locale: EmailLocale): Rende
           heading: subject,
           paragraphs: rows.map(([k, v]) => `<b>${k}:</b> ${esc(v!)}`),
           button: { label: 'Admin panelinde aç', href: d.adminLink },
-          footnote: 'advertise.kiqro.com demo formundan otomatik bildirim.',
+          footnote: 'kiqronetwork.com demo formundan otomatik bildirim.',
         }),
         text: text([subject, ...rows.map(([k, v]) => `${k}: ${v}`), d.adminLink]),
       };

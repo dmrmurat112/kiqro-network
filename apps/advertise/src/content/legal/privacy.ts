@@ -3,7 +3,7 @@ import { TBD, type LegalDoc } from './types';
 
 export const privacy: LegalDoc = {
   slug: 'privacy',
-  title: 'Privacy Notice — advertise.kiqro.com',
+  title: 'Privacy Notice — kiqronetwork.com',
   summary: 'How Kiqro handles personal data of website visitors, demo requesters and advertiser panel users.',
   version: '0.1-draft (2026-10-29)',
   status: 'draft',
@@ -13,7 +13,7 @@ export const privacy: LegalDoc = {
       title: '1. Who we are and what this covers',
       blocks: [
         `${ENTITY.name}, ${ENTITY.address} (“Kiqro”) is the controller for the personal data described here. Contact: ${ENTITY.privacyEmail}.`,
-        'This notice covers the advertise.kiqro.com website, the demo request form and the advertiser panel. It does not cover the Kiqro rewards app; its users are covered by the privacy policy at kiqro.com.',
+        'This notice covers the kiqronetwork.com website, the demo request form and the advertiser panel. It does not cover the Kiqro rewards app; its users are covered by the privacy policy at kiqro.com.',
       ],
     },
     {

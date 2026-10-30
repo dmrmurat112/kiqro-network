@@ -36,7 +36,7 @@ export function SiteFooter({ lang, t }: { lang: Locale; t: SiteDict }) {
           <div className="font-semibold">{t.footer.company}</div>
           <ul className="mt-4 space-y-2.5 text-muted">
             <li><a href="https://kiqro.com" className="hover:text-fg">{t.footer.users}</a></li>
-            <li><a href="mailto:ads@kiqro.com" className="hover:text-fg">{t.footer.contact}: ads@kiqro.com</a></li>
+            <li><a href="mailto:contact@kiqro.com" className="hover:text-fg">{t.footer.contact}: contact@kiqro.com</a></li>
           </ul>
         </div>
       </div>

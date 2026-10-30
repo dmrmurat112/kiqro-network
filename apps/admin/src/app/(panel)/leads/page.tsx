@@ -22,7 +22,7 @@ export default async function LeadsPage() {
   return (
     <>
       <h1>Demo talepleri</h1>
-      <p className="muted">advertise.kiqro.com üzerindeki formdan gelen reklamveren talepleri.</p>
+      <p className="muted">kiqronetwork.com üzerindeki formdan gelen reklamveren talepleri.</p>
       <div className="card">
         {leads.length === 0 ? (
           <p className="muted">Henüz talep yok.</p>

@@ -142,7 +142,7 @@ describe('e-mail delivery and alerts', () => {
     let sent: { url: string; body: Record<string, unknown>; auth: string } | undefined;
     const mailer = sendgridMailer({
       apiKey: 'SG.key',
-      from: 'no-reply@kiqro.com',
+      from: 'noreply@kiqro.com',
       fromName: 'Kiqro Network',
       fetcher: async (url, init) => {
         sent = { url, body: JSON.parse(init.body), auth: init.headers.Authorization! };
@@ -152,7 +152,7 @@ describe('e-mail delivery and alerts', () => {
     expect(await mailer.send({ to: 'a@b.test', subject: 'S', html: '<p>h</p>', text: 't', category: 'password_reset' })).toEqual({ ok: true, providerMessageId: 'msg-123' });
     expect(sent!.url).toBe('https://api.sendgrid.com/v3/mail/send');
     expect(sent!.auth).toBe('Bearer SG.key');
-    expect(sent!.body).toMatchObject({ from: { email: 'no-reply@kiqro.com' }, categories: ['password_reset'], tracking_settings: { click_tracking: { enable: false } } });
+    expect(sent!.body).toMatchObject({ from: { email: 'noreply@kiqro.com' }, categories: ['password_reset'], tracking_settings: { click_tracking: { enable: false } } });
   });
 
   it('escapes user input in templates', () => {

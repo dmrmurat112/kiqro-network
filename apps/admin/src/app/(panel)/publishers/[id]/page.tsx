@@ -50,7 +50,7 @@ export default async function PublisherPage({ params }: { params: Promise<{ id: 
   const org = await getOrganization(db, id);
   if (!org || org.type !== 'publisher') notFound();
   const [placements, users] = await Promise.all([listPlacements(db, id), listAdvertiserUsers(db, id)]);
-  const trackingBase = process.env.TRACKING_BASE_URL ?? 'https://track.kiqro.com';
+  const trackingBase = process.env.TRACKING_BASE_URL ?? 'https://track.kiqronetwork.com';
 
   return (
     <>
@@ -90,7 +90,7 @@ export default async function PublisherPage({ params }: { params: Promise<{ id: 
 
       <div className="card">
         <h2>Yayıncı paneli kullanıcıları</h2>
-        <p className="muted">Yayıncı advertise.kiqro.com/login adresinden girer: kazançlarını, placement ayarlarını (para birimi, puan kuru, postback adresi) ve barındırılan offerwall linkini görür. Gelir payı yalnızca buradan değişir.</p>
+        <p className="muted">Yayıncı kiqronetwork.com/login adresinden girer: kazançlarını, placement ayarlarını (para birimi, puan kuru, postback adresi) ve barındırılan offerwall linkini görür. Gelir payı yalnızca buradan değişir.</p>
         {users.length > 0 && (
           <table>
             <thead>

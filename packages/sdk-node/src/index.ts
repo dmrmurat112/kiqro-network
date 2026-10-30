@@ -12,7 +12,7 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 export interface KiqroDirectOptions {
   appKey: string;
   secret: string;
-  /** Defaults to production; use https://track-staging.kiqro.com while testing. */
+  /** Defaults to production; use https://track-staging.kiqronetwork.com while testing. */
   baseUrl?: string;
   fetch?: typeof fetch;
   /** Request timeout in milliseconds (default 5000). */
@@ -76,7 +76,7 @@ export class KiqroDirect {
 
   constructor(private readonly opts: KiqroDirectOptions) {
     if (!opts.appKey || !opts.secret) throw new Error('KiqroDirect: appKey and secret are required');
-    this.baseUrl = (opts.baseUrl ?? 'https://track.kiqro.com').replace(/\/$/, '');
+    this.baseUrl = (opts.baseUrl ?? 'https://track.kiqronetwork.com').replace(/\/$/, '');
     this.fetcher = opts.fetch ?? fetch;
   }
 

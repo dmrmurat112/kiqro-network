@@ -14,7 +14,7 @@ Authorization: Bearer kq_live_…
 - Revoke keys you no longer use. Up to 10 active keys per advertiser.
 - Limit: 300 requests per minute per key (HTTP `429 rate_limited` above that).
 
-**Base URL:** `https://track.kiqro.com/v1/advertiser`
+**Base URL:** `https://track.kiqronetwork.com/v1/advertiser`
 
 Responses are JSON with `snake_case` fields. Amounts are decimal strings in USD (`"12.40"`). Times are ISO 8601 UTC.
 

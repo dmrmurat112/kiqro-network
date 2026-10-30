@@ -4,7 +4,7 @@ import { db } from '@/lib/db';
 export const dynamic = 'force-dynamic';
 
 /**
- * Stripe webhook (Stripe Dashboard → Developers → Webhooks → https://advertise.kiqro.com/api/stripe/webhook).
+ * Stripe webhook (Stripe Dashboard → Developers → Webhooks → https://kiqronetwork.com/api/stripe/webhook).
  * Events: checkout.session.completed, checkout.session.async_payment_succeeded,
  * checkout.session.async_payment_failed, checkout.session.expired, charge.refunded.
  * The balance changes only here, after the signature check; never on the browser redirect.

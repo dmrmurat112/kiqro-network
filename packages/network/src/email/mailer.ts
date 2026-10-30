@@ -78,13 +78,13 @@ export function consoleMailer(log: (line: string) => void = console.log): Mailer
 
 /**
  * SENDGRID_API_KEY enables SendGrid; MAIL_FROM must be an address on a domain authenticated
- * in SendGrid (e.g. no-reply@kiqro.com). Without a key, mail is printed to the console.
+ * in SendGrid (e.g. noreply@kiqro.com). Without a key, mail is printed to the console.
  */
 export function mailerFromEnv(env: NodeJS.ProcessEnv = process.env): Mailer {
   if (!env.SENDGRID_API_KEY) return consoleMailer();
   return sendgridMailer({
     apiKey: env.SENDGRID_API_KEY,
-    from: env.MAIL_FROM ?? 'no-reply@kiqro.com',
+    from: env.MAIL_FROM ?? 'noreply@kiqro.com',
     fromName: env.MAIL_FROM_NAME ?? 'Kiqro Network',
     replyTo: env.MAIL_REPLY_TO,
     sandbox: env.SENDGRID_SANDBOX === 'true',

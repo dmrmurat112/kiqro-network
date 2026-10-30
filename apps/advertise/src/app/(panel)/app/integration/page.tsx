@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 export default async function IntegrationPage() {
   const [{ org }, lang] = await Promise.all([requireAdvertiserOrg(), panelLocale()]);
   const t = PANEL[lang].integration;
-  const base = process.env.TRACKING_BASE_URL ?? 'https://track.kiqro.com';
+  const base = process.env.TRACKING_BASE_URL ?? 'https://track.kiqronetwork.com';
   const events = `${base}/v1/mmp/${org.postbackKey}?click_id={clickid}&event={event_name}&event_ts={timestamp}`;
   const reversal = `${base}/v1/mmp/${org.postbackKey}/reversal?click_id={clickid}&event={event_name}&reason={reason}`;
 

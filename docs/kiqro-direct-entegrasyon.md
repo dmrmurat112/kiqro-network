@@ -20,8 +20,8 @@ Bu kılavuz, Kiqro uygulamasının (web, iOS, Android) Kiqro'nun kendi offerwall
 
 | Ortam | Adres |
 |---|---|
-| Test (staging) | Test ortamı kurulunca iletilecek |
-| Canlı | `https://track.kiqro.com` |
+| Test (staging) | `https://track-staging.kiqronetwork.com` |
+| Canlı | `https://track.kiqronetwork.com` |
 
 ### Akış
 
@@ -133,7 +133,7 @@ export async function kiqroDirectOffers(userId, country, lang, risk) {
       "description": "Install and reach the milestones within the time limit.",
       "platform": "android",
       "iconUrl": "https://…/icon.png",
-      "clickUrl": "https://track.kiqro.com/c/cmp_01JTESTCAMPAIGN0000000000?app_key=app_8f2c1d9e0a7b3c45&uid=u_102938&sig=516c6a…",
+      "clickUrl": "https://track.kiqronetwork.com/c/cmp_01JTESTCAMPAIGN0000000000?app_key=app_8f2c1d9e0a7b3c45&uid=u_102938&sig=516c6a…",
       "totalRewardPoints": "6020",
       "started": true,
       "completed": false,
@@ -429,4 +429,4 @@ Kiqro ekibi test ortamında, test reklamvereni ve test kampanyasıyla bir placem
 
 ## 13. İletişim
 
-Teknik sorular ve test postback'leri için Kiqro Network ekibi: **ads@kiqro.com**
+Teknik sorular ve test postback'leri için Kiqro Network ekibi: **contact@kiqro.com**

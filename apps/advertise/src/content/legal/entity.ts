@@ -10,7 +10,7 @@ export const ENTITY = {
   address: TBD('registered address of Kiqro Inc.'),
   registration: TBD('state of incorporation and company number'),
   successor: 'Kiqro Oy (Finland), once incorporated',
-  salesEmail: 'ads@kiqro.com',
+  salesEmail: 'contact@kiqro.com',
   privacyEmail: TBD('privacy contact e-mail, e.g. privacy@kiqro.com'),
-  website: 'advertise.kiqro.com',
+  website: 'kiqronetwork.com',
 };

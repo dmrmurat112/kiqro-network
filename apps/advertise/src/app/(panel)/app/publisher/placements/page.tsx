@@ -14,7 +14,7 @@ export default async function PlacementsPage() {
   const c = PANEL[lang].integration;
   const copy = { copy: c.copy, copied: c.copied };
   const placements = await publisherPlacements(db, org.id);
-  const track = process.env.TRACKING_BASE_URL ?? 'https://track.kiqro.com';
+  const track = process.env.TRACKING_BASE_URL ?? 'https://track.kiqronetwork.com';
 
   return (
     <>

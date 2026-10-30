@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { KiqroDirect } from '../src/index.ts';
 
 // Test vectors from the integration guide (secret test_secret_0123456789).
-const kiqro = new KiqroDirect({ appKey: 'app_8f2c1d9e0a7b3c45', secret: 'test_secret_0123456789', baseUrl: 'https://track-staging.kiqro.com/' });
+const kiqro = new KiqroDirect({ appKey: 'app_8f2c1d9e0a7b3c45', secret: 'test_secret_0123456789', baseUrl: 'https://track-staging.kiqronetwork.com/' });
 
 describe('Kiqro Direct SDK', () => {
   it('signs like the integration guide', () => {
@@ -13,7 +13,7 @@ describe('Kiqro Direct SDK', () => {
 
   it('builds signed wall links', () => {
     const url = new URL(kiqro.wallUrl('u_102938', { lang: 'tr', risk: 35 }));
-    expect(url.origin + url.pathname).toBe('https://track-staging.kiqro.com/wall');
+    expect(url.origin + url.pathname).toBe('https://track-staging.kiqronetwork.com/wall');
     expect(Object.fromEntries(url.searchParams)).toEqual({ app_key: 'app_8f2c1d9e0a7b3c45', user_id: 'u_102938', sig: '079cace1bf6c016056dbef57ae897520808bf266b185721f1f35f92e8085dde4', risk: '35', lang: 'tr' });
     expect(() => kiqro.wallUrl('u', { risk: 101 })).toThrow('risk');
   });

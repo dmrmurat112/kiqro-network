@@ -3,7 +3,7 @@ import type { LegalDoc } from './types';
 export const cookies: LegalDoc = {
   slug: 'cookies',
   title: 'Cookie Notice',
-  summary: 'The few cookies advertise.kiqro.com sets, and why no consent banner is needed.',
+  summary: 'The few cookies kiqronetwork.com sets, and why no consent banner is needed.',
   version: '0.1-draft (2026-10-29)',
   status: 'draft',
   sections: [

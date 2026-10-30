@@ -11,7 +11,7 @@ function Code({ children }: { children: string }) {
 export default async function PublisherIntegrationPage() {
   const [, lang] = await Promise.all([requirePublisherOrg(), panelLocale()]);
   const t = PANEL[lang].pub;
-  const track = process.env.TRACKING_BASE_URL ?? 'https://track.kiqro.com';
+  const track = process.env.TRACKING_BASE_URL ?? 'https://track.kiqronetwork.com';
 
   return (
     <>
@@ -26,7 +26,7 @@ const url = \`${track}/wall?app_key=\${APP_KEY}&user_id=\${userId}&sig=\${sig}&l
 
 // Android
 webView.settings.javaScriptEnabled = false
-webView.loadUrl(url)   // open offer links (track.kiqro.com/c/…) with an Intent in the browser
+webView.loadUrl(url)   // open offer links (track.kiqronetwork.com/c/…) with an Intent in the browser
 
 // iOS
 let view = WKWebView(frame: .zero)

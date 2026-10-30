@@ -23,21 +23,21 @@ envVarGroups:
       - key: NODE_ENV
         value: production
       - key: TRACKING_BASE_URL
-        value: https://track.kiqro.com
+        value: https://track.kiqronetwork.com
       - key: ADVERTISE_BASE_URL
-        value: https://advertise.kiqro.com
+        value: https://kiqronetwork.com
       - key: ADMIN_BASE_URL
-        value: https://admin.kiqro.com
+        value: https://admin.kiqronetwork.com
       - key: MAIL_FROM
-        value: no-reply@kiqro.com
+        value: noreply@kiqro.com
       - key: MAIL_FROM_NAME
         value: Kiqro Network
       - key: MAIL_REPLY_TO
-        value: ads@kiqro.com
+        value: contact@kiqro.com
       - key: LEADS_NOTIFY_EMAIL
-        value: ads@kiqro.com
+        value: contact@kiqro.com
       - key: REVIEW_NOTIFY_EMAIL
-        value: ads@kiqro.com
+        value: contact@kiqro.com
       # Switch to "true" once the lawyer-approved terms are published.
       - key: TERMS_REQUIRED
         value: "false"
@@ -71,7 +71,7 @@ services:
     healthCheckPath: /health
     autoDeployTrigger: checksPass
     domains:
-      - track.kiqro.com
+      - track.kiqronetwork.com
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -107,7 +107,7 @@ services:
     healthCheckPath: /en
     autoDeployTrigger: checksPass
     domains:
-      - advertise.kiqro.com
+      - kiqronetwork.com
     envVars:
       - key: APP
         value: advertise
@@ -128,7 +128,7 @@ services:
     healthCheckPath: /login
     autoDeployTrigger: checksPass
     domains:
-      - admin.kiqro.com
+      - admin.kiqronetwork.com
     envVars:
       - key: APP
         value: admin

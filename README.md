@@ -12,7 +12,7 @@ Kiqro's own offerwall / performance ad network. Product and technical spec: [doc
 | `packages/network` | Business rules shared by both apps: offers, clicks, postbacks, reversals, outbox; `./admin` holds admin auth, audit log and admin operations |
 | `apps/tracking` | Fastify service: Offers API, click redirects, MMP/S2S postbacks, reversals, publisher postback worker |
 | `apps/admin` | Next.js admin panel (Turkish UI): advertisers, top-ups, products, campaigns, publishers/placements, held-conversion review, postback logs, demo requests, advertiser logins |
-| `apps/advertise` | advertise.kiqro.com — marketing site (EN/TR, demo request form) and the advertiser panel (`/app`: overview, campaign funnels, conversion log with CSV export, integration URLs, billing with Stripe top-ups and invoices; light/dark, EN/TR). Tailwind 4 + Geist |
+| `apps/advertise` | kiqronetwork.com — marketing site (EN/TR, demo request form) and the advertiser panel (`/app`: overview, campaign funnels, conversion log with CSV export, integration URLs, billing with Stripe top-ups and invoices; light/dark, EN/TR). Tailwind 4 + Geist |
 
 ## Local setup
 

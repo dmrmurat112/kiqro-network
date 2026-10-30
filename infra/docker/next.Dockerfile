@@ -1,4 +1,4 @@
-# Next.js apps (admin panel, advertise.kiqro.com). Pick the app with the APP build argument:
+# Next.js apps (admin panel, kiqronetwork.com). Pick the app with the APP build argument:
 #   docker build -f infra/docker/next.Dockerfile --build-arg APP=admin .
 #   docker build -f infra/docker/next.Dockerfile --build-arg APP=advertise .
 FROM node:24-alpine AS build

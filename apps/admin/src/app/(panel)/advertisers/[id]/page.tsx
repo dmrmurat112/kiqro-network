@@ -24,7 +24,7 @@ export default async function AdvertiserPage({ params }: { params: Promise<{ id:
     listInvoices(db, id),
   ]);
   const now = new Date();
-  const trackingBase = process.env.TRACKING_BASE_URL ?? 'https://track.kiqro.com';
+  const trackingBase = process.env.TRACKING_BASE_URL ?? 'https://track.kiqronetwork.com';
 
   return (
     <>
@@ -253,7 +253,7 @@ export default async function AdvertiserPage({ params }: { params: Promise<{ id:
             </label>
           </div>
         </ActionForm>
-        <p className="muted">Reklamveren advertise.kiqro.com/login adresinden giriş yapar ve yalnızca kendi kampanya ve dönüşüm verilerini görür.</p>
+        <p className="muted">Reklamveren kiqronetwork.com/login adresinden giriş yapar ve yalnızca kendi kampanya ve dönüşüm verilerini görür.</p>
       </div>
 
       <div className="card">

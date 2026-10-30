@@ -19,7 +19,7 @@ export default async function DevelopersPage() {
   const copy = { copy: c.copy, copied: c.copied };
   const [keys, endpoints, deliveries] = await Promise.all([listApiKeys(db, org.id), listWebhookEndpoints(db, org.id), recentWebhookDeliveries(db, org.id)]);
   const admin = user.role === 'admin';
-  const base = `${process.env.TRACKING_BASE_URL ?? 'https://track.kiqro.com'}/v1/advertiser`;
+  const base = `${process.env.TRACKING_BASE_URL ?? 'https://track.kiqronetwork.com'}/v1/advertiser`;
 
   return (
     <>

@@ -36,7 +36,7 @@ export const INVITE_TTL_HOURS = 72;
 export const RESET_TTL_MINUTES = 60;
 const MAX_RESETS_PER_HOUR = 3;
 
-/** Base URL of advertise.kiqro.com, used to build links in e-mails. */
+/** Base URL of kiqronetwork.com, used to build links in e-mails. */
 export interface LinkOptions {
   advertiseBaseUrl: string;
 }
@@ -66,7 +66,7 @@ export async function createAdvertiserUser(db: Db, actor: AdminUser, orgId: stri
   const id = newId('advertiserUser');
   await db.transaction(async (tx) => {
     const org = await tx.query.organizations.findFirst({ where: eq(organizations.id, orgId) });
-    // Advertisers and publishers both sign in to the panel at advertise.kiqro.com.
+    // Advertisers and publishers both sign in to the panel at kiqronetwork.com.
     if (org?.type !== 'advertiser' && org?.type !== 'publisher') throw new AdminError('Kuruluş bulunamadı.');
     const taken = await tx.query.advertiserUsers.findFirst({ where: eq(advertiserUsers.email, data.email) });
     if (taken) throw new AdminError('Bu e-posta zaten kullanılıyor.');
