@@ -8,7 +8,7 @@ import {
   defaultFraudConfig,
   handleClick,
   handlePostback,
-  ipqsIntel,
+  proxycheckIntel,
   listOffers,
   staticIpIntel,
   type DemoSetup,
@@ -28,7 +28,7 @@ const intel = staticIpIntel({
   '10.0.0.1': { vpn: true },
   '10.0.0.2': { datacenter: true },
   '10.0.0.3': { score: 95 },
-  '10.0.0.4': { score: 80 },
+  '10.0.0.4': { score: 60 },
   '10.0.0.5': { country: 'US' },
 });
 const fraud: FraudContext = { intel, config: defaultFraudConfig };
@@ -139,19 +139,49 @@ describe('conversion holds', () => {
   });
 });
 
-describe('IPQualityScore client', () => {
-  it('maps the response, caches lookups and fails open', async () => {
+describe('proxycheck.io client', () => {
+  // Shaped like the v3 OpenAPI example for a VPN address.
+  const vpnResult = {
+    risk: 50,
+    detections: { anonymous: true, proxy: false, vpn: true, tor: false, hosting: true, scraper: false, compromised: false, confidence: 95 },
+    location: { isocode: 'DE', country: 'Germany' },
+    network: { type: 'Hosting' },
+  };
+
+  it('maps the v3 response, caches lookups and fails open', async () => {
+    const urls: string[] = [];
+    const fetcher = async (url: string) => {
+      urls.push(url);
+      return { ok: true, status: 200, json: async () => ({ status: 'ok', '37.60.48.2': vpnResult }) };
+    };
+    const client = proxycheckIntel('secret-key', { fetcher });
+    expect(await client.lookup('37.60.48.2')).toEqual({ source: 'proxycheck', country: 'DE', vpn: true, proxy: false, tor: false, datacenter: true, score: 50 });
+    await client.lookup('37.60.48.2');
+    expect(urls).toEqual(['https://proxycheck.io/v3/37.60.48.2?key=secret-key&p=0']);
+
+    const failing = proxycheckIntel('key', { fetcher: async () => { throw new Error('timeout'); } });
+    expect(await failing.lookup('1.2.3.4')).toBeNull();
+  });
+
+  it('fails open without caching when the plan is exhausted, and logs why', async () => {
+    const warnings: string[] = [];
     let calls = 0;
     const fetcher = async () => {
       calls++;
-      return { ok: true, json: async () => ({ success: true, fraud_score: 88, country_code: 'de', vpn: false, active_vpn: true, proxy: true, tor: false, connection_type: 'Data Center' }) };
+      return { ok: false, status: 429, json: async () => ({ status: 'denied', message: 'Queries exhausted.' }) };
     };
-    const client = ipqsIntel('key', { fetcher });
-    expect(await client.lookup('1.2.3.4')).toEqual({ source: 'ipqs', country: 'DE', vpn: true, proxy: true, tor: false, datacenter: true, score: 88 });
-    await client.lookup('1.2.3.4');
-    expect(calls).toBe(1);
+    const client = proxycheckIntel('key', { fetcher, warn: (m) => warnings.push(m) });
+    expect(await client.lookup('1.2.3.4')).toBeNull();
+    expect(await client.lookup('1.2.3.4')).toBeNull();
+    expect(calls).toBe(2);
+    expect(warnings).toEqual(['proxycheck.io: denied Queries exhausted.']);
 
-    const failing = ipqsIntel('key', { fetcher: async () => { throw new Error('timeout'); } });
-    expect(await failing.lookup('1.2.3.4')).toBeNull();
+    // A warning status (near the limit) still carries the result.
+    const near = proxycheckIntel('key', {
+      fetcher: async () => ({ ok: true, status: 200, json: async () => ({ status: 'warning', message: 'Within 10% of your limit.', '5.6.7.8': { risk: 0, detections: {}, location: { isocode: 'tr' } } }) }),
+      warn: (m) => warnings.push(m),
+    });
+    expect(await near.lookup('5.6.7.8')).toMatchObject({ country: 'TR', vpn: false, datacenter: false, score: 0 });
+    expect(warnings).toContain('proxycheck.io: Within 10% of your limit.');
   });
 });

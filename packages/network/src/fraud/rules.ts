@@ -27,8 +27,9 @@ export interface FraudConfig {
 export const defaultFraudConfig: FraudConfig = {
   blockAnonymizers: true,
   blockDatacenter: true,
-  ipScoreBlock: 90,
-  ipScoreHold: 75,
+  // proxycheck.io risk bands: 76–100 deny, 51–75 challenge (VPN alone scores 50, hosting 33).
+  ipScoreBlock: 76,
+  ipScoreHold: 51,
   publisherRiskHold: 70,
   publisherRiskBlock: 90,
   maxClicksPerIpPerHour: 60,

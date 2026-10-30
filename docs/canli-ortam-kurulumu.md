@@ -39,7 +39,7 @@ Sonraki her yayın aynı komutla yapılır. GitHub Actions bu dalda da testleri 
 2. **Blueprint path** alanına `render.production.yaml` yazın.
 3. Gizli değerleri girin. Hepsi canlı değerler olmalı; staging değerlerini kullanmayın:
    - `SENDGRID_API_KEY`: yeni, yalnızca Mail Send yetkili anahtar
-   - `IPQS_API_KEY`
+   - `PROXYCHECK_API_KEY`
    - `STRIPE_SECRET_KEY`: `sk_live_…`
    - `STRIPE_WEBHOOK_SECRET`: 5. adımda oluşur; önce boş bırakıp sonra girin
 4. **Apply**. `ORIGIN_SECRET` otomatik üretilir: **Env Groups → kiqro-prod** bölümünden kopyalayın.

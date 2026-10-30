@@ -43,7 +43,7 @@ envVarGroups:
         sync: false
       - key: SENDGRID_SANDBOX
         value: "false" # "true" makes SendGrid accept mail without delivering it (no sign-up / password emails)
-      - key: IPQS_API_KEY
+      - key: PROXYCHECK_API_KEY
         sync: false
       # Stripe test-mode keys on staging (sk_test_…, whsec_… of the staging webhook endpoint).
       - key: STRIPE_SECRET_KEY

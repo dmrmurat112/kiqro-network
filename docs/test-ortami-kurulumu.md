@@ -50,7 +50,7 @@ Sistem kullanıcının ülkesini ve gerçek IP'sini Cloudflare'den okur ve takip
 2. `kiqro-network` deposunu seçin. Render `render.yaml` dosyasını okuyup 4 servis ve 1 veritabanı listeler.
 3. Gizli değerler sorulacak:
    - `SENDGRID_API_KEY`: SendGrid'den yalnızca **Mail Send** yetkili yeni bir anahtar (bölüm 7). Hazır değilse boş bırakın; o durumda e-postalar gönderilmez, worker günlüğüne yazılır.
-   - `IPQS_API_KEY`: IPQualityScore anahtarı. Yoksa boş bırakın; o durumda VPN/veri merkezi tespiti kapalı kalır.
+   - `PROXYCHECK_API_KEY`: proxycheck.io anahtarı (Dashboard → API Key). Yoksa boş bırakın; o durumda VPN/veri merkezi tespiti kapalı kalır.
    - `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`: bölüm 8. Hazır değilse boş bırakın; panelde kartla ödeme "kullanılamıyor" görünür.
 4. **Apply** deyin. Render veritabanını oluşturur, imajları derler, veritabanı geçişlerini (migration) çalıştırır ve servisleri başlatır. İlk derleme 10–15 dakika sürebilir.
 5. `ORIGIN_SECRET` değeri Render tarafından otomatik üretilir. **Env Groups → kiqro-staging** bölümünden değeri kopyalayın; 4. adımda Cloudflare'e girilecek.

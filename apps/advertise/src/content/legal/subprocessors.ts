@@ -18,7 +18,7 @@ export const subprocessors: LegalDoc = {
               [TBD('hosting provider'), 'Application and database hosting', 'EU', '—'],
               ['Cloudflare, Inc.', 'DNS, TLS, DDoS and bot protection, visitor country', 'Global edge network', 'EU–US DPF / SCCs'],
               ['Twilio Inc. (SendGrid)', 'Transactional e-mail (invitations, password resets, alerts)', 'United States', 'EU–US DPF / SCCs'],
-              ['IPQualityScore', 'IP reputation checks for fraud prevention (IP address only)', 'United States', TBD('confirm DPF / SCCs')],
+              ['proxycheck.io', 'IP reputation checks for fraud prevention (IP address only)', TBD('confirm location'), TBD('confirm safeguard')],
             ],
           },
         },

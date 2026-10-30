@@ -46,7 +46,7 @@ envVarGroups:
       # Secrets — entered in the Render dashboard (live keys, never the staging ones).
       - key: SENDGRID_API_KEY
         sync: false
-      - key: IPQS_API_KEY
+      - key: PROXYCHECK_API_KEY
         sync: false
       - key: STRIPE_SECRET_KEY
         sync: false

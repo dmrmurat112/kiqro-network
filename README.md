@@ -90,7 +90,7 @@ When the lawyer approves a document: update its text, set `status: 'final'` and 
 
 Clicks are refused for VPN/proxy/Tor and datacenter IPs, provider risk score ≥ 90, a Cloudflare/provider country mismatch, more than 60 clicks per IP per hour, or a publisher user risk ≥ 90. Conversions are held for review (not billed, not rewarded) for IP risk ≥ 75, publisher user risk ≥ 70, a fourth distinct user installing from one IP within 24 h (device farm), or more than 20 conversions per user per hour. Thresholds live in `packages/network/src/fraud/rules.ts`.
 
-IP checks use IPQualityScore when `IPQS_API_KEY` is set (results cached for 6 h; lookups fail open). Publishers may pass their own user risk score as `risk=0..100` on the Offers API and click URLs; it is covered by the signature (`HMAC(secret, app_key|user_id|risk)` and `HMAC(secret, campaign_id|uid|risk)`), so users cannot alter it. The Kiqro app should send its existing fraud score this way.
+IP checks use proxycheck.io (v3 API) when `PROXYCHECK_API_KEY` is set (results cached for 1 h, detected addresses 15 min; lookups fail open, and quota or key problems are logged). Publishers may pass their own user risk score as `risk=0..100` on the Offers API and click URLs; it is covered by the signature (`HMAC(secret, app_key|user_id|risk)` and `HMAC(secret, campaign_id|uid|risk)`), so users cannot alter it. The Kiqro app should send its existing fraud score this way.
 
 After changing `packages/db/src/schema.ts`, run `npm run db:generate` and commit the new migration.
 
