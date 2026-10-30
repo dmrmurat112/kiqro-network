@@ -36,7 +36,7 @@ export function SiteNav({ lang, t, altHref }: { lang: Locale; t: SiteDict['nav']
         </Link>
         <div className="hidden items-center gap-1 lg:flex">
           {links.map((l) => (
-            <a key={l.href} href={l.href} className="rounded-lg px-3 py-2 text-sm text-muted transition-colors hover:bg-surface hover:text-fg">
+            <a key={l.href} href={l.href} className="rounded-lg px-3 py-2 text-sm text-muted transition-all duration-300 hover:bg-surface hover:text-fg">
               {l.label}
             </a>
           ))}

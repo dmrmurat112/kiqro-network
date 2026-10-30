@@ -14,6 +14,7 @@ import {
 import { Reveal } from '@/components/Reveal';
 import { DemoForm } from '@/components/site/DemoForm';
 import { HeroMockup } from '@/components/site/HeroMockup';
+import { PointerGlow } from '@/components/site/PointerGlow';
 import { SiteFooter } from '@/components/site/SiteFooter';
 import { SiteNav } from '@/components/site/SiteNav';
 import { isLocale, SITE, type Locale } from '@/lib/i18n';
@@ -40,23 +41,19 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
   return (
     <>
       <SiteNav lang={lang} t={t.nav} />
+      <PointerGlow />
 
       {/* ---------- Hero ---------- */}
       <section className="relative overflow-hidden pt-32 pb-20 lg:pt-40 lg:pb-28">
         <div className="bg-grid absolute inset-0 [mask-image:radial-gradient(ellipse_at_top,black_30%,transparent_75%)]" />
         <div className="absolute -top-40 left-1/2 h-[560px] w-[900px] -translate-x-1/2 rounded-full bg-violet-500/25 blur-[140px]" />
-        <div className="absolute top-40 -right-40 h-[380px] w-[380px] rounded-full bg-orange-500/15 blur-[120px]" />
+        <div className="absolute top-40 -right-40 h-[380px] w-[380px] animate-drift rounded-full bg-orange-500/15 blur-[120px]" />
+        <div className="absolute top-72 -left-32 h-[300px] w-[300px] animate-drift rounded-full bg-emerald-400/[0.07] blur-[110px] [animation-delay:-9s]" />
 
         <div className="relative mx-auto grid max-w-7xl items-center gap-16 px-5 lg:grid-cols-[1.1fr_0.9fr] lg:px-8">
           <div>
             <Reveal immediate>
-              <span className="eyebrow">
-                <span className="h-1.5 w-1.5 animate-pulse-dot rounded-full bg-good" />
-                {t.hero.eyebrow}
-              </span>
-            </Reveal>
-            <Reveal immediate delay={80}>
-              <h1 className="mt-7 text-[2.6rem] font-semibold leading-[1.04] tracking-tight sm:text-6xl lg:text-[4.4rem]">
+              <h1 className="text-[2.6rem] font-semibold leading-[1.04] tracking-tight sm:text-6xl lg:text-[4.4rem]">
                 {t.hero.title1}
                 <br />
                 <span className="text-gradient">{t.hero.title2}</span>
@@ -78,9 +75,9 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
             <Reveal immediate delay={320}>
               <dl className="mt-14 grid max-w-xl grid-cols-2 gap-x-8 gap-y-6 sm:grid-cols-4">
                 {t.hero.stats.map((s) => (
-                  <div key={s.label}>
+                  <div key={s.label} className="group cursor-default">
                     <dt className="sr-only">{s.label}</dt>
-                    <dd className="text-2xl font-semibold tracking-tight">{s.value}</dd>
+                    <dd className="text-2xl font-semibold tracking-tight transition-colors duration-500 group-hover:text-violet-300">{s.value}</dd>
                     <dd className="mt-1 text-xs leading-snug text-subtle">{s.label}</dd>
                   </div>
                 ))}
@@ -100,7 +97,7 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
         <div className="relative mt-6 overflow-hidden [mask-image:linear-gradient(90deg,transparent,black_15%,black_85%,transparent)]">
           <div className="flex w-max animate-ticker gap-14 pr-14">
             {[...MMPS, ...MMPS].map((name, i) => (
-              <span key={i} className="text-xl font-semibold tracking-tight text-fg/40">
+              <span key={i} className="cursor-default text-xl font-semibold tracking-tight text-fg/40 transition-colors duration-500 hover:text-fg">
                 {name}
               </span>
             ))}
@@ -120,9 +117,9 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
               const Icon = STEP_ICONS[i]!;
               return (
                 <Reveal key={step.title} delay={i * 120}>
-                  <div className="card-glow relative h-full rounded-2xl !bg-elevated p-7">
+                  <div className="card-glow group relative h-full rounded-2xl !bg-elevated p-7">
                     <div className="flex items-center gap-4">
-                      <div className="grid h-12 w-12 place-items-center rounded-xl border border-violet-500/30 bg-violet-500/10 text-violet-300">
+                      <div className="grid h-12 w-12 place-items-center rounded-xl border border-violet-500/30 bg-violet-500/10 text-violet-300 transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:-rotate-6 group-hover:scale-110 group-hover:border-violet-400/60 group-hover:bg-violet-500/20 group-hover:shadow-[0_0_30px_-6px_rgb(140_123_255/0.8)]">
                         <Icon size={22} />
                       </div>
                       <span className="font-mono text-sm text-subtle">0{i + 1}</span>
@@ -150,15 +147,15 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
               return (
                 <Reveal key={item.title} delay={(i % 3) * 100} className={wide ? 'lg:col-span-2' : ''}>
                   <div className="card-glow group relative h-full overflow-hidden rounded-2xl p-7">
-                    {wide && <div className="absolute -right-20 -bottom-20 h-64 w-64 rounded-full bg-violet-500/10 blur-3xl transition-opacity group-hover:opacity-100" />}
-                    <Icon size={22} className="text-violet-300" />
+                    {wide && <div className="absolute -right-20 -bottom-20 h-64 w-64 rounded-full bg-violet-500/10 blur-3xl transition-all duration-700 group-hover:scale-125 group-hover:bg-violet-500/20" />}
+                    <Icon size={22} className="text-violet-300 transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:-translate-y-0.5 group-hover:scale-110" />
                     <h3 className="mt-5 text-lg font-semibold">{item.title}</h3>
                     <p className="mt-2.5 max-w-lg leading-relaxed text-muted">{item.body}</p>
                     {i === 0 && (
                       <div className="mt-7 flex flex-wrap items-center gap-2 text-xs">
                         {['Install · $0.60', 'Level 10 · $3.00', 'Level 25 · $4.50', 'Purchase · $6.00'].map((step, k) => (
                           <span key={step} className="flex items-center gap-2">
-                            <span className="rounded-lg border border-line-strong bg-surface-strong px-2.5 py-1.5 font-mono text-fg/80">{step}</span>
+                            <span className="rounded-lg border border-line-strong bg-surface-strong px-2.5 py-1.5 font-mono text-fg/80 transition-colors duration-500 group-hover:border-violet-400/40">{step}</span>
                             {k < 3 && <ArrowRight size={13} className="text-subtle" />}
                           </span>
                         ))}
@@ -167,7 +164,11 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
                     {i === 3 && (
                       <div className="mt-7 flex h-16 items-end gap-1.5">
                         {[28, 40, 34, 52, 46, 62, 58, 74, 68, 86, 80, 96].map((h, k) => (
-                          <div key={k} className="flex-1 rounded-t bg-gradient-to-t from-violet-500/30 to-violet-400/80" style={{ height: `${h}%` }} />
+                          <div
+                            key={k}
+                            className="flex-1 origin-bottom rounded-t bg-gradient-to-t from-violet-500/30 to-violet-400/80 transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-y-110 group-hover:from-violet-500/40 group-hover:to-orange-400/80"
+                            style={{ height: `${h}%`, transitionDelay: `${k * 25}ms` }}
+                          />
                         ))}
                       </div>
                     )}
@@ -191,7 +192,7 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
               <Reveal delay={120}>
                 <ul className="grid gap-3">
                   {t.fraud.checks.map((check) => (
-                    <li key={check} className="flex items-start gap-3 rounded-xl border border-line bg-surface px-4 py-3.5">
+                    <li key={check} className="soft-row flex items-start gap-3 rounded-xl border border-line bg-surface px-4 py-3.5">
                       <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-good/15 text-good">
                         <Check size={13} strokeWidth={3} />
                       </span>
@@ -223,7 +224,7 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
                 <div
                   className={`relative h-full rounded-2xl p-8 ${
                     'featured' in m && m.featured
-                      ? 'border border-violet-500/50 bg-gradient-to-b from-violet-500/15 to-surface shadow-[0_30px_80px_-30px_rgb(108_87_240/0.6)]'
+                      ? 'card-glow !border-violet-500/50 !bg-gradient-to-b from-violet-500/15 to-surface shadow-[0_30px_80px_-30px_rgb(108_87_240/0.6)]'
                       : 'card-glow'
                   }`}
                 >
@@ -254,10 +255,10 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
           </Reveal>
           <div className="mt-12 divide-y divide-line rounded-2xl border border-line bg-surface">
             {t.faq.items.map((item) => (
-              <details key={item.q} className="group px-6 py-5 [&_summary::-webkit-details-marker]:hidden">
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-6 font-medium">
+              <details key={item.q} className="group px-6 py-5 transition-colors duration-500 hover:bg-white/[0.02] [&_summary::-webkit-details-marker]:hidden">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-6 font-medium transition-colors duration-300 group-hover:text-violet-200">
                   {item.q}
-                  <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full border border-line-strong text-muted transition-transform group-open:rotate-45">+</span>
+                  <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full border border-line-strong text-muted transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] group-open:rotate-45 group-open:border-violet-400/60 group-open:bg-violet-500/15 group-open:text-violet-200">+</span>
                 </summary>
                 <p className="mt-3 leading-relaxed text-muted">{item.a}</p>
               </details>

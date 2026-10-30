@@ -3,6 +3,8 @@
 /* ---------- Theme tokens ----------
    Brand: Kiqro indigo (#13111F), violet K-mark (#6C57F0), Kiqro Ads orange (#FF6B2C).
    Semantic colors switch with [data-theme]; the marketing site is always dark. */
+:root { --ease-out: cubic-bezier(0.22, 1, 0.36, 1); }
+
 :root,
 [data-theme="dark"] {
   --bg: #0b0a14;
@@ -60,6 +62,12 @@
   --animate-float: float 7s ease-in-out infinite;
   --animate-pulse-dot: pulse-dot 2s ease-in-out infinite;
   --animate-ticker: ticker 28s linear infinite;
+  --animate-aurora: aurora 14s ease-in-out infinite;
+  --animate-draw: draw 2.2s cubic-bezier(0.65, 0, 0.35, 1) 0.3s both;
+  --animate-area-in: area-in 1.6s ease-out 0.6s both;
+  --animate-feed-in: feed-in 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-shimmer: shimmer 8s ease-in-out infinite;
+  --animate-drift: drift 18s ease-in-out infinite;
 }
 
 @keyframes fade-up {
@@ -78,6 +86,48 @@
   from { transform: translateX(0); }
   to { transform: translateX(-50%); }
 }
+@keyframes aurora {
+  0%, 100% { transform: rotate(0deg) scale(1); }
+  50% { transform: rotate(18deg) scale(1.06); }
+}
+@keyframes draw {
+  from { stroke-dasharray: 1; stroke-dashoffset: 1; }
+  to { stroke-dasharray: 1; stroke-dashoffset: 0; }
+}
+@keyframes area-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes feed-in {
+  from { opacity: 0; transform: translateY(-14px) scale(0.97); filter: blur(2px); }
+  to { opacity: 1; transform: none; filter: none; }
+}
+@keyframes shimmer {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+@keyframes drift {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(40px, 30px) scale(1.08); }
+  66% { transform: translate(-30px, 20px) scale(0.95); }
+}
+@keyframes spin-border {
+  to { --border-angle: 360deg; }
+}
+@property --border-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+/* Smooth height animation for <details> (FAQ) where the browser supports it. */
+:root { interpolate-size: allow-keywords; }
+details::details-content {
+  height: 0;
+  overflow: clip;
+  transition: height 0.45s cubic-bezier(0.22, 1, 0.36, 1), content-visibility 0.45s allow-discrete;
+}
+details[open]::details-content { height: auto; }
 
 html { background: var(--bg); color: var(--fg); }
 body { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
@@ -86,10 +136,17 @@ body { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
 /* ---------- Reusable pieces ---------- */
 @layer components {
   .text-gradient {
-    background: linear-gradient(100deg, #b3a8ff 0%, #8c7bff 35%, #ff8a4c 100%);
+    background: linear-gradient(100deg, #b3a8ff 0%, #8c7bff 30%, #ff8a4c 60%, #8c7bff 100%);
+    background-size: 220% 100%;
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
+    animation: var(--animate-shimmer);
+  }
+  /* Slowly rotating gradient border for the hero product card. */
+  .mockup-border {
+    background: conic-gradient(from var(--border-angle), rgb(255 255 255 / 0.06), rgb(140 123 255 / 0.7), rgb(255 138 76 / 0.6), rgb(255 255 255 / 0.06) 40%, rgb(255 255 255 / 0.06));
+    animation: spin-border 9s linear infinite;
   }
   .bg-grid {
     background-image:
@@ -102,30 +159,68 @@ body { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
     border: 1px solid var(--line);
     backdrop-filter: blur(14px);
   }
-  /* Card with a 1px gradient border that lights up on hover. */
+  /*
+   * Card that lifts softly on hover, with a light that follows the pointer (--mx/--my are set
+   * by <PointerGlow />; without JavaScript the light sits in the top-left corner).
+   */
   .card-glow {
     position: relative;
+    isolation: isolate;
     background: var(--surface);
     border: 1px solid var(--line);
-    transition: border-color 0.3s, transform 0.3s;
+    transition: border-color 0.5s var(--ease-out), transform 0.5s var(--ease-out), box-shadow 0.5s var(--ease-out), background-color 0.5s var(--ease-out);
   }
-  .card-glow:hover { border-color: rgb(140 123 255 / 0.45); transform: translateY(-2px); }
+  .card-glow::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    z-index: -1;
+    border-radius: inherit;
+    background: radial-gradient(420px circle at var(--mx, 20%) var(--my, 0%), rgb(140 123 255 / 0.22), transparent 45%);
+    opacity: 0;
+    transition: opacity 0.5s var(--ease-out);
+    pointer-events: none;
+  }
+  .card-glow:hover {
+    border-color: rgb(140 123 255 / 0.4);
+    transform: translateY(-4px);
+    box-shadow: 0 24px 60px -28px rgb(108 87 240 / 0.55);
+  }
+  .card-glow:hover::before { opacity: 1; }
+  /* Small rows (lists, checks) that brighten softly on hover. */
+  .soft-row {
+    transition: transform 0.45s var(--ease-out), border-color 0.45s var(--ease-out), background-color 0.45s var(--ease-out);
+  }
+  .soft-row:hover { transform: translateX(4px); border-color: rgb(140 123 255 / 0.35); background-color: var(--surface-strong); }
   .btn-primary {
+    position: relative; overflow: hidden; isolation: isolate;
     display: inline-flex; align-items: center; gap: 0.5rem;
     border-radius: 0.75rem; padding: 0.7rem 1.15rem; font-weight: 600; font-size: 0.925rem;
-    color: #fff; background: linear-gradient(135deg, #7a66ff 0%, #6c57f0 45%, #5641d6 100%);
+    color: #fff; background: linear-gradient(135deg, #8a78ff 0%, #6c57f0 45%, #5641d6 100%);
     box-shadow: 0 8px 30px -8px rgb(108 87 240 / 0.7), inset 0 1px 0 rgb(255 255 255 / 0.18);
-    transition: transform 0.2s, box-shadow 0.2s;
+    transition: transform 0.45s var(--ease-out), box-shadow 0.45s var(--ease-out), filter 0.45s var(--ease-out);
   }
-  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 12px 36px -8px rgb(108 87 240 / 0.85), inset 0 1px 0 rgb(255 255 255 / 0.22); }
+  /* A soft light sweeps across on hover. */
+  .btn-primary::after {
+    content: ''; position: absolute; inset: 0; z-index: -1;
+    background: linear-gradient(110deg, transparent 30%, rgb(255 255 255 / 0.28) 50%, transparent 70%);
+    transform: translateX(-120%);
+    transition: transform 0.9s var(--ease-out);
+  }
+  .btn-primary:hover { transform: translateY(-2px); filter: saturate(1.12); box-shadow: 0 16px 40px -10px rgb(108 87 240 / 0.95), inset 0 1px 0 rgb(255 255 255 / 0.25); }
+  .btn-primary:hover::after { transform: translateX(120%); }
+  .btn-primary:active { transform: translateY(0) scale(0.98); transition-duration: 0.15s; }
+  .btn-primary svg { transition: transform 0.45s var(--ease-out); }
+  .btn-primary:hover svg { transform: translateX(3px); }
   .btn-primary:disabled { opacity: 0.6; transform: none; cursor: progress; }
   .btn-ghost {
     display: inline-flex; align-items: center; gap: 0.5rem;
     border-radius: 0.75rem; padding: 0.7rem 1.15rem; font-weight: 600; font-size: 0.925rem;
     color: var(--fg); background: var(--surface); border: 1px solid var(--line-strong);
-    transition: background 0.2s, border-color 0.2s;
+    transition: background 0.45s var(--ease-out), border-color 0.45s var(--ease-out), transform 0.45s var(--ease-out), box-shadow 0.45s var(--ease-out);
   }
-  .btn-ghost:hover { background: var(--surface-strong); border-color: rgb(140 123 255 / 0.5); }
+  .btn-ghost:hover { background: var(--surface-strong); border-color: rgb(140 123 255 / 0.5); transform: translateY(-2px); box-shadow: 0 12px 30px -16px rgb(108 87 240 / 0.6); }
+  .btn-ghost:active { transform: scale(0.98); transition-duration: 0.15s; }
   .field {
     width: 100%; border-radius: 0.7rem; padding: 0.7rem 0.85rem; font-size: 0.925rem;
     background: var(--surface); border: 1px solid var(--line-strong); color: var(--fg);
@@ -142,8 +237,14 @@ body { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
   }
 }
 
+/*
+ * Reduced motion: stop the looping decoration (floating card, ticker, glows, rotating border,
+ * shimmer) but keep short hover and state transitions, which do not move the page around.
+ */
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation: none !important; transition: none !important; }
+  .animate-float, .animate-ticker, .animate-aurora, .animate-drift, .animate-ping, .animate-pulse-dot,
+  .text-gradient, .mockup-border { animation: none !important; }
+  *, *::before, *::after { transition-duration: min(var(--tw-duration, 0.3s), 0.3s) !important; }
 }
 
 /* Printing (invoices): only the document, on white A4, without the panel chrome. */
