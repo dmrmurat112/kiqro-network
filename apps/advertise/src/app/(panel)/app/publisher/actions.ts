@@ -14,7 +14,14 @@ export async function placementSettingsAction(placementId: string, _: PlacementS
     db,
     session,
     placementId,
-    { currencyName: String(form.get('currencyName') ?? ''), pointsPerUsd: String(form.get('pointsPerUsd') ?? ''), postbackUrl: String(form.get('postbackUrl') ?? '') },
+    {
+      currencyName: String(form.get('currencyName') ?? ''),
+      pointsPerUsd: String(form.get('pointsPerUsd') ?? ''),
+      postbackUrl: String(form.get('postbackUrl') ?? ''),
+      brandColor: String(form.get('brandColor') ?? ''),
+      logoUrl: String(form.get('logoUrl') ?? ''),
+      wallTitle: String(form.get('wallTitle') ?? ''),
+    },
     lang,
   );
   if (!result.ok) return { issues: result.issues };

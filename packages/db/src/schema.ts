@@ -73,6 +73,8 @@ export const products = pgTable('products', {
   storeId: text('store_id').notNull(),
   name: text('name').notNull(),
   iconUrl: text('icon_url'),
+  /** Wide banner (about 2:1) shown on offerwall cards; the icon is used when it is missing. */
+  coverUrl: text('cover_url'),
   mmp: text('mmp'),
   createdAt: createdAt(),
 });
@@ -149,6 +151,10 @@ export const placements = pgTable('placements', {
   revshareBps: integer('revshare_bps').notNull(),
   /** Publisher server URL with macros such as {user_id} {amount} {status} {signature}. */
   postbackUrl: text('postback_url'),
+  /** Hosted offerwall branding, set by the publisher: accent colour (#rrggbb), logo and heading. */
+  brandColor: text('brand_color'),
+  logoUrl: text('logo_url'),
+  wallTitle: text('wall_title'),
   createdAt: createdAt(),
 });
 

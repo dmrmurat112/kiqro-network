@@ -15,6 +15,7 @@ const MESSAGES: Record<string, Record<UiLocale, (param: string) => string>> = {
   name_short: { en: () => 'at least 2 characters', tr: () => 'en az 2 karakter' },
   url_invalid: { en: () => 'must be a valid URL', tr: () => 'geçerli bir URL olmalı' },
   url_https: { en: () => 'must start with https://', tr: () => 'https:// ile başlamalı' },
+  color: { en: () => 'must be a colour like #6c57f0', tr: () => '#6c57f0 gibi bir renk olmalı' },
   tracking_click_id: { en: () => 'the tracking link must contain the {click_id} macro', tr: () => 'takip linkinde {click_id} makrosu olmalı' },
   countries_required: { en: () => 'choose at least one country', tr: () => 'en az bir ülke seçilmeli' },
   title_en_required: { en: () => 'an English offer title is required', tr: () => 'İngilizce başlık gerekli' },

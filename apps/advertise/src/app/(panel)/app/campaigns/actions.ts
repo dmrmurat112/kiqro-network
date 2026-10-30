@@ -14,13 +14,13 @@ const reviewNotify = () => ({
 });
 
 export type ProductResult =
-  | { ok: true; product: { id: string; name: string; platform: string; storeId: string; mmp: string | null; iconUrl: string | null } }
+  | { ok: true; product: { id: string; name: string; platform: string; storeId: string; mmp: string | null; iconUrl: string | null; coverUrl: string | null } }
   | { ok: false; issues: FieldIssue[] };
 
 /** Icons are only accepted from the stores' image hosts and the favicon service used for websites. */
 const STORE_ICON = /^https:\/\/(play-lh\.googleusercontent\.com\/|is\d+-ssl\.mzstatic\.com\/|www\.google\.com\/s2\/favicons\?)/;
 
-type ProductInput = { platform: string; storeId: string; name: string; mmp: string; iconUrl?: string };
+type ProductInput = { platform: string; storeId: string; name: string; mmp: string; iconUrl?: string; coverUrl?: string };
 const safeIcon = (url?: string) => (url && STORE_ICON.test(url) ? url : '');
 
 /** Name, icon and developer of an app from Google Play or the App Store (or a website's favicon), for the wizard. */
@@ -36,7 +36,7 @@ export async function createProductAction(input: ProductInput): Promise<ProductR
   const iconUrl = safeIcon(input.iconUrl);
   const result = await advertiserCreateProduct(db, session, { ...input, iconUrl }, lang);
   if (!result.ok) return result;
-  return { ok: true, product: { id: result.id, name: input.name, platform: input.platform, storeId: input.storeId, mmp: input.mmp, iconUrl: iconUrl || null } };
+  return { ok: true, product: { id: result.id, name: input.name, platform: input.platform, storeId: input.storeId, mmp: input.mmp, iconUrl: iconUrl || null, coverUrl: input.coverUrl?.trim() || null } };
 }
 
 export async function updateProductAction(productId: string, input: ProductInput): Promise<ProductResult> {
@@ -44,7 +44,7 @@ export async function updateProductAction(productId: string, input: ProductInput
   const iconUrl = safeIcon(input.iconUrl);
   const result = await advertiserUpdateProduct(db, session, productId, { ...input, iconUrl }, lang);
   if (!result.ok) return result;
-  return { ok: true, product: { id: productId, name: input.name, platform: input.platform, storeId: input.storeId, mmp: input.mmp, iconUrl: iconUrl || null } };
+  return { ok: true, product: { id: productId, name: input.name, platform: input.platform, storeId: input.storeId, mmp: input.mmp, iconUrl: iconUrl || null, coverUrl: input.coverUrl?.trim() || null } };
 }
 
 export async function deleteProductAction(productId: string): Promise<{ ok: boolean; issues?: FieldIssue[] }> {

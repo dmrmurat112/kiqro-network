@@ -511,16 +511,23 @@ describe('hosted offerwall', () => {
     expect(wall.statusCode).toBe(200);
     expect(wall.headers['content-security-policy']).toContain("default-src 'none'");
     expect(wall.body).toContain('Ödül kazan');
-    expect(wall.body).toContain('&lt;script&gt;');
     expect(wall.body).not.toContain('<script>');
-    expect(wall.body).toContain(`/c/${s.campaignId}?app_key=${s.appKey}`);
+    // Cards open the offer's page, which carries the signed click link.
+    expect(wall.body).toContain(`offer=${s.campaignId}`);
+    const detail = await app.inject({ url: `/wall?app_key=${s.appKey}&user_id=user-1&sig=${sig}&lang=tr&offer=${s.campaignId}`, headers: { 'cf-ipcountry': 'TR' } });
+    expect(detail.body).toContain(`/c/${s.campaignId}?app_key=${s.appKey}`);
+    expect(detail.body).toContain('Görevler');
+    expect(detail.body).toContain('&lt;script&gt;');
+    expect(detail.body).not.toContain('<script>');
     expect((await app.inject({ url: `/wall?app_key=${s.appKey}&user_id=user-1&sig=bad` })).statusCode).toBe(403);
 
-    // After a click the offer moves to "in progress" and offers the missing-reward form.
+    // After a click the offer moves to "in progress" and its page offers the missing-reward form.
     const clickId = await click(s);
     await postback(s, clickId, 'install', at(60));
     const started = await app.inject({ url: `/wall?app_key=${s.appKey}&user_id=user-1&sig=${sig}&tab=started`, headers: { 'cf-ipcountry': 'TR' } });
-    expect(started.body).toContain('Report missing reward');
+    expect(started.body).toContain('1/');
+    const startedPage = await app.inject({ url: `/wall?app_key=${s.appKey}&user_id=user-1&sig=${sig}&tab=started&offer=${s.campaignId}`, headers: { 'cf-ipcountry': 'TR' } });
+    expect(startedPage.body).toContain('Report missing reward');
     const levelTask = (await db.select().from(schema.campaignTasks).where(eq(schema.campaignTasks.mmpEventName, 'af_level_achieved_10')))[0]!;
     const posted = await app.inject({
       method: 'POST',
@@ -534,6 +541,28 @@ describe('hosted offerwall', () => {
 
     const forged = await app.inject({ method: 'POST', url: '/wall/claim', payload: { app_key: s.appKey, user_id: 'user-2', sig, offer_id: s.campaignId, task_id: levelTask.id } });
     expect(forged.headers.location).toContain('claimed=0');
+  });
+
+  it("uses the publisher's branding and the app's cover image", async () => {
+    const s = await setup();
+    const app = server(db);
+    const sig = sign(s.placementSecret, [s.appKey, 'user-1']);
+    const url = `/wall?app_key=${s.appKey}&user_id=user-1&sig=${sig}&theme=light`;
+    const campaign = (await db.select().from(schema.campaigns).where(eq(schema.campaigns.id, s.campaignId)))[0]!;
+    await db.update(schema.products).set({ coverUrl: 'https://cdn.example.com/banner.jpg' }).where(eq(schema.products.id, campaign.productId));
+    await db.update(schema.placements).set({ brandColor: '#e5466b', wallTitle: 'Görev <Merkezi>' }).where(eq(schema.placements.appKey, s.appKey));
+
+    const wall = await app.inject({ url, headers: { 'cf-ipcountry': 'TR' } });
+    expect(wall.body).toContain('--accent:#e5466b');
+    expect(wall.body).toContain('class="light"');
+    expect(wall.body).toContain('Görev &lt;Merkezi&gt;');
+    expect(wall.body).toContain('src="https://cdn.example.com/banner.jpg"');
+
+    // A colour that is not #rrggbb never reaches the stylesheet.
+    await db.update(schema.placements).set({ brandColor: 'red;}body{display:none' }).where(eq(schema.placements.appKey, s.appKey));
+    const fallback = await app.inject({ url, headers: { 'cf-ipcountry': 'TR' } });
+    expect(fallback.body).toContain('--accent:#6c57f0');
+    expect(fallback.body).not.toContain('display:none');
   });
 });
 

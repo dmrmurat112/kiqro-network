@@ -105,11 +105,31 @@ const placementSettings = z.object({
     .trim()
     .refine((v) => v === '' || allowedPostbackUrl(v), 'url_https')
     .transform((v) => v || null),
+  brandColor: z
+    .string()
+    .trim()
+    .refine((v) => v === '' || /^#[0-9a-fA-F]{6}$/.test(v), 'color')
+    .transform((v) => v.toLowerCase() || null)
+    .default(''),
+  logoUrl: z
+    .string()
+    .trim()
+    .max(500)
+    .refine((v) => v === '' || /^https:\/\/[^\s"'<>]+$/.test(v), 'url_https')
+    .transform((v) => v || null)
+    .default(''),
+  wallTitle: z
+    .string()
+    .trim()
+    .max(40)
+    .transform((v) => v || null)
+    .default(''),
 });
 
 /**
  * The publisher's own settings of a placement: virtual currency name, points per USD (its
- * exchange rate, spec decision K-6) and postback URL. The revenue share stays with Kiqro.
+ * exchange rate, spec decision K-6), postback URL and the hosted offerwall's branding. The
+ * revenue share stays with Kiqro.
  */
 export async function updatePlacementSettings(db: Db, session: AdvertiserSession, placementId: string, input: unknown, locale: UiLocale): Promise<PublisherResult> {
   if (session.user.role !== 'admin') return fail('team_admin_only', locale);
@@ -120,7 +140,10 @@ export async function updatePlacementSettings(db: Db, session: AdvertiserSession
   return db.transaction(async (tx) => {
     const placement = await tx.query.placements.findFirst({ where: and(eq(placements.id, placementId), eq(placements.publisherOrgId, session.org.id)) });
     if (!placement) return fail('not_found', locale);
-    await tx.update(placements).set({ currencyName: d.currencyName, pointsPerUsd: d.pointsPerUsd, postbackUrl: d.postbackUrl }).where(eq(placements.id, placementId));
+    await tx
+      .update(placements)
+      .set({ currencyName: d.currencyName, pointsPerUsd: d.pointsPerUsd, postbackUrl: d.postbackUrl, brandColor: d.brandColor, logoUrl: d.logoUrl, wallTitle: d.wallTitle })
+      .where(eq(placements.id, placementId));
     await tx.insert(auditLog).values({
       id: newId('audit'),
       adminUserId: null,
@@ -128,7 +151,7 @@ export async function updatePlacementSettings(db: Db, session: AdvertiserSession
       entityType: 'placement',
       entityId: placementId,
       details: {
-        before: { currencyName: placement.currencyName, pointsPerUsd: placement.pointsPerUsd, postbackUrl: placement.postbackUrl },
+        before: { currencyName: placement.currencyName, pointsPerUsd: placement.pointsPerUsd, postbackUrl: placement.postbackUrl, brandColor: placement.brandColor, logoUrl: placement.logoUrl, wallTitle: placement.wallTitle },
         after: d,
         advertiserUserId: session.user.id,
       },

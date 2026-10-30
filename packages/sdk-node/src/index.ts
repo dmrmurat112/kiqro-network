@@ -35,6 +35,10 @@ export interface Offer {
   description: string;
   platform: string;
   iconUrl: string | null;
+  /** Wide banner (about 2:1), when the advertiser added one. */
+  coverUrl: string | null;
+  /** Live for less than 14 days. */
+  isNew: boolean;
   clickUrl: string;
   totalRewardPoints: string;
   started: boolean;

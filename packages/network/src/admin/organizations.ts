@@ -137,6 +137,15 @@ export const productInput = z.object({
   storeId: z.string().trim().min(3, 'store_id_required'),
   name: z.string().trim().min(2),
   iconUrl: z.string().trim().url('url_invalid').optional().or(z.literal('').transform(() => undefined)),
+  /** Wide offerwall banner; any https image (campaigns are reviewed by Kiqro before they run). */
+  coverUrl: z
+    .string()
+    .trim()
+    .max(500)
+    .url('url_invalid')
+    .refine((v) => v.startsWith('https://'), 'url_https')
+    .optional()
+    .or(z.literal('').transform(() => undefined)),
   mmp: z.enum(['appsflyer', 'adjust', 'singular', 'kochava', 'branch', 'tenjin', 'none']),
 });
 
@@ -145,7 +154,7 @@ export async function createProduct(db: Db, actor: AdminUser, orgId: string, inp
   const data = parse(productInput, input);
   const id = newId('product');
   await db.transaction(async (tx) => {
-    await tx.insert(products).values({ id, orgId, platform: data.platform, storeId: data.storeId, name: data.name, iconUrl: data.iconUrl ?? null, mmp: data.mmp });
+    await tx.insert(products).values({ id, orgId, platform: data.platform, storeId: data.storeId, name: data.name, iconUrl: data.iconUrl ?? null, coverUrl: data.coverUrl ?? null, mmp: data.mmp });
     await audit(tx, actor.id, 'product.create', 'product', id, { orgId, name: data.name });
   });
   return id;

@@ -75,7 +75,7 @@ export default async function PlacementsPage() {
                     </div>
                   </div>
                 </div>
-                <PlacementForm p={{ id: p.id, currencyName: p.currencyName, pointsPerUsd: p.pointsPerUsd, postbackUrl: p.postbackUrl, secret: p.secret }} t={t} canEdit={user.role === 'admin'} copy={copy} />
+                <PlacementForm p={{ id: p.id, currencyName: p.currencyName, pointsPerUsd: p.pointsPerUsd, postbackUrl: p.postbackUrl, secret: p.secret, brandColor: p.brandColor, logoUrl: p.logoUrl, wallTitle: p.wallTitle }} t={t} canEdit={user.role === 'admin'} copy={copy} />
               </div>
             </Card>
           ))}

@@ -8,7 +8,7 @@ import { createProductAction, deleteProductAction, lookupStoreAppAction, saveCam
 import type { PanelDictT } from '@/lib/i18n';
 
 type Task = CampaignInput['tasks'][number];
-type Product = { id: string; name: string; platform: string; storeId: string; mmp: string | null; iconUrl?: string | null };
+type Product = { id: string; name: string; platform: string; storeId: string; mmp: string | null; iconUrl?: string | null; coverUrl?: string | null };
 
 interface Props {
   t: PanelDictT['wizard'];
@@ -97,7 +97,7 @@ export function CampaignWizard({ t, lang, products: initialProducts, initial, ca
   const [issues, setIssues] = useState<FieldIssue[]>([]);
   const [pending, startTransition] = useTransition();
   const [adding, setAdding] = useState(initialProducts.length === 0);
-  const emptyApp = { platform: 'android', storeId: '', name: '', mmp: 'appsflyer', iconUrl: '' };
+  const emptyApp = { platform: 'android', storeId: '', name: '', mmp: 'appsflyer', iconUrl: '', coverUrl: '' };
   const [newApp, setNewApp] = useState(emptyApp);
   const [nameTouched, setNameTouched] = useState(false);
   const [lookup, setLookup] = useState<{ state: 'idle' | 'loading' | 'found' | 'missing'; app?: StoreApp }>({ state: 'idle' });
@@ -200,7 +200,7 @@ export function CampaignWizard({ t, lang, products: initialProducts, initial, ca
     setEditingId(p.id);
     setAdding(true);
     setNameTouched(true); // keep the advertiser's own name
-    setNewApp({ platform: p.platform, storeId: p.storeId, name: p.name, mmp: p.mmp ?? 'none', iconUrl: p.iconUrl ?? '' });
+    setNewApp({ platform: p.platform, storeId: p.storeId, name: p.name, mmp: p.mmp ?? 'none', iconUrl: p.iconUrl ?? '', coverUrl: p.coverUrl ?? '' });
     // With an icon there is nothing to look up; without one the store is asked again.
     setLookup(p.iconUrl ? { state: 'found', app: { platform: p.platform as StoreApp['platform'], storeId: p.storeId, name: p.name, iconUrl: p.iconUrl, developer: null } } : { state: 'idle' });
   }
@@ -365,6 +365,22 @@ export function CampaignWizard({ t, lang, products: initialProducts, initial, ca
                         setNewApp({ ...newApp, name: e.target.value });
                       }}
                     />
+                  </label>
+
+                  <label className="grid gap-1.5 text-sm">
+                    <span className="text-muted">{t.app.cover}</span>
+                    <input className="field font-mono text-xs" spellCheck={false} placeholder="https://…/banner.jpg" value={newApp.coverUrl} onChange={(e) => setNewApp({ ...newApp, coverUrl: e.target.value })} />
+                    {appIssues.find((x) => x.path === 'coverUrl') ? (
+                      <span className="text-xs text-bad">{appIssues.find((x) => x.path === 'coverUrl')!.message}</span>
+                    ) : (
+                      <span className="text-xs text-subtle">{t.app.coverHint}</span>
+                    )}
+                    {newApp.coverUrl.startsWith('https://') && (
+                      <span className="relative mt-1 block aspect-[2/1] w-full max-w-sm overflow-hidden rounded-xl border border-line bg-surface-strong">
+                        {/* eslint-disable-next-line @next/next/no-img-element -- advertiser-hosted banner preview */}
+                        <img src={newApp.coverUrl} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+                      </span>
+                    )}
                   </label>
 
                   <fieldset className="grid gap-2 text-sm">

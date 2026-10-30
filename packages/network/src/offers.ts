@@ -75,6 +75,10 @@ export interface OfferTask {
 export interface PlacementInfo {
   currencyName: string;
   publisherName: string;
+  /** Hosted offerwall branding chosen by the publisher (null = Kiqro defaults). */
+  brandColor: string | null;
+  logoUrl: string | null;
+  wallTitle: string | null;
 }
 
 export interface Offer {
@@ -83,6 +87,10 @@ export interface Offer {
   description: string;
   platform: string;
   iconUrl: string | null;
+  /** Wide banner of the app, when the advertiser added one. */
+  coverUrl: string | null;
+  /** Campaign went live in the last 14 days. */
+  isNew: boolean;
   clickUrl: string;
   totalRewardPoints: string;
   /** True once the user has clicked the offer; started offers stay listed until their time runs out. */
@@ -138,7 +146,13 @@ export async function listOffers(db: Db, input: OffersInput): Promise<{ ok: true
     if (stillRunning) available.push({ campaign, started: true, country: start.country });
     else if ((await acceptsNewUsers(db, campaign, input.country, now)) === null) available.push({ campaign, started: false, country: input.country });
   }
-  const info: PlacementInfo = { currencyName: placement.currencyName, publisherName: (await db.query.organizations.findFirst({ where: eq(schema.organizations.id, placement.publisherOrgId), columns: { name: true } }))?.name ?? '' };
+  const info: PlacementInfo = {
+    currencyName: placement.currencyName,
+    publisherName: (await db.query.organizations.findFirst({ where: eq(schema.organizations.id, placement.publisherOrgId), columns: { name: true } }))?.name ?? '',
+    brandColor: placement.brandColor,
+    logoUrl: placement.logoUrl,
+    wallTitle: placement.wallTitle,
+  };
   if (available.length === 0) return { ok: true, offers: [], placement: info };
 
   const productRows = await db.select().from(products).where(inArray(products.id, available.map((a) => a.campaign.productId)));
@@ -178,6 +192,8 @@ export async function listOffers(db: Db, input: OffersInput): Promise<{ ok: true
       description: pick(campaign.description, input.lang),
       platform: product.platform,
       iconUrl: product.iconUrl,
+      coverUrl: product.coverUrl,
+      isNew: now.getTime() - (campaign.reviewedAt ?? campaign.createdAt).getTime() <= 14 * DAY_MS,
       clickUrl: `${input.trackingBaseUrl}/c/${campaign.id}?${clickParams}`,
       totalRewardPoints: total.toString(),
       started,

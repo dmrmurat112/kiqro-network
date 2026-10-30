@@ -29,7 +29,7 @@ Open this URL in a WebView or the browser:
 https://track.kiqronetwork.com/wall?app_key=APP_KEY&user_id=USER_ID&sig=SIG&lang=en
 ```
 
-The page lists available, in-progress and completed offers with their steps and rewards in your currency, opens offers, and lets users report a missing reward. It uses no JavaScript and works inside any WebView. Open links to `track.kiqronetwork.com/c/…` in the system browser so the store opens correctly:
+The page shows one card per offer (banner, step count, total reward in your currency) under the tabs *Offers*, *In progress* and *Completed*; tapping a card opens the offer's page with its steps, the start button and the missing-reward form. Optional parameters: `theme=light` for a light background (dark by default) and `offer=<offer_id>` to open one offer directly. Set your accent colour, logo and heading in the panel under **Placements → Offerwall look**. It uses no JavaScript and works inside any WebView. Open links to `track.kiqronetwork.com/c/…` in the system browser so the store opens correctly:
 
 ```kotlin
 // Android

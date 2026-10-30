@@ -25,6 +25,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ id: s
   const data = await getCampaignForm(db, id);
   if (!data) notFound();
   const { campaign, form, hasClicks, spend } = data;
+  const product = await db.query.products.findFirst({ where: (p, { eq }) => eq(p.id, campaign.productId), columns: { iconUrl: true, coverUrl: true } });
 
   return (
     <>
@@ -46,6 +47,17 @@ export default async function CampaignPage({ params }: { params: Promise<{ id: s
           <p className="muted">
             Gönderim: {dateTime(campaign.submittedAt)}. Takip linkini (test tıklaması + test postback), MMP olay adlarını, süreleri, fiyatları ve reklam politikasını kontrol edin.
           </p>
+          {product && (product.iconUrl || product.coverUrl) && (
+            <div className="row" style={{ alignItems: 'flex-start', margin: '8px 0 12px' }}>
+              {/* Offerwall images of the app: the cover is any https link the advertiser chose, so check it here. */}
+              {product.iconUrl && <img src={product.iconUrl} alt="" width={56} height={56} style={{ borderRadius: 12, objectFit: 'cover' }} referrerPolicy="no-referrer" />}
+              {product.coverUrl && (
+                <a href={product.coverUrl} target="_blank" rel="noopener noreferrer" title="Kapak görseli (offerwall)">
+                  <img src={product.coverUrl} alt="Kapak görseli" style={{ width: 240, aspectRatio: '2 / 1', borderRadius: 12, objectFit: 'cover', display: 'block' }} referrerPolicy="no-referrer" />
+                </a>
+              )}
+            </div>
+          )}
           <div className="grid cols-2">
             <ActionForm action={approveCampaignAction.bind(null, id)} submitLabel="Onayla ve yayına al" confirm="Kampanya hemen yayına girecek. Emin misiniz?">
               <p className="muted">Reklamverene "kampanyanız yayında" e-postası gider.</p>

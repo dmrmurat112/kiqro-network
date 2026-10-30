@@ -55,7 +55,14 @@ describe('publisher panel', () => {
     expect(await updatePlacementSettings(db, me, placement!.id, { currencyName: 'Coins', pointsPerUsd: '500', postbackUrl: 'http://pub.test/cb' }, 'en')).toMatchObject({ ok: false, issues: [{ path: 'postbackUrl' }] });
     expect(await updatePlacementSettings(db, me, placement!.id, { currencyName: 'Coins', pointsPerUsd: '500', postbackUrl: 'https://pub.test/cb?u={user_id}&a={amount}&tx={transaction_id}&s={status}&sig={signature}' }, 'en')).toEqual({ ok: true });
     const after = (await db.query.placements.findFirst({ where: eq(schema.placements.id, placement!.id) }))!;
-    expect(after).toMatchObject({ currencyName: 'Coins', pointsPerUsd: '500.000000', revshareBps: placement!.revshareBps });
+    expect(after).toMatchObject({ currencyName: 'Coins', pointsPerUsd: '500.000000', revshareBps: placement!.revshareBps, brandColor: null });
+
+    // Offerwall branding: #rrggbb colour and an https logo only.
+    const base = { currencyName: 'Coins', pointsPerUsd: '500', postbackUrl: after.postbackUrl! };
+    expect(await updatePlacementSettings(db, me, placement!.id, { ...base, brandColor: 'red' }, 'en')).toMatchObject({ ok: false, issues: [{ path: 'brandColor' }] });
+    expect(await updatePlacementSettings(db, me, placement!.id, { ...base, logoUrl: 'http://pub.test/logo.png' }, 'en')).toMatchObject({ ok: false, issues: [{ path: 'logoUrl' }] });
+    expect(await updatePlacementSettings(db, me, placement!.id, { ...base, brandColor: '#E5466B', logoUrl: 'https://pub.test/logo.png', wallTitle: 'Görevler' }, 'en')).toEqual({ ok: true });
+    expect(await db.query.placements.findFirst({ where: eq(schema.placements.id, placement!.id) })).toMatchObject({ brandColor: '#e5466b', logoUrl: 'https://pub.test/logo.png', wallTitle: 'Görevler' });
 
     // Members cannot change settings; other organizations cannot touch the placement.
     await inviteTeamMember(db, me, { email: 'member@app.test', name: 'Member', role: 'member' }, LINKS, 'en');
