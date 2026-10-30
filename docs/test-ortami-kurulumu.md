@@ -118,7 +118,8 @@ E-postalar `noreply@kiqro.com` adresinden gider; bu yüzden SendGrid'de doğrula
 2. SendGrid'in verdiği CNAME kayıtlarını `kiqro.com`'un DNS'ine ekleyin (Cloudflare'deyse **DNS only**, gri) ve SendGrid'de **Verify** deyin. `kiqro.com`'da zaten bir SPF kaydı varsa (ör. Google Workspace) SendGrid'in otomatik güvenlik ayarı (automated security) açıkken ek SPF gerekmez.
 3. `contact@kiqro.com` posta kutusunun (veya yönlendirmesinin) çalıştığından emin olun: reklamverenlerin cevapları, demo talepleri ve kampanya inceleme bildirimleri buraya gelir.
 4. **Settings → API Keys** bölümünden yalnızca **Mail Send** yetkili bir anahtar oluşturup Render'da `SENDGRID_API_KEY` olarak girin.
-5. Staging'de `SENDGRID_SANDBOX=true` ayarlı. Bu modda SendGrid isteği doğrular ama e-postayı **teslim etmez**. Test için gerçek gönderim isterseniz Render'da bu değeri `false` yapın.
+5. Staging'de de e-postalar gerçekten gönderilir (`SENDGRID_SANDBOX=false`); kayıt ve parola belirleme e-postaları olmadan akışlar denenemez. Gönderen adı "Kiqro Network (staging)" olduğundan canlı e-postalarla karışmaz. `true` yapılırsa SendGrid e-postayı kabul eder ama **teslim etmez**.
+6. E-posta gelmiyorsa Render → **kiqro-staging-worker → Logs**'ta `SendGrid 403` (alan adı doğrulanmamış veya `MAIL_FROM` doğrulanmış alan adında değil) ya da `SendGrid 401` (API anahtarı hatalı) arayın. Spam klasörünü de kontrol edin.
 
 ## 8. Stripe (kartla bakiye yükleme)
 
