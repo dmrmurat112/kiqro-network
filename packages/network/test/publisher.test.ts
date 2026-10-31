@@ -6,7 +6,19 @@ import { resetTestDb, setupTestDb } from '@kiqro/db/testing';
 import { createDemoSetup, handleClick, handlePostback, type DemoSetup } from '../src/index.ts';
 import { createAdminUser } from '../src/admin/index.ts';
 import { advertiserLogin, createAdvertiserUser, getAdvertiserSession, inviteTeamMember, setPasswordWithToken, type AdvertiserSession } from '../src/advertiser/index.ts';
-import { publisherConversions, publisherOverview, publisherPlacements, sendTestPostback, updatePlacementSettings } from '../src/publisher/index.ts';
+import {
+  createPublisherPlacement,
+  deletePublisherPlacement,
+  placementStats,
+  publisherConversions,
+  publisherOverview,
+  publisherPlacement,
+  publisherPlacements,
+  sendTestPostback,
+  setPlacementStatus,
+  updatePlacementProfile,
+  updatePlacementSettings,
+} from '../src/publisher/index.ts';
 
 let db: Db;
 let close: () => Promise<void>;
@@ -74,5 +86,37 @@ describe('publisher panel', () => {
     expect(r).toMatchObject({ ok: true, status: 204 });
     const q = new URL(urls[0]!).searchParams;
     expect(q.get('sig')).toBe(sign(after.secret, [q.get('u')!, q.get('a')!, q.get('tx')!, q.get('s')!]));
+  });
+
+  it('lets publisher admins add, pause and delete their own placements', async () => {
+    const s = await createDemoSetup(db);
+    const me = await publisherUser(s);
+    const base = { name: 'Kiqro Android', storeUrl: 'https://play.google.com/store/apps/details?id=com.kiqro.application', iconUrl: 'https://evil.example/x.png', currencyName: 'Puan', pointsPerUsd: '1000', postbackUrl: '' };
+
+    // A website needs its address; members cannot add placements.
+    expect(await createPublisherPlacement(db, me, { ...base, type: 'web', storeUrl: '' }, 'en')).toMatchObject({ ok: false, issues: [{ path: 'storeUrl' }] });
+    await inviteTeamMember(db, me, { email: 'member2@app.test', name: 'Member', role: 'member' }, LINKS, 'en');
+    expect((await createPublisherPlacement(db, await signIn('member2@app.test'), { ...base, type: 'android' }, 'en')).ok).toBe(false);
+
+    const created = await createPublisherPlacement(db, me, { ...base, type: 'android' }, 'en');
+    if (!created.ok) throw new Error(JSON.stringify(created.issues));
+    const [existing] = (await publisherPlacements(db, s.publisherId)).filter((p) => p.id !== created.id);
+    const placement = (await publisherPlacement(db, s.publisherId, created.id))!;
+    // Own keys, the share of the publisher's latest placement, and only store-hosted icons.
+    expect(placement).toMatchObject({ type: 'android', status: 'active', revshareBps: existing!.revshareBps, iconUrl: null, currencyName: 'Puan' });
+    expect(placement.appKey).not.toBe(existing!.appKey);
+    expect(await publisherPlacement(db, s.advertiserId, created.id)).toBeUndefined();
+
+    expect(await updatePlacementProfile(db, me, created.id, { name: 'Kiqro Android TR', storeUrl: '' }, 'en')).toEqual({ ok: true });
+    expect(await setPlacementStatus(db, me, created.id, 'paused', 'en')).toEqual({ ok: true });
+    expect((await publisherPlacement(db, s.publisherId, created.id))).toMatchObject({ name: 'Kiqro Android TR', status: 'paused' });
+
+    // Placements with traffic cannot be deleted; unused ones can.
+    const c = await handleClick(db, { campaignId: s.campaignId, appKey: s.appKey, publisherUserId: 'u1', signature: sign(s.placementSecret, [s.campaignId, 'u1']), country: 'TR', ip: null, userAgent: null, query: {} });
+    if (!c.ok) throw new Error(c.reason);
+    expect(await deletePublisherPlacement(db, me, existing!.id, 'en')).toMatchObject({ ok: false, issues: [{ message: expect.stringContaining('traffic') }] });
+    expect((await placementStats(db, [existing!.id], 7)).get(existing!.id)).toMatchObject({ users: 1, clicks: 1, conversions: 0 });
+    expect(await deletePublisherPlacement(db, me, created.id, 'en')).toEqual({ ok: true });
+    expect(await publisherPlacement(db, s.publisherId, created.id)).toBeUndefined();
   });
 });

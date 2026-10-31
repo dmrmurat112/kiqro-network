@@ -1,8 +1,7 @@
 'use client';
 
 import { useActionState, useState, useTransition } from 'react';
-import { Eye, Send } from 'lucide-react';
-import { CopyField } from '@/components/panel/CopyField';
+import { Send } from 'lucide-react';
 import type { PanelDictT } from '@/lib/i18n';
 import { placementSettingsAction, testPostbackAction } from '../actions';
 
@@ -11,7 +10,6 @@ interface Placement {
   currencyName: string;
   pointsPerUsd: string;
   postbackUrl: string | null;
-  secret: string;
   brandColor: string | null;
   logoUrl: string | null;
   wallTitle: string | null;
@@ -19,27 +17,17 @@ interface Placement {
 
 const SWATCHES = ['#6c57f0', '#e5466b', '#f97316', '#10b981', '#0ea5e9', '#111827'];
 
-export function PlacementForm({ p, t, canEdit, copy }: { p: Placement; t: PanelDictT['pub']; canEdit: boolean; copy: { copy: string; copied: string } }) {
+/** Reward currency, exchange rate, postback URL and offerwall branding of a placement. */
+export function PlacementForm({ p, t, canEdit }: { p: Placement; t: PanelDictT['pub']; canEdit: boolean }) {
   const [state, action, pending] = useActionState(placementSettingsAction.bind(null, p.id), undefined);
   const [testing, startTest] = useTransition();
   const [test, setTest] = useState('');
-  const [showSecret, setShowSecret] = useState(false);
   const [color, setColor] = useState(p.brandColor ?? '');
   const [logo, setLogo] = useState(p.logoUrl ?? '');
   const issue = (path: string) => state?.issues?.find((i) => i.path === path)?.message;
 
   return (
     <div className="grid min-w-0 grid-cols-1 gap-4">
-      <div>
-        <div className="mb-1 text-xs text-subtle">{t.secret}</div>
-        {showSecret ? (
-          <CopyField value={p.secret} copyLabel={copy.copy} copiedLabel={copy.copied} />
-        ) : (
-          <button type="button" onClick={() => setShowSecret(true)} className="inline-flex items-center gap-1.5 text-sm text-violet-400 hover:text-violet-300">
-            <Eye size={14} /> {t.reveal}
-          </button>
-        )}
-      </div>
       <form action={action} className="grid gap-4">
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="grid gap-1.5 text-sm">

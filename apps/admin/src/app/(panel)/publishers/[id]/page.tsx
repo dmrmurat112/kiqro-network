@@ -64,6 +64,16 @@ export default async function PublisherPage({ params }: { params: Promise<{ id: 
             <Badge status={p.status} />
           </div>
           <p>
+            Tür: <b>{{ android: 'Android uygulaması', ios: 'iOS uygulaması', web: 'Web sitesi', api: 'API / Ağ' }[p.type]}</b>
+            {p.storeUrl && (
+              <>
+                {' · '}
+                <a href={p.storeUrl} target="_blank" rel="noopener noreferrer">
+                  {p.storeUrl}
+                </a>
+              </>
+            )}
+            <br />
             App key: <code>{p.appKey}</code>
             <br />
             Gizli anahtar: <code>{p.secret}</code>

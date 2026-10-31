@@ -24,6 +24,8 @@ export const orgStatus = pgEnum('org_status', ['pending', 'active', 'suspended']
 export const platform = pgEnum('platform', ['android', 'ios', 'web']);
 export const campaignStatus = pgEnum('campaign_status', ['draft', 'in_review', 'active', 'paused', 'completed', 'archived']);
 export const placementStatus = pgEnum('placement_status', ['active', 'paused']);
+/** Where a placement's offers are shown: a store app, a website, or the publisher's own API integration. */
+export const placementType = pgEnum('placement_type', ['android', 'ios', 'web', 'api']);
 export const conversionStatus = pgEnum('conversion_status', ['approved', 'held', 'rejected', 'reversed']);
 export const ledgerAccountKind = pgEnum('ledger_account_kind', [
   'advertiser_balance', // funds an advertiser has prepaid and not yet spent
@@ -143,6 +145,10 @@ export const placements = pgTable('placements', {
   name: text('name').notNull(),
   appKey: text('app_key').notNull().unique(),
   secret: text('secret').notNull(),
+  type: placementType('type').notNull().default('api'),
+  /** Store page or website of the app the offers are shown in (optional for API placements). */
+  storeUrl: text('store_url'),
+  iconUrl: text('icon_url'),
   status: placementStatus('status').notNull().default('active'),
   currencyName: text('currency_name').notNull(),
   /** Set by the publisher: how many points one USD of publisher payout is worth. */
