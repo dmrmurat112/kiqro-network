@@ -679,7 +679,7 @@ export function CampaignWizard({ t, lang, products: initialProducts, initial, ca
                 </div>
                 <code className="block font-mono text-xs break-all text-muted">
                   {product?.mmp === 'appsflyer' || !product?.mmp
-                    ? `https://app.appsflyer.com/${product?.storeId ?? 'com.studio.game'}?pid=kiqro_int&clickid={click_id}&af_siteid={source_id}&af_sub1={sub_source}`
+                    ? `https://app.appsflyer.com/${product?.storeId ?? 'com.studio.game'}?pid=kiqro_int&clickid={click_id}&af_siteid={source_id}&af_sub1={sub_source}&${product?.platform === 'ios' ? 'idfa={idfa}' : 'advertising_id={gaid}'}`
                     : `https://<your-${product.mmp}-link>?…&click_id={click_id}&source={source_id}`}
                 </code>
               </div>

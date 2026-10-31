@@ -55,10 +55,10 @@ On the web, the wall can also be shown in an `<iframe>`.
 ## Option 2 — Offers API (your own UI)
 
 ```
-GET https://track.kiqronetwork.com/v1/offers?app_key&user_id&sig[&risk][&lang][&country][&platform=android,ios][&category=games][&custom_1..5]
+GET https://track.kiqronetwork.com/v1/offers?app_key&user_id&sig[&risk][&lang][&country][&platform=android,ios][&category=games][&custom_1..5][&device_id]
 ```
 
-Returns `{ offers: [{ offerId, title, description, instructions, category, platform, iconUrl, coverUrl, screenshots, isNew, clickUrl, totalRewardPoints, started, completed, tasks: [{ taskId, seq, name, timeLimitDays, payoutUsd, rewardPoints, state }] }], currency_sale: { multiplier, endsAt } | null }`. `platform` and `category` filter the list; `custom_1`..`custom_5` (your values, up to 200 characters, not signed) are carried in click URLs and returned in postbacks. During a currency sale the points are already multiplied. Open `clickUrl` unchanged. `payoutUsd` is your earning, not for display. Call from your server; pass `country` (ISO code) since Kiqro sees your server's address.
+Returns `{ offers: [{ offerId, title, description, instructions, category, platform, storeUrl, iconUrl, coverUrl, screenshots, isNew, clickUrl, totalRewardPoints, started, completed, tasks: [{ taskId, seq, name, timeLimitDays, payoutUsd, rewardPoints, state }] }], currency_sale: { multiplier, endsAt } | null }`. `platform` and `category` filter the list; `custom_1`..`custom_5` (your values, up to 200 characters, not signed) are carried in click URLs and returned in postbacks. During a currency sale the points are already multiplied. `device_id` (GAID / IDFA, when the user allows it) is carried in click URLs to the advertiser’s MMP link and improves install attribution. Open `clickUrl` unchanged. `payoutUsd` is your earning, not for display. Call from your server; pass `country` (ISO code) since Kiqro sees your server's address.
 
 ## Option 3 — Node.js SDK
 

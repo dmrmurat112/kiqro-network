@@ -1,6 +1,6 @@
 # Kiqro Direct — Kiqro uygulaması entegrasyon kılavuzu
 
-**Sürüm 1.2 · 31 Ekim 2026 · Kiqro Network**
+**Sürüm 1.3 · 31 Ekim 2026 · Kiqro Network**
 
 Bu kılavuz, Kiqro uygulamasının (web, iOS, Android) Kiqro'nun kendi offerwall ağı **Kiqro Direct**'i yeni bir teklif sağlayıcısı olarak bağlaması içindir. Entegrasyon, bugün bağlı olan diğer offerwall'lara (Torox, ayeT-Studios, AdscendMedia vb.) çok benzer: teklifler bir API'den çekilir, kullanıcı tıklama linkine yönlendirilir, ödül sunucudan sunucuya bildirim (postback) ile gelir.
 
@@ -71,6 +71,7 @@ GET {TRACK}/v1/offers?app_key={app_key}&user_id={user_id}&country={country}&lang
 | `risk` | | Kiqro'nun kendi fraud skorundan 0–100 tam sayı (bkz. bölüm 7). Gönderilirse imzaya dahil edilir. |
 | `platform` | | Yalnızca bu platformların teklifleri: `android`, `ios`, `web` (virgülle birden fazla). Kullanıcının cihazına göre gönderin. |
 | `category` | | Yalnızca bu kategoriler: `games`, `finance`, `shopping`, `entertainment`, `lifestyle`, `utilities`, `other`. |
+| `device_id` | | Cihazın reklam kimliği (Android'de GAID, iOS'ta IDFA), kullanıcı izin verdiyse. Tıklama linkine taşınır ve reklamverenin MMP'sine iletilir; kurulum eşleştirmesini iyileştirir. Sıfır kimlik (`00000000-…`) yok sayılır. |
 | `custom_1` … `custom_5` | | Sizin değerleriniz (en fazla 200 karakter). Tıklama linkine taşınır ve postback'te `{custom_1}` … `{custom_5}` olarak geri gelir; reklamverene gönderilmez. |
 | `sig` | ✓ | İmza (aşağıda) |
 
@@ -139,6 +140,7 @@ export async function kiqroDirectOffers(userId, country, lang, risk) {
       "title": "Dragon Realm",
       "description": "Install and reach the milestones within the time limit.",
       "platform": "android",
+      "storeUrl": "https://play.google.com/store/apps/details?id=com.dragon.realm",
       "iconUrl": "https://…/icon.png",
       "coverUrl": "https://…/banner.jpg",
       "isNew": false,
@@ -165,6 +167,7 @@ export async function kiqroDirectOffers(userId, country, lang, risk) {
 | `offerId` | Teklifin kalıcı kimliği. Postback'teki `offer_id` ile aynı. |
 | `title`, `description` | İstenen dilde. |
 | `platform` | `android`, `ios` veya `web`. Kullanıcının cihazına uymayan teklifleri gizleyin. |
+| `storeUrl` | Google Play / App Store sayfası ya da site adresi (bilgi amaçlı; kullanıcıyı her zaman `clickUrl` ile gönderin). |
 | `iconUrl` | Uygulama ikonu (kare). `null` olabilir. |
 | `coverUrl` | Geniş kapak görseli (yaklaşık 2:1), reklamveren eklediyse. `null` ise ikonu kullanın. |
 | `isNew` | Teklif son 14 gün içinde yayına girdi; "Yeni" rozeti için. |
@@ -225,7 +228,7 @@ Kendi arayüzünüzü yapmadan önce ya da web sürümü için, Kiqro Network'ü
 
 ## 5. Tıklama linki
 
-- `clickUrl`'i **değiştirmeden** açın. Parametre eklemek, çıkarmak ya da URL'yi yeniden kodlamak imzayı bozar.
+- `clickUrl`'i **değiştirmeden** açın. Parametre çıkarmak ya da URL'yi yeniden kodlamak imzayı bozar. Offers API isteğinde gönderdiğiniz `device_id` ve `custom_*` zaten linkin içindedir.
 - Linki **kullanıcının cihazı** açmalı. Kendi sunucunuz üzerinden yönlendirmeyin (proxy yapmayın). Kiqro Network ülkeyi ve fraud kontrollerini kullanıcının kendi IP adresinden yapar.
 - **Android:** Chrome Custom Tabs veya harici tarayıcı. **iOS:** `SFSafariViewController` veya harici Safari. **Web:** yeni sekme.
 - Uygulama içi WebView **kullanmayın**: mağaza yönlendirmeleri (`market://`, App Store) WebView'da çalışmaz.

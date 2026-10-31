@@ -700,4 +700,24 @@ describe('publisher tools', () => {
     await postback(s, later, 'install', at(5 * 3600));
     expect((await db.select().from(conversions).where(eq(conversions.clickId, later)))[0]!.userRewardPoints).toBe(280n);
   });
+
+  it('passes the advertising ID to the advertiser and lists the store link', async () => {
+    const s = await setup();
+    const gaid = '38400000-8cf0-11bd-b23e-10b96e40000d';
+    const [offer] = (await server(db).inject({ url: offersUrl(s, 'u1', `&device_id=${gaid}`) })).json().offers;
+    expect(offer.storeUrl).toBe('https://play.google.com/store/apps/details?id=com.dragon.realm');
+    const clickUrl = new URL(offer.clickUrl);
+    expect(clickUrl.searchParams.get('device_id')).toBe(gaid);
+    const go = (deviceId: string, user: string) =>
+      handleClick(db, { campaignId: s.campaignId, appKey: s.appKey, publisherUserId: user, signature: sign(s.placementSecret, [s.campaignId, user]), country: 'TR', ip: null, userAgent: null, query: { device_id: deviceId }, now: T0 });
+    const c = await go(gaid, 'u1');
+    if (!c.ok) throw new Error(c.reason);
+    expect(new URL(c.redirectUrl).searchParams.get('advertising_id')).toBe(gaid);
+    // Limited ad tracking (all zeros) and junk are ignored.
+    for (const [id, user] of [['00000000-0000-0000-0000-000000000000', 'u2'], ['not-an-id', 'u3']] as const) {
+      const r = await go(id, user);
+      if (!r.ok) throw new Error(r.reason);
+      expect(new URL(r.redirectUrl).searchParams.get('advertising_id')).toBe('');
+    }
+  });
 });

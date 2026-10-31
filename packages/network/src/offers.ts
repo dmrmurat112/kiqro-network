@@ -57,7 +57,7 @@ export interface OffersInput {
   platforms?: string[];
   /** Only offers in these categories; all when empty. */
   categories?: string[];
-  /** Publisher's own values (custom_1..custom_5), carried in click URLs and returned in its postbacks. */
+  /** Publisher's own values (custom_1..custom_5, returned in its postbacks) and device_id, carried in click URLs. */
   custom?: Record<string, string>;
   now?: Date;
 }
@@ -99,6 +99,8 @@ export interface Offer {
   description: string;
   platform: string;
   iconUrl: string | null;
+  /** Store page (Google Play, App Store) or website of the offer. */
+  storeUrl: string;
   /** Wide banner of the app, when the advertiser added one. */
   coverUrl: string | null;
   /** Store screenshots (https). */
@@ -224,6 +226,7 @@ export async function listOffers(db: Db, input: OffersInput): Promise<{ ok: true
       description: pick(campaign.description, input.lang),
       platform: product.platform,
       iconUrl: product.iconUrl,
+      storeUrl: storeUrl(product.platform, product.storeId),
       coverUrl: product.coverUrl,
       screenshots: product.screenshots,
       category: campaign.category,
@@ -265,5 +268,14 @@ export function offerQueryOptions(query: Record<string, string | undefined>): Pi
     const value = query[`custom_${n}`];
     if (value) custom[`custom_${n}`] = value.slice(0, 200);
   }
+  // Advertising ID (GAID / IDFA) for the advertiser's MMP; validated again on the click.
+  if (query.device_id && /^[0-9a-fA-F-]{36}$/.test(query.device_id)) custom.device_id = query.device_id;
   return { platforms: list(query.platform, PLATFORMS), categories: list(query.category, OFFER_CATEGORIES), custom };
+}
+
+/** Public store page of an app (Play package name, App Store id) or a website domain. */
+export function storeUrl(platform: string, storeId: string): string {
+  if (platform === 'android') return `https://play.google.com/store/apps/details?id=${encodeURIComponent(storeId)}`;
+  if (platform === 'ios') return `https://apps.apple.com/app/id${encodeURIComponent(storeId)}`;
+  return `https://${storeId}`;
 }

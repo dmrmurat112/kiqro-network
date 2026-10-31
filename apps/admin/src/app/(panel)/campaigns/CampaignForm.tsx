@@ -88,7 +88,7 @@ export function CampaignForm({ initial, action, submitLabel, tasksLocked }: Prop
       <div className="card">
         <h2>Takip ve kurallar</h2>
         <label>
-          MMP takip linki — {'{click_id}'} zorunlu; {'{source_id}'}, {'{sub_source}'}, {'{country}'} isteğe bağlı
+          MMP takip linki — {'{click_id}'} zorunlu; {'{source_id}'}, {'{sub_source}'}, {'{country}'}, {'{gaid}'} / {'{idfa}'} / {'{device_id}'} isteğe bağlı
           <input name="trackingUrl" defaultValue={initial.trackingUrl} placeholder="https://app.appsflyer.com/com.app?pid=kiqro_int&clickid={click_id}&af_siteid={source_id}" required />
         </label>
         <div className="fields" style={{ marginTop: 12 }}>

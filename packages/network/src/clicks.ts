@@ -6,12 +6,15 @@ import { acceptsNewUsers } from './campaigns.ts';
 import { defaultFraudContext, screenClick, type FraudContext } from './fraud/rules.ts';
 import { isUserBanned } from './publisher/tools.ts';
 
-const { campaigns, clicks, placements } = schema;
+const { campaigns, clicks, placements, products } = schema;
 
 const SUB_ID_KEYS = ['sub1', 'sub2', 'sub3', 'sub4', 'sub5'] as const;
 /** Publisher's own values, returned in its postbacks; never sent to the advertiser. */
 const CUSTOM_KEYS = ['custom_1', 'custom_2', 'custom_3', 'custom_4', 'custom_5'] as const;
 const DAY_MS = 86_400_000;
+/** GAID / IDFA: a UUID. The all-zero value (ad tracking limited) carries no information. */
+const DEVICE_ID = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+const ZERO_ID = '00000000-0000-0000-0000-000000000000';
 
 export interface ClickInput {
   campaignId: string;
@@ -91,6 +94,11 @@ export async function handleClick(db: Db, input: ClickInput): Promise<ClickResul
     if (value) subIds[key] = value.slice(0, 200);
   }
 
+  // Advertising ID from the publisher's app (optional): passed to the advertiser's MMP link.
+  const deviceId = input.query.device_id && DEVICE_ID.test(input.query.device_id) && input.query.device_id !== ZERO_ID ? input.query.device_id.toLowerCase() : null;
+  if (deviceId) subIds.device_id = deviceId;
+  const platform = deviceId ? (await db.query.products.findFirst({ where: eq(products.id, campaign.productId), columns: { platform: true } }))?.platform : null;
+
   const clickId = previous?.id ?? newId('click');
   if (!previous) {
     await db.insert(clicks).values({
@@ -115,6 +123,9 @@ export async function handleClick(db: Db, input: ClickInput): Promise<ClickResul
     sub_source: subIds.sub1,
     country: input.country,
     timestamp: Math.floor(now.getTime() / 1000),
+    device_id: deviceId,
+    gaid: platform === 'android' ? deviceId : null,
+    idfa: platform === 'ios' ? deviceId : null,
   });
   return { ok: true, clickId, redirectUrl };
 }

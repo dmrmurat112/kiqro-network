@@ -35,6 +35,8 @@ export interface Offer {
   description: string;
   platform: string;
   iconUrl: string | null;
+  /** Google Play / App Store page or website of the offer. */
+  storeUrl: string;
   /** Wide banner (about 2:1), when the advertiser added one. */
   coverUrl: string | null;
   /** Live for less than 14 days. */
@@ -65,6 +67,8 @@ export interface UserOptions {
   category?: string[];
   /** Your own values (custom_1..custom_5), returned in your postbacks as {custom_1}..{custom_5}. */
   custom?: Partial<Record<'custom_1' | 'custom_2' | 'custom_3' | 'custom_4' | 'custom_5', string>>;
+  /** The device's advertising ID (GAID on Android, IDFA on iOS) when the user allows it; improves MMP attribution. */
+  deviceId?: string;
 }
 
 export interface StatsDay {
@@ -124,6 +128,7 @@ export class KiqroDirect {
     if (o.platform?.length) q.set('platform', o.platform.join(','));
     if (o.category?.length) q.set('category', o.category.join(','));
     for (const [k, v] of Object.entries(o.custom ?? {})) if (v) q.set(k, v);
+    if (o.deviceId) q.set('device_id', o.deviceId);
     return q;
   }
 

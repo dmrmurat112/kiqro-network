@@ -52,7 +52,7 @@ export async function createDemoSetup(db: Db, opts: DemoOptions = {}): Promise<D
     productId,
     name: 'Dragon Realm – DE/FI/TR CPE',
     status: 'active',
-    trackingUrl: 'https://app.appsflyer.com/com.dragon.realm?pid=kiqro_int&clickid={click_id}&af_siteid={source_id}&af_sub1={sub_source}',
+    trackingUrl: 'https://app.appsflyer.com/com.dragon.realm?pid=kiqro_int&clickid={click_id}&af_siteid={source_id}&af_sub1={sub_source}&advertising_id={gaid}',
     countries: ['DE', 'FI', 'TR'],
     totalBudget: parseMicros(opts.totalBudgetUsd ?? '5000'),
     title: { en: 'Dragon Realm', tr: 'Dragon Realm', fi: 'Dragon Realm' },
