@@ -20,6 +20,8 @@ export interface StoreApp {
   name: string;
   iconUrl: string;
   developer: string | null;
+  /** Up to 8 store screenshots (https), when the store lists them. */
+  screenshots?: string[];
 }
 
 type Fetcher = (url: string, init: { headers: Record<string, string>; signal: AbortSignal }) => Promise<{ ok: boolean; status: number; text(): Promise<string> }>;
@@ -72,6 +74,21 @@ async function getText(fetcher: Fetcher, url: string): Promise<string | null> {
   }
 }
 
+/**
+ * Screenshot URLs from a Play store page (images Play marks as screenshots), resized to
+ * a 720px height. Best effort: an empty list when Play changes its markup.
+ */
+function playScreenshots(html: string): string[] {
+  const out = new Set<string>();
+  for (const tag of html.match(/<img[^>]+>/g) ?? []) {
+    if (!/alt="Screenshot image"/i.test(tag)) continue;
+    const src = /src="(https:\/\/play-lh\.googleusercontent\.com\/[^"=]+)/.exec(tag)?.[1];
+    if (src) out.add(`${src}=h720`);
+    if (out.size >= 8) break;
+  }
+  return [...out];
+}
+
 async function lookupPlay(fetcher: Fetcher, pkg: string): Promise<StoreApp | null> {
   const html = await getText(fetcher, `https://play.google.com/store/apps/details?id=${encodeURIComponent(pkg)}&hl=en&gl=US`);
   if (!html) return null;
@@ -86,6 +103,7 @@ async function lookupPlay(fetcher: Fetcher, pkg: string): Promise<StoreApp | nul
     // Play serves the icon at any size via the "=sNNN" suffix.
     iconUrl: image.replace(/=[swh]\d+.*$/, '') + '=s256',
     developer: developer ? decode(developer).trim() : null,
+    screenshots: playScreenshots(html),
   };
 }
 
@@ -94,7 +112,7 @@ async function lookupAppStore(fetcher: Fetcher, ref: StoreRef): Promise<StoreApp
   const body = await getText(fetcher, `https://itunes.apple.com/lookup?${query}&country=us&entity=software`);
   if (!body) return null;
   try {
-    const app = (JSON.parse(body) as { results?: { trackId?: number; trackName?: string; artworkUrl512?: string; artworkUrl100?: string; sellerName?: string; artistName?: string }[] }).results?.[0];
+    const app = (JSON.parse(body) as { results?: { trackId?: number; trackName?: string; artworkUrl512?: string; artworkUrl100?: string; sellerName?: string; artistName?: string; screenshotUrls?: string[] }[] }).results?.[0];
     if (!app?.trackId || !app.trackName) return null;
     return {
       platform: 'ios',
@@ -102,6 +120,7 @@ async function lookupAppStore(fetcher: Fetcher, ref: StoreRef): Promise<StoreApp
       name: app.trackName,
       iconUrl: app.artworkUrl512 ?? app.artworkUrl100 ?? '',
       developer: app.sellerName ?? app.artistName ?? null,
+      screenshots: (app.screenshotUrls ?? []).filter((u) => u.startsWith('https://')).slice(0, 8),
     };
   } catch {
     return null;

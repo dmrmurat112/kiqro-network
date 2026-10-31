@@ -36,7 +36,7 @@ export async function advertiserCreateProduct(db: Db, session: AdvertiserSession
   return db.transaction(async (tx) => {
     const duplicate = await tx.query.products.findFirst({ where: and(eq(products.orgId, session.org.id), eq(products.platform, d.platform), eq(products.storeId, d.storeId)) });
     if (duplicate) return fail('app_exists', locale, 'storeId');
-    await tx.insert(products).values({ id, orgId: session.org.id, platform: d.platform, storeId: d.storeId, name: d.name, iconUrl: d.iconUrl ?? null, coverUrl: d.coverUrl ?? null, mmp: d.mmp });
+    await tx.insert(products).values({ id, orgId: session.org.id, platform: d.platform, storeId: d.storeId, name: d.name, iconUrl: d.iconUrl ?? null, coverUrl: d.coverUrl ?? null, screenshots: d.screenshots, mmp: d.mmp });
     await auditAdvertiser(tx, session, 'advertiser.product.create', 'product', id, { name: d.name });
     return { ok: true, id } as const;
   });
@@ -65,7 +65,7 @@ export async function advertiserUpdateProduct(db: Db, session: AdvertiserSession
       const duplicate = await tx.query.products.findFirst({ where: and(eq(products.orgId, session.org.id), eq(products.platform, d.platform), eq(products.storeId, d.storeId)) });
       if (duplicate && duplicate.id !== productId) return fail('app_exists', locale, 'storeId');
     }
-    await tx.update(products).set({ platform: d.platform, storeId: d.storeId, name: d.name, iconUrl: d.iconUrl ?? null, coverUrl: d.coverUrl ?? null, mmp: d.mmp }).where(eq(products.id, productId));
+    await tx.update(products).set({ platform: d.platform, storeId: d.storeId, name: d.name, iconUrl: d.iconUrl ?? null, coverUrl: d.coverUrl ?? null, screenshots: d.screenshots, mmp: d.mmp }).where(eq(products.id, productId));
     await auditAdvertiser(tx, session, 'advertiser.product.update', 'product', productId, {
       before: { platform: product.platform, storeId: product.storeId, name: product.name, mmp: product.mmp },
       after: { platform: d.platform, storeId: d.storeId, name: d.name, mmp: d.mmp },

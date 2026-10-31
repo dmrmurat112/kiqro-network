@@ -63,6 +63,26 @@ export function CampaignForm({ initial, action, submitLabel, tasksLocked }: Prop
             <textarea name="descriptionTr" rows={2} defaultValue={initial.descriptionTr} />
           </label>
         </div>
+        <div className="fields" style={{ marginTop: 12 }}>
+          <label>
+            Talimatlar (EN)
+            <textarea name="instructionsEn" rows={3} defaultValue={initial.instructionsEn} />
+          </label>
+          <label>
+            Talimatlar (TR)
+            <textarea name="instructionsTr" rows={3} defaultValue={initial.instructionsTr} />
+          </label>
+          <label>
+            Kategori
+            <select name="category" defaultValue={initial.category ?? 'other'}>
+              {Object.entries({ games: 'Oyun', finance: 'Finans', shopping: 'Alışveriş', entertainment: 'Eğlence', lifestyle: 'Yaşam', utilities: 'Uygulama ve araçlar', other: 'Diğer' }).map(([k, v]) => (
+                <option key={k} value={k}>
+                  {v}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
       </div>
 
       <div className="card">

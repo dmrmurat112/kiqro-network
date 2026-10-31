@@ -1,6 +1,7 @@
 import { and, asc, eq, inArray, lte, sql } from 'drizzle-orm';
 import { fillMacros, formatMicros, sign } from '@kiqro/core';
 import { newId, schema, type Db, type DbOrTx } from '@kiqro/db';
+import { postbackMacros } from './publisher/tools.ts';
 
 const { campaignTasks, campaigns, clicks, conversions, placements, publisherPostbacks } = schema;
 
@@ -34,19 +35,28 @@ export async function enqueuePublisherPostback(db: DbOrTx, conversionId: string,
   const status = kind === 'credit' ? 1 : 2;
   const amount = conversion.userRewardPoints.toString();
   const url = fillMacros(template, {
-    user_id: conversion.publisherUserId,
-    amount,
-    payout_usd: formatMicros(conversion.publisherPayout),
-    transaction_id: conversion.id,
-    offer_id: campaign.id,
-    offer_name: campaign.title.en ?? Object.values(campaign.title)[0],
-    task_id: task.id,
-    task_name: task.displayName.en ?? Object.values(task.displayName)[0],
-    // Turkish names for Turkish-speaking publishers, falling back to English.
-    offer_name_tr: campaign.title.tr ?? campaign.title.en ?? Object.values(campaign.title)[0],
-    task_name_tr: task.displayName.tr ?? task.displayName.en ?? Object.values(task.displayName)[0],
-    status,
-    country: click.country,
+    ...postbackMacros({
+      userId: conversion.publisherUserId,
+      amount,
+      payoutUsd: formatMicros(conversion.publisherPayout),
+      transactionId: conversion.id,
+      offerId: campaign.id,
+      offerName: campaign.title.en ?? Object.values(campaign.title)[0] ?? '',
+      // Turkish names for Turkish-speaking publishers, falling back to English.
+      offerNameTr: campaign.title.tr ?? campaign.title.en ?? Object.values(campaign.title)[0] ?? '',
+      taskId: task.id,
+      taskName: task.displayName.en ?? Object.values(task.displayName)[0] ?? '',
+      taskNameTr: task.displayName.tr ?? task.displayName.en ?? Object.values(task.displayName)[0] ?? '',
+      status,
+      country: click.country,
+      ip: click.ip,
+      clickTime: click.createdAt,
+      eventTime: conversion.eventAt,
+      appKey: placement.appKey,
+      reversalReason: conversion.reversalReason,
+      custom: [1, 2, 3, 4, 5].map((n) => click.subIds[`custom_${n}`]),
+      sandbox: false,
+    }),
     signature: sign(placement.secret, [conversion.publisherUserId, amount, conversion.id, status]),
   });
   await db.insert(publisherPostbacks).values({ id: newId('outbox'), conversionId, kind, url, nextAttemptAt: now }).onConflictDoNothing();

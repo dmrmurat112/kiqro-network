@@ -3,6 +3,7 @@ import { applyBps, formatMicros, sign, toPoints, verify } from '@kiqro/core';
 import { schema, type Db } from '@kiqro/db';
 import { acceptsNewUsers, priceFor } from './campaigns.ts';
 import { parseRisk, signedParts } from './clicks.ts';
+import { activeSale, isUserBanned, multiplyPoints, saleMultiplierAt } from './publisher/tools.ts';
 
 const { campaignTasks, campaigns, clicks, conversions, placements, products } = schema;
 
@@ -52,8 +53,17 @@ export interface OffersInput {
   trackingBaseUrl: string;
   /** Optional publisher risk score for the user; signed and carried into every click URL. */
   publisherRisk?: string;
+  /** Only offers for these platforms (android, ios, web); all when empty. */
+  platforms?: string[];
+  /** Only offers in these categories; all when empty. */
+  categories?: string[];
+  /** Publisher's own values (custom_1..custom_5), carried in click URLs and returned in its postbacks. */
+  custom?: Record<string, string>;
   now?: Date;
 }
+
+/** Offer categories advertisers choose from (offerwall filters, `category` in the Offers API). */
+export const OFFER_CATEGORIES = ['games', 'finance', 'shopping', 'entertainment', 'lifestyle', 'utilities', 'other'] as const;
 
 /** Progress of one step for this user: not done yet, rewarded, held for review, or not rewarded. */
 export type TaskState = 'open' | 'credited' | 'in_review' | 'rejected' | 'reversed';
@@ -75,6 +85,8 @@ export interface OfferTask {
 export interface PlacementInfo {
   currencyName: string;
   publisherName: string;
+  /** Currency sale running now: rewards of offers clicked until endsAt are multiplied. */
+  sale: { multiplier: number; endsAt: string } | null;
   /** Hosted offerwall branding chosen by the publisher (null = Kiqro defaults). */
   brandColor: string | null;
   logoUrl: string | null;
@@ -89,6 +101,12 @@ export interface Offer {
   iconUrl: string | null;
   /** Wide banner of the app, when the advertiser added one. */
   coverUrl: string | null;
+  /** Store screenshots (https). */
+  screenshots: string[];
+  /** One of OFFER_CATEGORIES. */
+  category: string;
+  /** Step-by-step instructions for the user in the requested language (may be empty). */
+  instructions: string;
   /** Campaign went live in the last 14 days. */
   isNew: boolean;
   clickUrl: string;
@@ -119,6 +137,7 @@ export async function listOffers(db: Db, input: OffersInput): Promise<{ ok: true
     return { ok: false, status: 403, reason: 'invalid_signature' };
   }
   if (Number.isNaN(parseRisk(input.publisherRisk))) return { ok: false, status: 403, reason: 'invalid_risk' };
+  const sale = await activeSale(db, placement.id, now);
 
   // What this user already did on this placement.
   const userClicks = await db
@@ -152,22 +171,34 @@ export async function listOffers(db: Db, input: OffersInput): Promise<{ ok: true
     brandColor: placement.brandColor,
     logoUrl: placement.logoUrl,
     wallTitle: placement.wallTitle,
+    sale: sale ? { multiplier: sale.multiplierBps / 10_000, endsAt: sale.endsAt.toISOString() } : null,
   };
+  if (await isUserBanned(db, placement.publisherOrgId, input.publisherUserId)) return { ok: true, offers: [], placement: info };
   if (available.length === 0) return { ok: true, offers: [], placement: info };
 
   const productRows = await db.select().from(products).where(inArray(products.id, available.map((a) => a.campaign.productId)));
+  const platforms = input.platforms?.length ? new Set(input.platforms) : null;
+  const categories = input.categories?.length ? new Set(input.categories) : null;
+  // Points follow the currency sale that runs when the user clicks: now for new offers, the
+  // first click for started ones (as credited later by the conversion).
+  const nowBps = sale?.multiplierBps ?? 10_000;
 
   const offers: Offer[] = [];
   const offerPrice = new Map<string, bigint>();
   for (const { campaign, started, country } of available) {
     const product = productRows.find((p) => p.id === campaign.productId)!;
+    if (platforms && !platforms.has(product.platform)) continue;
+    if (categories && !categories.has(campaign.category)) continue;
+    const first = firstClick.get(campaign.id);
+    const bps = started && first ? await saleMultiplierAt(db, placement.id, first.at) : nowBps;
     const tasks: OfferTask[] = [];
     let total = 0n;
     for (const task of candidateTasks.filter((t) => t.campaignId === campaign.id)) {
       const price = await priceFor(db, task.id, country);
       if (price === null) continue;
       const payout = applyBps(price, placement.revshareBps);
-      const points = toPoints(payout, placement.pointsPerUsd);
+      const base = toPoints(payout, placement.pointsPerUsd);
+      const points = multiplyPoints(base, bps);
       total += points;
       offerPrice.set(campaign.id, (offerPrice.get(campaign.id) ?? 0n) + price);
       const done = userConversions.find((c) => c.taskId === task.id);
@@ -185,6 +216,7 @@ export async function listOffers(db: Db, input: OffersInput): Promise<{ ok: true
 
     const clickParams = new URLSearchParams({ app_key: placement.appKey, uid: input.publisherUserId });
     if (input.publisherRisk !== undefined) clickParams.set('risk', input.publisherRisk);
+    for (const [k, v] of Object.entries(input.custom ?? {})) clickParams.set(k, v);
     clickParams.set('sig', sign(placement.secret, signedParts(campaign.id, input.publisherUserId, input.publisherRisk)));
     offers.push({
       offerId: campaign.id,
@@ -193,6 +225,9 @@ export async function listOffers(db: Db, input: OffersInput): Promise<{ ok: true
       platform: product.platform,
       iconUrl: product.iconUrl,
       coverUrl: product.coverUrl,
+      screenshots: product.screenshots,
+      category: campaign.category,
+      instructions: pick(campaign.instructions, input.lang),
       isNew: now.getTime() - (campaign.reviewedAt ?? campaign.createdAt).getTime() <= 14 * DAY_MS,
       clickUrl: `${input.trackingBaseUrl}/c/${campaign.id}?${clickParams}`,
       totalRewardPoints: total.toString(),
@@ -211,4 +246,24 @@ export async function listOffers(db: Db, input: OffersInput): Promise<{ ok: true
       Number(BigInt(b.totalRewardPoints) - BigInt(a.totalRewardPoints)),
   );
   return { ok: true, offers, placement: info };
+}
+
+const PLATFORMS = ['android', 'ios', 'web'];
+const list = (v: string | undefined, allowed: readonly string[]) =>
+  (v ?? '')
+    .split(',')
+    .map((x) => x.trim().toLowerCase())
+    .filter((x) => allowed.includes(x));
+
+/**
+ * Optional Offers API / offerwall parameters: platform=android,ios · category=games,finance ·
+ * custom_1..custom_5 (up to 200 characters each, returned in postbacks).
+ */
+export function offerQueryOptions(query: Record<string, string | undefined>): Pick<OffersInput, 'platforms' | 'categories' | 'custom'> {
+  const custom: Record<string, string> = {};
+  for (let n = 1; n <= 5; n++) {
+    const value = query[`custom_${n}`];
+    if (value) custom[`custom_${n}`] = value.slice(0, 200);
+  }
+  return { platforms: list(query.platform, PLATFORMS), categories: list(query.category, OFFER_CATEGORIES), custom };
 }

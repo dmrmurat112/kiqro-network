@@ -77,6 +77,8 @@ export const products = pgTable('products', {
   iconUrl: text('icon_url'),
   /** Wide banner (about 2:1) shown on offerwall cards; the icon is used when it is missing. */
   coverUrl: text('cover_url'),
+  /** Store screenshots (https), shown on the offer page. */
+  screenshots: text('screenshots').array().notNull().default([]),
   mmp: text('mmp'),
   createdAt: createdAt(),
 });
@@ -107,6 +109,10 @@ export const campaigns = pgTable(
     reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
     title: jsonb('title').$type<Record<string, string>>().notNull(),
     description: jsonb('description').$type<Record<string, string>>().notNull().default({}),
+    /** Step-by-step instructions for users, per language. */
+    instructions: jsonb('instructions').$type<Record<string, string>>().notNull().default({}),
+    /** Offer category (games, finance, shopping, …) for offerwall filters. */
+    category: text('category').notNull().default('other'),
     createdAt: createdAt(),
   },
   (t) => [index('campaigns_status_idx').on(t.status)],
@@ -163,6 +169,37 @@ export const placements = pgTable('placements', {
   wallTitle: text('wall_title'),
   createdAt: createdAt(),
 });
+
+/**
+ * Time-boxed reward multiplier of a placement ("currency sale"): users earn
+ * multiplierBps/10000 times the points for offers they click during the sale. Paid by the
+ * publisher in its own currency; the USD payout is unchanged.
+ */
+export const currencySales = pgTable(
+  'currency_sales',
+  {
+    id: text('id').primaryKey(),
+    placementId: text('placement_id').notNull().references(() => placements.id, { onDelete: 'cascade' }),
+    multiplierBps: integer('multiplier_bps').notNull(),
+    startsAt: timestamp('starts_at', { withTimezone: true }).notNull(),
+    endsAt: timestamp('ends_at', { withTimezone: true }).notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [index('currency_sales_placement_idx').on(t.placementId, t.endsAt), check('currency_sales_multiplier', sql`${t.multiplierBps} > 10000 AND ${t.multiplierBps} <= 50000`)],
+);
+
+/** Users a publisher blocked from its offerwalls (all placements of the organization). */
+export const publisherUserBans = pgTable(
+  'publisher_user_bans',
+  {
+    id: text('id').primaryKey(),
+    publisherOrgId: text('publisher_org_id').notNull().references(() => organizations.id),
+    publisherUserId: text('publisher_user_id').notNull(),
+    reason: text('reason'),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex('publisher_user_bans_uq').on(t.publisherOrgId, t.publisherUserId)],
+);
 
 export const clicks = pgTable(
   'clicks',

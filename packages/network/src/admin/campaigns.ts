@@ -61,6 +61,10 @@ export const campaignInput = z
     titleTr: z.string().trim().default(''),
     descriptionEn: z.string().trim().default(''),
     descriptionTr: z.string().trim().default(''),
+    /** Shown on the offer page; one step per line works best. */
+    instructionsEn: z.string().trim().max(2000).default(''),
+    instructionsTr: z.string().trim().max(2000).default(''),
+    category: z.enum(['games', 'finance', 'shopping', 'entertainment', 'lifestyle', 'utilities', 'other']).default('other'),
     tasks: z.array(taskInput).min(1, 'tasks_required'),
   })
   .superRefine((c, ctx) => {
@@ -95,6 +99,8 @@ export function campaignValues(data: z.output<typeof campaignInput>) {
     ctitMinSeconds: data.ctitMinSeconds,
     title: { en: data.titleEn, ...(data.titleTr ? { tr: data.titleTr } : {}) },
     description: { en: data.descriptionEn, ...(data.descriptionTr ? { tr: data.descriptionTr } : {}) },
+    instructions: { ...(data.instructionsEn ? { en: data.instructionsEn } : {}), ...(data.instructionsTr ? { tr: data.instructionsTr } : {}) },
+    category: data.category,
   };
 }
 
@@ -284,6 +290,9 @@ export async function getCampaignForm(db: Db, campaignId: string) {
     titleTr: campaign.title.tr ?? '',
     descriptionEn: campaign.description.en ?? '',
     descriptionTr: campaign.description.tr ?? '',
+    instructionsEn: campaign.instructions.en ?? '',
+    instructionsTr: campaign.instructions.tr ?? '',
+    category: campaign.category as 'other',
     tasks: await taskSnapshot(db, campaignId),
   };
   return { campaign, form, hasClicks: clickCount!.n > 0, spend: await campaignSpend(db, campaignId) };

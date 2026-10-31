@@ -1,9 +1,10 @@
 import { timingSafeEqual } from 'node:crypto';
 import Fastify, { type FastifyInstance, type FastifyRequest } from 'fastify';
 import type { Db } from '@kiqro/db';
-import { defaultFraudContext, fileClaim, handleClick, handlePostback, listOffers, listUserClaims, reverseConversion, type FraudContext } from '@kiqro/network';
+import { defaultFraudContext, fileClaim, handleClick, handlePostback, listOffers, listUserClaims, offerQueryOptions, reverseConversion, type FraudContext } from '@kiqro/network';
 import { registerAdvertiserApi } from './advertiser-api.ts';
 import { registerWall } from './wall.ts';
+import { registerPublisherApi } from './publisher-api.ts';
 
 export interface ServerOptions {
   db: Db;
@@ -118,9 +119,10 @@ export function buildServer(opts: ServerOptions): FastifyInstance {
       lang: req.query.lang ?? 'en',
       trackingBaseUrl: opts.trackingBaseUrl,
       publisherRisk: req.query.risk,
+      ...offerQueryOptions(req.query),
     });
     if (!result.ok) return reply.code(result.status).send({ error: result.reason });
-    return { offers: result.offers };
+    return { offers: result.offers, currency_sale: result.placement.sale };
   });
 
   // Missing-credit claims, filed by the publisher for its user (form or JSON body).
@@ -178,6 +180,7 @@ export function buildServer(opts: ServerOptions): FastifyInstance {
 
   registerAdvertiserApi(app, opts.db);
   registerWall(app, opts.db, opts.trackingBaseUrl, requestCountry);
+  registerPublisherApi(app, opts.db);
 
   return app;
 }

@@ -1,6 +1,6 @@
 # Kiqro Direct — Kiqro uygulaması entegrasyon kılavuzu
 
-**Sürüm 1.1 · 31 Ekim 2026 · Kiqro Network**
+**Sürüm 1.2 · 31 Ekim 2026 · Kiqro Network**
 
 Bu kılavuz, Kiqro uygulamasının (web, iOS, Android) Kiqro'nun kendi offerwall ağı **Kiqro Direct**'i yeni bir teklif sağlayıcısı olarak bağlaması içindir. Entegrasyon, bugün bağlı olan diğer offerwall'lara (Torox, ayeT-Studios, AdscendMedia vb.) çok benzer: teklifler bir API'den çekilir, kullanıcı tıklama linkine yönlendirilir, ödül sunucudan sunucuya bildirim (postback) ile gelir.
 
@@ -69,9 +69,12 @@ GET {TRACK}/v1/offers?app_key={app_key}&user_id={user_id}&country={country}&lang
 | `country` | ✓ | Kullanıcının ülkesi, ISO 3166 iki harf (`TR`, `FI`, `DE`). Hedefleme ve fiyat buna göre yapılır. |
 | `lang` | | `en` veya `tr` (varsayılan `en`). Başlık ve görev adları bu dilde döner; çevirisi yoksa İngilizce. |
 | `risk` | | Kiqro'nun kendi fraud skorundan 0–100 tam sayı (bkz. bölüm 7). Gönderilirse imzaya dahil edilir. |
+| `platform` | | Yalnızca bu platformların teklifleri: `android`, `ios`, `web` (virgülle birden fazla). Kullanıcının cihazına göre gönderin. |
+| `category` | | Yalnızca bu kategoriler: `games`, `finance`, `shopping`, `entertainment`, `lifestyle`, `utilities`, `other`. |
+| `custom_1` … `custom_5` | | Sizin değerleriniz (en fazla 200 karakter). Tıklama linkine taşınır ve postback'te `{custom_1}` … `{custom_5}` olarak geri gelir; reklamverene gönderilmez. |
 | `sig` | ✓ | İmza (aşağıda) |
 
-**İmza:** `HMAC-SHA256(secret, "app_key|user_id")`, küçük harf hex. `risk` gönderiliyorsa: `HMAC-SHA256(secret, "app_key|user_id|risk")`. İmza, URL'ye kodlanmamış (ham) değerler üzerinden hesaplanır.
+**İmza:** `HMAC-SHA256(secret, "app_key|user_id")`, küçük harf hex. `platform`, `category` ve `custom_*` imzaya dahil değildir. `risk` gönderiliyorsa: `HMAC-SHA256(secret, "app_key|user_id|risk")`. İmza, URL'ye kodlanmamış (ham) değerler üzerinden hesaplanır.
 
 ### 3.2 Örnek (PHP)
 
@@ -139,6 +142,9 @@ export async function kiqroDirectOffers(userId, country, lang, risk) {
       "iconUrl": "https://…/icon.png",
       "coverUrl": "https://…/banner.jpg",
       "isNew": false,
+      "screenshots": ["https://…/1.png", "https://…/2.png"],
+      "category": "games",
+      "instructions": "Oyunu yükleyin ve 10. seviyeye ulaşın. Seviye, ana ekranın sol üstünde görünür.",
       "clickUrl": "https://track.kiqronetwork.com/c/cmp_01JTESTCAMPAIGN0000000000?app_key=app_8f2c1d9e0a7b3c45&uid=u_102938&sig=516c6a…",
       "totalRewardPoints": "6020",
       "started": true,
@@ -149,7 +155,8 @@ export async function kiqroDirectOffers(userId, country, lang, risk) {
         { "taskId": "tsk_01JTASKPURCHASE00000000", "seq": 3, "name": "Satın alma yap",    "timeLimitDays": 14, "payoutUsd": "4.20", "rewardPoints": "4200", "state": "open" }
       ]
     }
-  ]
+  ],
+  "currency_sale": { "multiplier": 1.5, "endsAt": "2026-11-02T21:00:00.000Z" }
 }
 ```
 
@@ -161,6 +168,10 @@ export async function kiqroDirectOffers(userId, country, lang, risk) {
 | `iconUrl` | Uygulama ikonu (kare). `null` olabilir. |
 | `coverUrl` | Geniş kapak görseli (yaklaşık 2:1), reklamveren eklediyse. `null` ise ikonu kullanın. |
 | `isNew` | Teklif son 14 gün içinde yayına girdi; "Yeni" rozeti için. |
+| `screenshots` | Mağaza ekran görüntüleri (https), teklif detayında gösterilebilir. |
+| `category` | Teklif kategorisi (filtre ve sekmeler için). |
+| `instructions` | Kullanıcıya adım adım talimat (istenen dilde; boş olabilir). Satır sonlarını koruyun. |
+| `currency_sale` | (Cevabın üst seviyesinde) Şu an süren para birimi kampanyası ya da `null`. Ödüller zaten çarpılmış gelir; bu alan yalnızca "×1,5 ödül" bandı göstermek içindir (bölüm 9). |
 | `clickUrl` | **Olduğu gibi** açılacak, imzalı tıklama linki (bölüm 5). |
 | `totalRewardPoints` | Tüm adımların toplam ödülü (puan). Sayı **string** olarak gelir. |
 | `started` | Kullanıcı bu teklife daha önce tıkladı mı. Başlanmış teklifler, kampanya yeni kullanıcı almayı durdursa bile süreleri bitene kadar listede kalır. |
@@ -190,6 +201,7 @@ Kiqro Direct, mevcut sağlayıcı birleştirme katmanına **"Kiqro Direct" adlı
 **Teklif kartı:** kapak görseli (`coverUrl`, yoksa ikon), ikon, başlık, adım sayısı, toplam ödül (`totalRewardPoints`); `isNew` ise "Yeni" rozeti.
 
 **Teklif detayı:**
+- `instructions` metni ve `screenshots` (varsa).
 - Adım listesi: her adımın adı, ödülü, süresi ve durumu (`state`). `credited` adımlar ✓ ile, `in_review` "inceleniyor" ile gösterilmeli.
 - Kurallar metni (sabit):
   - "Uygulamayı daha önce yüklediyseniz ödül verilmez."
@@ -244,6 +256,12 @@ Parametre adlarını (`uid`, `tx` …) siz seçersiniz; süslü parantezli makro
 | `{offer_name_tr}`, `{task_name_tr}` | Teklif ve adım adı (Türkçe; çevirisi yoksa İngilizce) |
 | `{status}` | `1` = ödül ver, `2` = geri al (chargeback) |
 | `{country}` | Tıklamadaki ülke |
+| `{ip}` | Kullanıcının tıklamadaki IP adresi (fraud analizi için) |
+| `{click_time}`, `{event_time}` | Tıklama ve olay zamanı (Unix saniye) |
+| `{app_key}` | Placement anahtarı; birden fazla placement aynı adresi kullanıyorsa ayırt etmek için |
+| `{reversal_reason}` | Geri almanın nedeni (yalnızca `status=2`'de dolu) |
+| `{custom_1}` … `{custom_5}` | Offers API / offerwall isteğinde gönderdiğiniz değerler |
+| `{is_sandbox}` | `1` = panelden gönderilen test postback'i, `0` = gerçek ödül |
 | `{signature}` | İmza (aşağıda) |
 
 **Zorunlu makrolar:** `{user_id}`, `{amount}`, `{transaction_id}`, `{status}`, `{signature}`.
@@ -266,9 +284,12 @@ Adres **https** olmalı ve herkese açık bir sunucuya gitmelidir (iç ağ / öz
    - Tekrarlayan geri almalar Kiqro fraud skorunu yükseltmelidir.
 5. **Hızlı cevap:** `2xx` dönün, en geç 10 saniye içinde. Ağır işleri kuyruğa alın.
 6. **Kayıt:** Her postback'i ham haliyle saklayın (destek ve mutabakat için).
-7. **Panel testi:** "Test postback gönder" düğmesi `user_id=kiqro_test_user`, `transaction_id=test_…`, `offer_id=cmp_TEST`, `task_id=tsk_TEST` değerleriyle, geçerli imzayla gelir. Bu kullanıcı sizde yoksa bakiye değiştirmeden `200` dönün; amaç uç noktanın erişilebilir olduğunu ve imzanın tuttuğunu görmektir.
+7. **Sandbox:** `is_sandbox=1` gelen postback'ler panelden gönderilen testlerdir. İmzayı doğrulayıp kaydedin ama bakiyeyi değiştirmeden `200` dönün.
+8. **Panel testi:** "Test postback gönder" düğmesi `user_id=kiqro_test_user`, `transaction_id=test_…`, `offer_id=cmp_TEST`, `task_id=tsk_TEST` değerleriyle, geçerli imzayla gelir. Bu kullanıcı sizde yoksa bakiye değiştirmeden `200` dönün; amaç uç noktanın erişilebilir olduğunu ve imzanın tuttuğunu görmektir.
 
 `2xx` dışındaki her cevap ya da zaman aşımı **başarısız** sayılır ve tekrar gönderilir: 1, 2, 4, 8 … dakika aralıklarla (en fazla 6 saat), toplam **10 deneme**. Sonra Kiqro admin panelinde "başarısız" olarak görünür ve elle yeniden gönderilebilir.
+
+**IP listesi (isteğe bağlı):** Postback'lerin geldiği IP adresleri yayıncı panelinde **Entegrasyon** sayfasında yazar. Güvenlik duvarınızda izin listesi tutuyorsanız bunları ekleyin; imza doğrulaması her durumda zorunludur.
 
 ### 6.4 Örnek (PHP)
 
@@ -372,6 +393,42 @@ Cevap: `{ "claims": [ { "claim_id", "offer_id", "task_id", "status": "open" | "a
 
 ---
 
+## 8.1 Para birimi kampanyası
+
+Panelde **Placement → Para birimi kampanyası** bölümünden belirli bir süre için ödülleri katlayabilirsiniz (×1,01–×5, en fazla 31 gün; ör. hafta sonu ×1,5).
+
+- Kampanya süresince **tıklanan** tekliflerin ödülleri çarpılır. Kullanıcı görevi kampanya bittikten sonra tamamlasa da çarpılmış ödülü alır.
+- Offers API'deki `rewardPoints` / `totalRewardPoints` ve postback'teki `{amount}` çarpılmış gelir; ayrıca hesap yapmanız gerekmez.
+- Ek ödülü kendi para biriminizle siz verirsiniz; `{payout_usd}` (Kiqro uygulamasının USD payı) değişmez.
+- Cevaptaki `currency_sale` alanıyla uygulamada "×1,5 ödül — Pazar 23:59'a kadar" gibi bir bant gösterin.
+
+## 8.2 Kullanıcı engelleme
+
+Fraud yapan kullanıcıları Kiqro Direct'ten engelleyebilirsiniz. Engellenen kullanıcı hiçbir placement'ta teklif görmez (Offers API boş liste döner), tıklamaları reddedilir. Panelde **Engellenenler** sayfasından ya da sunucunuzdan:
+
+```
+POST {TRACK}/v1/publisher/bans     { "app_key", "user_id", "reason", "sig" }   sig = HMAC(secret, "ban|app_key|user_id")
+POST {TRACK}/v1/publisher/unbans   { "app_key", "user_id", "sig" }             sig = HMAC(secret, "unban|app_key|user_id")
+```
+
+İmzanın başındaki `ban|` / `unban|` öneki zorunludur: offerwall linkindeki imza (kullanıcı görebilir) bu işlemler için geçmez.
+
+## 8.3 İstatistik API'si
+
+Günlük rakamlar (UTC günleri, tek istekte en fazla 92 gün):
+
+```
+GET {TRACK}/v1/publisher/stats?app_key=…&from=2026-10-01&to=2026-10-31&sig=HMAC(secret, "stats|app_key|from|to")
+```
+
+Cevap: `{ "app_key", "currency_name", "days": [ { "date", "clicks", "users", "rewards", "reversals", "earnings_usd", "points" } ] }`. `earnings_usd` geri almalardan sonraki net tutardır.
+
+## 8.4 Postback test aracı
+
+Panelde **Placement → Postback test aracı** ile kullanıcı kimliği, tutar, teklif/adım ID, tür (ödül / geri alma) ve `custom_*` değerlerini seçip gerçek formatta, geçerli imzalı bir postback gönderebilirsiniz. Bu postback'ler `is_sandbox=1` ile gelir; hiçbir şey kaydedilmez veya faturalanmaz. Sunucunuzun döndüğü HTTP kodu ve gönderilen adres ekranda görünür.
+
+---
+
 ## 9. Güvenlik kontrol listesi
 
 - [ ] `secret` yalnızca backend ortam değişkeninde; repoda, uygulamada, loglarda yok.
@@ -381,6 +438,7 @@ Cevap: `{ "claims": [ { "claim_id", "offer_id", "task_id", "status": "open" | "a
 - [ ] `transaction_id` + `status` için benzersiz kayıt; tekrar gelen postback ikinci kez bakiye değiştirmiyor.
 - [ ] Eksi bakiyede para çekme engelleniyor.
 - [ ] Postback uç noktası yalnızca HTTPS.
+- [ ] `is_sandbox=1` postback'leri bakiyeyi değiştirmiyor.
 
 ---
 
@@ -413,6 +471,10 @@ Kiqro ekibi test ortamında, test reklamvereni ve test kampanyasıyla bir placem
 
 **8. VPN** — VPN açıkken tıklandığında kullanıcı açıklama sayfası görmeli.
 
+**10. Sandbox** — Postback test aracıyla `status=1` ve `status=2` gönderin; uç nokta `200` dönmeli, bakiye değişmemeli.
+
+**11. Engelleme** — Test kullanıcısını engelleyin; Offers API boş liste dönmeli, offerwall'da teklif görünmemeli. Engeli kaldırınca teklifler geri gelmeli.
+
 **9. Kayıp ödül talebi** — Test kullanıcısı, tıkladığı ama ödül almadığı bir adım için talep açar; talep "Taleplerim" ekranında `open` görünmeli. Kiqro ekibi talebi onaylayınca ödül postback'i gelmeli ve talep `approved` olmalı; reddedilen talepte gerekçe görünmeli.
 
 ---
@@ -434,6 +496,7 @@ Kiqro ekibi test ortamında, test reklamvereni ve test kampanyasıyla bir placem
 | 400 | `missing_user_id`, `invalid_risk` | Link eksik ya da bozuk |
 | 403 | `invalid_signature` | Link değiştirilmiş |
 | 403 | `anonymizer`, `datacenter_ip`, `ip_high_risk`, `ip_country_mismatch`, `publisher_user_risk` | Fraud kontrolleri |
+| 403 | `user_banned` | Kullanıcı yayıncı tarafından engellenmiş (kullanıcıya genel bir mesaj gösterilir) |
 | 404 | `unknown_campaign`, `unknown_placement` | Teklif yok |
 | 409 | `campaign_not_active`, `country_not_targeted`, `budget_exhausted`, `daily_budget_exhausted`, `advertiser_balance_empty` … | Teklif şu an yeni kullanıcı almıyor |
 | 429 | `ip_click_velocity` | Aynı ağdan çok fazla tıklama |

@@ -3,7 +3,19 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { lookupStoreApp, parseStoreInput, websiteApp, type FieldIssue, type StoreApp } from '@kiqro/network';
-import { createPublisherPlacement, deletePublisherPlacement, sendTestPostback, setPlacementStatus, updatePlacementProfile, updatePlacementSettings } from '@kiqro/network/publisher';
+import {
+  banUser,
+  createCurrencySale,
+  createPublisherPlacement,
+  deletePublisherPlacement,
+  endCurrencySale,
+  sendTestPostback,
+  sendTesterPostback,
+  setPlacementStatus,
+  unbanUser,
+  updatePlacementProfile,
+  updatePlacementSettings,
+} from '@kiqro/network/publisher';
 import { db } from '@/lib/db';
 import { panelLocale, requirePublisherOrg } from '@/lib/session';
 
@@ -76,4 +88,70 @@ export async function deletePlacementAction(placementId: string): Promise<{ issu
   if (!result.ok) return { issues: result.issues };
   revalidatePath('/app/publisher/placements');
   redirect('/app/publisher/placements?deleted=1');
+}
+
+/** datetime-local values (no zone) are entered as UTC in the panel. */
+const utc = (v: FormDataEntryValue | null) => {
+  const s = String(v ?? '');
+  return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(s) ? `${s}:00Z` : s;
+};
+
+export async function createSaleAction(placementId: string, _: PlacementState, form: FormData): Promise<PlacementState> {
+  const [session, lang] = await Promise.all([requirePublisherOrg(), panelLocale()]);
+  const result = await createCurrencySale(
+    db,
+    session,
+    placementId,
+    { multiplier: String(form.get('multiplier') ?? '').replace(',', '.'), startsAt: utc(form.get('startsAt')), endsAt: utc(form.get('endsAt')) },
+    lang,
+  );
+  if (!result.ok) return { issues: result.issues };
+  revalidatePath(`/app/publisher/placements/${placementId}`);
+  return { ok: true };
+}
+
+export async function endSaleAction(placementId: string, saleId: string): Promise<void> {
+  const [session, lang] = await Promise.all([requirePublisherOrg(), panelLocale()]);
+  await endCurrencySale(db, session, saleId, lang);
+  revalidatePath(`/app/publisher/placements/${placementId}`);
+}
+
+export type TesterState = { issues?: FieldIssue[]; status?: number; error?: string; url?: string } | undefined;
+
+export async function testerPostbackAction(placementId: string, _: TesterState, form: FormData): Promise<TesterState> {
+  const [session, lang] = await Promise.all([requirePublisherOrg(), panelLocale()]);
+  const f = (k: string) => String(form.get(k) ?? '');
+  const result = await sendTesterPostback(
+    db,
+    session,
+    placementId,
+    {
+      userId: f('userId'),
+      offerId: f('offerId') || undefined,
+      offerName: f('offerName') || undefined,
+      taskId: f('taskId') || undefined,
+      taskName: f('taskName') || undefined,
+      amount: f('amount'),
+      payoutUsd: f('payoutUsd') || undefined,
+      status: f('status'),
+      custom: [1, 2, 3, 4, 5].map((n) => f(`custom_${n}`)),
+    },
+    lang,
+  );
+  if (!result.ok) return { issues: result.issues };
+  return { status: result.status, error: result.error, url: result.url };
+}
+
+export async function banUserAction(_: PlacementState, form: FormData): Promise<PlacementState> {
+  const [session, lang] = await Promise.all([requirePublisherOrg(), panelLocale()]);
+  const result = await banUser(db, session.org.id, { userId: String(form.get('userId') ?? ''), reason: String(form.get('reason') ?? '') }, lang, session);
+  if (!result.ok) return { issues: result.issues };
+  revalidatePath('/app/publisher/bans');
+  return { ok: true };
+}
+
+export async function unbanUserAction(userId: string): Promise<void> {
+  const session = await requirePublisherOrg();
+  await unbanUser(db, session.org.id, userId, session);
+  revalidatePath('/app/publisher/bans');
 }

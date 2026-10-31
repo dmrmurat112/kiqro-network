@@ -7,14 +7,18 @@ import { createDemoSetup, handleClick, handlePostback, type DemoSetup } from '..
 import { createAdminUser } from '../src/admin/index.ts';
 import { advertiserLogin, createAdvertiserUser, getAdvertiserSession, inviteTeamMember, setPasswordWithToken, type AdvertiserSession } from '../src/advertiser/index.ts';
 import {
+  createCurrencySale,
   createPublisherPlacement,
   deletePublisherPlacement,
+  endCurrencySale,
+  listCurrencySales,
   placementStats,
   publisherConversions,
   publisherOverview,
   publisherPlacement,
   publisherPlacements,
   sendTestPostback,
+  sendTesterPostback,
   setPlacementStatus,
   updatePlacementProfile,
   updatePlacementSettings,
@@ -118,5 +122,30 @@ describe('publisher panel', () => {
     expect((await placementStats(db, [existing!.id], 7)).get(existing!.id)).toMatchObject({ users: 1, clicks: 1, conversions: 0 });
     expect(await deletePublisherPlacement(db, me, created.id, 'en')).toEqual({ ok: true });
     expect(await publisherPlacement(db, s.publisherId, created.id)).toBeUndefined();
+  });
+
+  it('schedules currency sales and sends signed sandbox postbacks from the tester', async () => {
+    const s = await createDemoSetup(db);
+    const me = await publisherUser(s);
+    const [placement] = await publisherPlacements(db, s.publisherId);
+    const now = new Date();
+    const later = (h: number) => new Date(now.getTime() + h * 3_600_000).toISOString();
+    expect(await createCurrencySale(db, me, placement!.id, { multiplier: '7', startsAt: later(0), endsAt: later(5) }, 'en')).toMatchObject({ ok: false, issues: [{ path: 'multiplier' }] });
+    expect(await createCurrencySale(db, me, placement!.id, { multiplier: '1.5', startsAt: later(0), endsAt: later(40 * 24) }, 'en')).toMatchObject({ ok: false, issues: [{ path: 'endsAt' }] });
+    expect(await createCurrencySale(db, me, placement!.id, { multiplier: '1.5', startsAt: later(-1), endsAt: later(5) }, 'en')).toEqual({ ok: true });
+    const [sale] = await listCurrencySales(db, placement!.id);
+    expect(sale).toMatchObject({ multiplierBps: 15_000 });
+    expect(await endCurrencySale(db, me, sale!.id, 'en')).toEqual({ ok: true });
+    expect((await listCurrencySales(db, placement!.id))[0]!.endsAt.getTime()).toBeLessThanOrEqual(Date.now());
+
+    await updatePlacementSettings(db, me, placement!.id, { currencyName: 'Coins', pointsPerUsd: '500', postbackUrl: 'https://pub.test/cb?u={user_id}&a={amount}&tx={transaction_id}&s={status}&r={reversal_reason}&c={custom_2}&sb={is_sandbox}&sig={signature}' }, 'en');
+    const urls: string[] = [];
+    const r = await sendTesterPostback(db, me, placement!.id, { userId: 'u_77', amount: '450', status: '2', custom: ['', 'x'] }, 'en', async (url) => (urls.push(url), { status: 200 }));
+    expect(r).toMatchObject({ ok: true, status: 200 });
+    const q = new URL(urls[0]!).searchParams;
+    expect(Object.fromEntries(q)).toMatchObject({ u: 'u_77', a: '450', s: '2', r: 'test', c: 'x', sb: '1' });
+    expect(q.get('tx')).toMatch(/^sbx_/);
+    expect(q.get('sig')).toBe(sign(placement!.secret, ['u_77', '450', q.get('tx')!, '2']));
+    expect(await db.select().from(schema.conversions)).toEqual([]);
   });
 });

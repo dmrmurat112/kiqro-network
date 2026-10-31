@@ -1,11 +1,12 @@
 import { and, eq, inArray, ne } from 'drizzle-orm';
-import { applyBps, verify, toPoints } from '@kiqro/core';
+import { applyBps, verify } from '@kiqro/core';
 import { getAccountId, lockAccount, newId, postTransaction, schema, type Db, type Tx } from '@kiqro/db';
 import { creditPosition } from './billing/credit.ts';
 import { priceFor } from './campaigns.ts';
 import { parseRevenue, recordRevenue } from './revenue.ts';
 import { conversionHoldReasons, defaultFraudContext, type FraudContext } from './fraud/rules.ts';
 import { enqueuePublisherPostback } from './outbox.ts';
+import { rewardPoints } from './publisher/tools.ts';
 import { conversionEventData, emitWebhook } from './webhooks.ts';
 
 const { campaignTasks, campaigns, clicks, conversions, organizations, placements, postbacksRaw } = schema;
@@ -156,7 +157,7 @@ async function evaluatePostback(db: Db, input: PostbackInput, rawId: string, now
       reasons: [...rejectReasons, ...holdReasons],
       advertiserPrice,
       publisherPayout,
-      userRewardPoints: toPoints(publisherPayout, placement.pointsPerUsd),
+      userRewardPoints: await rewardPoints(tx, placement, publisherPayout, click.createdAt),
       eventAt,
       postbackRawId: rawId,
       createdAt: now,

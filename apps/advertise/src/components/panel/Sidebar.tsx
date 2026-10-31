@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
-import { AppWindow, Code2, CreditCard, LayoutDashboard, LifeBuoy, LogOut, Users, Megaphone, Menu, Moon, Plug, Sun, UserRound, X, ListChecks } from 'lucide-react';
+import { AppWindow, Ban, Code2, CreditCard, LayoutDashboard, LifeBuoy, LogOut, Users, Megaphone, Menu, Moon, Plug, Sun, UserRound, X, ListChecks } from 'lucide-react';
 import type { Locale, PanelDictT } from '@/lib/i18n';
 import { logoutAction, setPreferenceAction } from '@/app/(panel)/actions';
 import { Logo } from '../Logo';
@@ -35,6 +35,7 @@ const PUBLISHER_ITEMS = [
   { href: '/app/publisher/placements', key: 'placements', icon: AppWindow },
   { href: '/app/publisher/conversions', key: 'pubConversions', icon: ListChecks },
   { href: '/app/publisher/integration', key: 'pubIntegration', icon: Plug },
+  { href: '/app/publisher/bans', key: 'bans', icon: Ban },
   { href: '/app/team', key: 'team', icon: Users },
   { href: '/app/account', key: 'account', icon: UserRound },
 ] as const;

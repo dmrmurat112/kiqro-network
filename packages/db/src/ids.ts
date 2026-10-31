@@ -23,6 +23,8 @@ const prefixes = {
   payment: 'pay',
   invoice: 'inv',
   claim: 'clm',
+  currencySale: 'sal',
+  userBan: 'ban',
   apiKey: 'key',
   webhook: 'whe',
   delivery: 'whd',

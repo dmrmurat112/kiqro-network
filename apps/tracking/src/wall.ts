@@ -1,12 +1,12 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { sign, verify } from '@kiqro/core';
 import type { Db } from '@kiqro/db';
-import { fileClaim, listOffers, type Offer, type PlacementInfo } from '@kiqro/network';
+import { fileClaim, listOffers, offerQueryOptions, type Offer, type PlacementInfo } from '@kiqro/network';
 
 /**
  * Hosted offerwall: a mobile web page publishers open in a WebView, an iframe or a browser
  * instead of building their own UI. Same signed URL as the Offers API:
- *   /wall?app_key&user_id&sig[&risk][&lang=en|tr][&theme=light|dark][&offer=<id>]
+ *   /wall?app_key&user_id&sig[&risk][&lang=en|tr][&theme=light|dark][&offer=<id>][&platform][&category][&custom_1..5]
  *   sig = HMAC(secret, app_key|user_id[|risk])
  * The list shows one card per offer (banner, icon, step count, total reward); `offer` opens the
  * offer's page with its steps. Server-rendered without JavaScript; every value is HTML-escaped
@@ -42,6 +42,11 @@ const T = {
     claimed: 'Thanks — we have passed your report to the advertiser. Decisions usually take 3–7 days.',
     claimFailed: 'We could not file this report.',
     footer: 'Offers by Kiqro Network',
+    sale: (m: string, end: string) => `×${m} rewards on every offer you start until ${end}`,
+    all: 'All',
+    instructions: 'How to complete',
+    screenshots: 'Screenshots',
+    categories: { games: 'Games', finance: 'Finance', shopping: 'Shopping', entertainment: 'Entertainment', lifestyle: 'Lifestyle', utilities: 'Apps', other: 'Other' } as Record<string, string>,
   },
   tr: {
     title: 'Ödül kazan',
@@ -69,6 +74,11 @@ const T = {
     claimed: 'Teşekkürler, bildiriminizi reklamverene ilettik. Karar genelde 3–7 gün sürer.',
     claimFailed: 'Bildirim oluşturulamadı.',
     footer: 'Teklifler Kiqro Network tarafından sağlanır',
+    sale: (m: string, end: string) => `${end} tarihine kadar başladığınız tüm tekliflerde ödüller ×${m}`,
+    all: 'Tümü',
+    instructions: 'Nasıl tamamlanır?',
+    screenshots: 'Ekran görüntüleri',
+    categories: { games: 'Oyun', finance: 'Finans', shopping: 'Alışveriş', entertainment: 'Eğlence', lifestyle: 'Yaşam', utilities: 'Uygulama', other: 'Diğer' } as Record<string, string>,
   },
 };
 type Texts = (typeof T)['en'];
@@ -175,6 +185,15 @@ form{display:grid;gap:8px;margin-top:10px}select,textarea{width:100%;padding:10p
 .go{display:flex;align-items:center;justify-content:center;gap:10px;padding:15px;border-radius:16px;background:linear-gradient(135deg,var(--accent),color-mix(in srgb,var(--accent) 70%,#ff5fa2));color:var(--on-accent);font-weight:800;font-size:16px;box-shadow:0 14px 30px -12px color-mix(in srgb,var(--accent) 90%,transparent);transition:transform .25s}
 .go:active{transform:scale(.98)}.go span{width:18px;height:18px}
 footer{color:var(--subtle);font-size:11px;text-align:center;padding:4px 16px 22px}
+.sale{display:flex;align-items:center;gap:10px;margin:0 16px 12px;padding:10px 12px;border-radius:14px;font-size:13px;font-weight:650;color:var(--on-accent);background:linear-gradient(110deg,var(--accent),color-mix(in srgb,var(--accent) 55%,#ffb020));box-shadow:0 10px 24px -14px var(--accent)}
+.sale b{font-size:18px;line-height:1}
+.chips{display:flex;gap:6px;overflow-x:auto;padding:0 16px 12px;scrollbar-width:none}.chips::-webkit-scrollbar{width:0;height:0}
+.chips a{flex:none;padding:6px 12px;border-radius:999px;font-size:12.5px;font-weight:600;color:var(--muted);background:var(--surface2);border:1px solid var(--line)}
+.chips a.on{color:var(--on-accent);background:var(--accent);border-color:var(--accent)}
+.cat{display:inline-block;font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;background:var(--surface2);color:var(--muted);margin-left:6px}
+.instr{margin:6px 16px 0;padding:14px 16px;border-radius:18px;background:var(--surface);border:1px solid var(--line);font-size:13.5px;color:var(--muted);white-space:pre-line}.instr h3{margin:0 0 6px;font-size:14px;color:var(--fg)}
+.shots{display:flex;gap:10px;overflow-x:auto;padding:0 16px 4px;scroll-snap-type:x mandatory;scrollbar-width:none}.shots::-webkit-scrollbar{width:0;height:0}
+.shots img{flex:none;height:220px;border-radius:14px;border:1px solid var(--line);scroll-snap-align:start;background:var(--surface2)}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}`;
 
 function platformIcon(platform: string): string {
@@ -233,10 +252,12 @@ function offerPage(o: Offer, t: Texts, lang: string, currency: string, heading: 
   return `<header><div class="top"><a class="backbtn" href="${esc(backHref)}" aria-label="${esc(t.back)}">${ICONS.back}</a><div class="hd"><h1>${esc(heading)}</h1></div><span class="cur">${esc(currency)}</span></div></header>
     <div class="wrap">${notice ? `<div style="margin:12px 16px 0">${notice}</div>` : ''}
     <div class="hero" style="margin-top:12px">${cover(o, o.isNew && !o.started ? `<span class="tag">${esc(t.isNew)}</span>` : '')}</div>
-    <div class="ohead">${icon(o)}<div><h1>${esc(o.title)}</h1><div class="sub"><span>${platformIcon(o.platform)}</span>${esc(o.platform === 'ios' ? 'App Store' : o.platform === 'web' ? 'Web' : 'Google Play')} · ${esc(t.tasks(o.tasks.length))}</div></div></div>
+    <div class="ohead">${icon(o)}<div><h1>${esc(o.title)}</h1><div class="sub"><span>${platformIcon(o.platform)}</span>${esc(o.platform === 'ios' ? 'App Store' : o.platform === 'web' ? 'Web' : 'Google Play')} · ${esc(t.tasks(o.tasks.length))}${o.category !== 'other' ? `<span class="cat">${esc(t.categories[o.category] ?? o.category)}</span>` : ''}</div></div></div>
     ${o.description ? `<p class="desc">${esc(o.description)}</p>` : ''}
     <div class="total"><span>${esc(t.total)}</span><b>+${esc(num(o.totalRewardPoints, lang))}<small>${esc(currency)}</small></b></div>
     <h2 class="sec">${esc(t.steps)}</h2><ol class="steps">${steps}</ol>
+    ${o.instructions ? `<div class="instr"><h3>${esc(t.instructions)}</h3>${esc(o.instructions)}</div>` : ''}
+    ${o.screenshots.length ? `<h2 class="sec">${esc(t.screenshots)}</h2><div class="shots">${o.screenshots.map((u) => `<img src="${esc(u)}" alt="" loading="lazy" referrerpolicy="no-referrer">`).join('')}</div>` : ''}
     <div class="how"><h3>${esc(t.how)}</h3><ol>${t.howSteps.map((s) => `<li>${esc(s)}</li>`).join('')}</ol></div>
     ${claim}${go}<footer style="margin-top:14px">${esc(t.footer)}</footer></div>`;
 }
@@ -257,6 +278,9 @@ export function registerWall(app: FastifyInstance, db: Db, trackingBaseUrl: stri
     // Dark by default; publishers with a light app pass theme=light.
     const light = req.query.theme === 'light';
     const tab = ['started', 'done'].includes(req.query.tab ?? '') ? (req.query.tab as 'started' | 'done') : 'available';
+    // Platform and custom parameters are the publisher's; the category is the user's filter.
+    const options = offerQueryOptions(req.query);
+    const category = options.categories?.[0];
     const result = await listOffers(db, {
       appKey: req.query.app_key ?? '',
       publisherUserId: req.query.user_id ?? '',
@@ -266,6 +290,7 @@ export function registerWall(app: FastifyInstance, db: Db, trackingBaseUrl: stri
       lang,
       trackingBaseUrl,
       publisherRisk: req.query.risk,
+      ...options,
     });
     reply.header('content-security-policy', CSP).header('cache-control', 'no-store').header('referrer-policy', 'no-referrer').type('text/html; charset=utf-8');
     if (!result.ok) return reply.code(result.status).send(page(lang, t.title, light, null, `<div class="empty">${esc(result.reason)}</div>`));
@@ -279,6 +304,8 @@ export function registerWall(app: FastifyInstance, db: Db, trackingBaseUrl: stri
       ...(light ? { theme: 'light' } : {}),
       ...(req.query.risk ? { risk: req.query.risk } : {}),
       ...(req.query.country ? { country: req.query.country } : {}),
+      ...(options.platforms?.length ? { platform: options.platforms.join(',') } : {}),
+      ...options.custom,
     });
     const link = (extra: Record<string, string>) => `?${new URLSearchParams({ ...Object.fromEntries(keep), ...extra }).toString()}`;
     const hidden = [...keep].map(([k, v]) => `<input type="hidden" name="${esc(k)}" value="${esc(v)}">`).join('');
@@ -299,6 +326,17 @@ export function registerWall(app: FastifyInstance, db: Db, trackingBaseUrl: stri
     }
 
     const list = groups[tab];
+    // Category chips for the offers tab: categories present in the full list (filter applied via ?category=).
+    const present = tab === 'available' && !selected ? [...new Set(result.offers.map((o) => o.category))].filter((c) => c !== 'other') : [];
+    const chips =
+      present.length > 1 || category
+        ? `<div class="chips"><a class="${category ? '' : 'on'}" href="${esc(link({}))}">${esc(t.all)}</a>${(category && !present.includes(category) ? [...present, category] : present)
+            .map((c) => `<a class="${c === category ? 'on' : ''}" href="${esc(link({ category: c }))}">${esc(t.categories[c] ?? c)}</a>`)
+            .join('')}</div>`
+        : '';
+    const sale = placement.sale
+      ? `<div class="sale"><b>×${esc(String(placement.sale.multiplier).replace('.', lang === 'tr' ? ',' : '.'))}</b><span>${esc(t.sale(String(placement.sale.multiplier).replace('.', lang === 'tr' ? ',' : '.'), new Date(placement.sale.endsAt).toLocaleString(lang === 'tr' ? 'tr-TR' : 'en-US', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }) + ' UTC'))}</span></div>`
+      : '';
     // The single most rewarding offer gets a badge (none when several tie for first place).
     const ranked = [...groups.available].sort((a, b) => Number(BigInt(b.totalRewardPoints) - BigInt(a.totalRewardPoints)));
     const best = ranked.length > 2 && BigInt(ranked[0]!.totalRewardPoints) > BigInt(ranked[1]!.totalRewardPoints) ? ranked[0] : null;
@@ -311,7 +349,7 @@ export function registerWall(app: FastifyInstance, db: Db, trackingBaseUrl: stri
       ? list.map((o) => offerCard(o, t, lang, placement.currencyName, link({ offer: o.offerId, ...(tab === 'available' ? {} : { tab }) }), tab === 'available' && o === best)).join('')
       : `<div class="empty"><div class="art">${ICONS.gift}</div><h2>${esc(t.empty[tab])}</h2><p>${esc(t.emptySub[tab])}</p></div>`;
     const body = `<header><div class="wrap"><div class="bar">${brandMark}<div class="hd"><h1>${esc(heading)}</h1>${placement.publisherName ? `<p>${esc(placement.publisherName)}</p>` : ''}</div><span class="cur">${esc(placement.currencyName)}</span></div>
-      <nav>${tabLink('available', t.available)}${tabLink('started', t.started)}${tabLink('done', t.done)}</nav></div></header>
+      <nav>${tabLink('available', t.available)}${tabLink('started', t.started)}${tabLink('done', t.done)}</nav>${sale}${chips}</div></header>
       <div class="wrap"><main>${notice}${cards}</main><footer>${esc(t.footer)}</footer></div>`;
     return reply.send(page(lang, heading, light, placement, body));
   });

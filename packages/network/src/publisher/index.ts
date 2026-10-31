@@ -5,7 +5,7 @@ import { getAccountId, getBalance, newId, schema, type Db } from '@kiqro/db';
 import { z } from 'zod';
 import type { AdvertiserSession } from '../advertiser/auth.ts';
 import { localizedIssues, translateMessage, type FieldIssue, type UiLocale } from '../validation.ts';
-import { isAllowedWebhookUrl } from '../webhooks.ts';
+import { allowedPostbackUrl, postbackMacros } from './tools.ts';
 
 /**
  * Publisher panel: publishers sign in with the same panel accounts as advertisers (users of a
@@ -262,7 +262,6 @@ export async function publisherConversions(db: Db, orgId: string, limit = 200) {
 }
 
 /** Public https in production (Kiqro's servers call it); http://localhost too in development. */
-const allowedPostbackUrl = (v: string) => isAllowedWebhookUrl(v) || (process.env.NODE_ENV !== 'production' && /^http:\/\/localhost[:/]/.test(v));
 
 const placementSettings = z.object({
   currencyName: z.string().trim().min(1, 'name_short').max(40),
@@ -339,19 +338,29 @@ export async function sendTestPostback(db: Db, session: AdvertiserSession, place
   if (!allowedPostbackUrl(placement.postbackUrl)) return { ok: false as const, error: 'postback_url_not_allowed' };
   const transactionId = `test_${Date.now()}`;
   const amount = '100';
+  const now = new Date();
   const url = fillMacros(placement.postbackUrl, {
-    user_id: 'kiqro_test_user',
-    amount,
-    payout_usd: formatMicros(100_000n),
-    transaction_id: transactionId,
-    offer_id: 'cmp_TEST',
-    offer_name: 'Kiqro test offer',
-    task_id: 'tsk_TEST',
-    task_name: 'Test step',
-    offer_name_tr: 'Kiqro test teklifi',
-    task_name_tr: 'Test adımı',
-    status: 1,
-    country: 'FI',
+    ...postbackMacros({
+      userId: 'kiqro_test_user',
+      amount,
+      payoutUsd: formatMicros(100_000n),
+      transactionId,
+      offerId: 'cmp_TEST',
+      offerName: 'Kiqro test offer',
+      offerNameTr: 'Kiqro test teklifi',
+      taskId: 'tsk_TEST',
+      taskName: 'Test step',
+      taskNameTr: 'Test adımı',
+      status: 1,
+      country: 'FI',
+      ip: '0.0.0.0',
+      clickTime: now,
+      eventTime: now,
+      appKey: placement.appKey,
+      reversalReason: null,
+      custom: [],
+      sandbox: true,
+    }),
     signature: sign(placement.secret, ['kiqro_test_user', amount, transactionId, 1]),
   });
   const controller = new AbortController();
@@ -365,3 +374,4 @@ export async function sendTestPostback(db: Db, session: AdvertiserSession, place
     clearTimeout(timer);
   }
 }
+export * from './tools.ts';

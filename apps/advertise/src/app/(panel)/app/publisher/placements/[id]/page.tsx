@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { ArrowLeft, BookOpen, ExternalLink } from 'lucide-react';
 import QRCode from 'qrcode';
 import { sign } from '@kiqro/core';
-import { placementStats, publisherPlacement } from '@kiqro/network/publisher';
+import { listCurrencySales, placementStats, publisherPlacement } from '@kiqro/network/publisher';
 import { Card, StatusPill } from '@/components/panel/ui';
 import { CopyField } from '@/components/panel/CopyField';
 import { db } from '@/lib/db';
@@ -13,6 +13,7 @@ import { panelLocale, requirePublisherOrg } from '@/lib/session';
 import { PlacementForm } from '../PlacementForm';
 import { PlacementIcon, TypeBadge } from '../shared';
 import { DeleteButton, ProfileRows, Row, SecretField, StatusButton } from './client';
+import { EndSaleButton, SaleForm, TesterForm } from './tools';
 
 export const dynamic = 'force-dynamic';
 
@@ -38,6 +39,8 @@ export default async function PlacementPage({ params, searchParams }: { params: 
   const copy = { copy: c.copy, copied: c.copied };
   const canEdit = user.role === 'admin';
   const s = (await placementStats(db, [placement.id], 7)).get(placement.id)!;
+  const sales = await listCurrencySales(db, placement.id);
+  const now = new Date();
   const track = process.env.TRACKING_BASE_URL ?? 'https://track.kiqronetwork.com';
 
   // Signed wall link for the signed-in member's own test user (see the Testing section).
@@ -119,6 +122,48 @@ export default async function PlacementPage({ params, searchParams }: { params: 
             t={t}
             canEdit={canEdit}
           />
+        </div>
+      </Section>
+
+      <Section title={p.saleTitle} sub={p.saleSub}>
+        {canEdit && (
+          <div className="border-b border-line p-5 sm:p-6">
+            <SaleForm id={placement.id} p={p} />
+          </div>
+        )}
+        {sales.length === 0 ? (
+          <p className="px-5 py-4 text-sm text-subtle sm:px-6">{p.saleNone}</p>
+        ) : (
+          <ul className="divide-y divide-line">
+            {sales.map((sale) => {
+              const state = sale.startsAt > now ? 'upcoming' : sale.endsAt > now ? 'live' : 'ended';
+              const fmt = (d: Date) => d.toLocaleString(lang === 'tr' ? 'tr-TR' : 'en-US', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'UTC' });
+              return (
+                <li key={sale.id} className="flex flex-wrap items-center gap-3 px-5 py-3 sm:px-6">
+                  <span className="rounded-lg bg-violet-500/15 px-2 py-1 font-mono text-sm font-semibold text-violet-300">×{(sale.multiplierBps / 10_000).toLocaleString(lang === 'tr' ? 'tr-TR' : 'en-US')}</span>
+                  <span className="min-w-0 flex-1 text-sm text-muted">
+                    {fmt(sale.startsAt)} → {fmt(sale.endsAt)} UTC
+                  </span>
+                  <StatusPill status={state === 'live' ? 'active' : state === 'upcoming' ? 'in_review' : 'paused'} label={state === 'live' ? p.saleLive : state === 'upcoming' ? p.saleUpcoming : p.saleEnded} />
+                  {canEdit && state !== 'ended' && <EndSaleButton placementId={placement.id} saleId={sale.id} label={state === 'live' ? p.saleEnd : p.saleCancel} />}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </Section>
+
+      <Section title={p.testerTitle} sub={p.testerSub}>
+        <div className="p-5 sm:p-6">
+          <TesterForm id={placement.id} p={p} testUser={testUser} />
+        </div>
+      </Section>
+
+      <Section title={p.apiTitle} sub={p.apiSub}>
+        <div className="grid gap-3 p-5 font-mono text-[0.75rem] break-all text-muted sm:p-6">
+          <code className="rounded-xl border border-line bg-bg p-3">GET {track}/v1/publisher/stats?app_key={placement.appKey}&amp;from=YYYY-MM-DD&amp;to=YYYY-MM-DD&amp;sig=HMAC(secret, "stats|app_key|from|to")</code>
+          <code className="rounded-xl border border-line bg-bg p-3">POST {track}/v1/publisher/bans {'{'} app_key, user_id, reason, sig=HMAC(secret, "ban|app_key|user_id") {'}'}</code>
+          <code className="rounded-xl border border-line bg-bg p-3">POST {track}/v1/publisher/unbans {'{'} app_key, user_id, sig=HMAC(secret, "unban|app_key|user_id") {'}'}</code>
         </div>
       </Section>
 

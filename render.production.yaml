@@ -52,6 +52,9 @@ envVarGroups:
         sync: false
       - key: STRIPE_WEBHOOK_SECRET
         sync: false
+      # Outbound IPs of the worker (Render → worker → Connect → Outbound), comma separated; shown to publishers.
+      - key: POSTBACK_SOURCE_IPS
+        sync: false
       - key: ORIGIN_SECRET
         generateValue: true
 

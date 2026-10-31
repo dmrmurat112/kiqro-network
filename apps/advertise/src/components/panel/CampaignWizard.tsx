@@ -8,7 +8,7 @@ import { createProductAction, deleteProductAction, lookupStoreAppAction, saveCam
 import type { PanelDictT } from '@/lib/i18n';
 
 type Task = CampaignInput['tasks'][number];
-type Product = { id: string; name: string; platform: string; storeId: string; mmp: string | null; iconUrl?: string | null; coverUrl?: string | null };
+type Product = { id: string; name: string; platform: string; storeId: string; mmp: string | null; iconUrl?: string | null; coverUrl?: string | null; screenshots?: string[] };
 
 interface Props {
   t: PanelDictT['wizard'];
@@ -79,6 +79,9 @@ const emptyCampaign = (product?: { id: string; name: string }): CampaignInput =>
   titleTr: '',
   descriptionEn: '',
   descriptionTr: '',
+  instructionsEn: '',
+  instructionsTr: '',
+  category: 'other',
   tasks: [],
 });
 
@@ -97,7 +100,7 @@ export function CampaignWizard({ t, lang, products: initialProducts, initial, ca
   const [issues, setIssues] = useState<FieldIssue[]>([]);
   const [pending, startTransition] = useTransition();
   const [adding, setAdding] = useState(initialProducts.length === 0);
-  const emptyApp = { platform: 'android', storeId: '', name: '', mmp: 'appsflyer', iconUrl: '', coverUrl: '' };
+  const emptyApp = { platform: 'android', storeId: '', name: '', mmp: 'appsflyer', iconUrl: '', coverUrl: '', screenshots: [] as string[] };
   const [newApp, setNewApp] = useState(emptyApp);
   const [nameTouched, setNameTouched] = useState(false);
   const [lookup, setLookup] = useState<{ state: 'idle' | 'loading' | 'found' | 'missing'; app?: StoreApp }>({ state: 'idle' });
@@ -120,7 +123,7 @@ export function CampaignWizard({ t, lang, products: initialProducts, initial, ca
       if (seq !== lookupSeq.current) return; // a newer input superseded this one
       if (!app) return setLookup({ state: 'missing' });
       setLookup({ state: 'found', app });
-      setNewApp((prev) => ({ ...prev, platform: app.platform, storeId: app.storeId, iconUrl: app.iconUrl, name: nameTouched && prev.name ? prev.name : app.name }));
+      setNewApp((prev) => ({ ...prev, platform: app.platform, storeId: app.storeId, iconUrl: app.iconUrl, screenshots: app.screenshots ?? [], name: nameTouched && prev.name ? prev.name : app.name }));
     }, 550);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- re-run only when the store input changes
@@ -200,7 +203,7 @@ export function CampaignWizard({ t, lang, products: initialProducts, initial, ca
     setEditingId(p.id);
     setAdding(true);
     setNameTouched(true); // keep the advertiser's own name
-    setNewApp({ platform: p.platform, storeId: p.storeId, name: p.name, mmp: p.mmp ?? 'none', iconUrl: p.iconUrl ?? '', coverUrl: p.coverUrl ?? '' });
+    setNewApp({ platform: p.platform, storeId: p.storeId, name: p.name, mmp: p.mmp ?? 'none', iconUrl: p.iconUrl ?? '', coverUrl: p.coverUrl ?? '', screenshots: p.screenshots ?? [] });
     // With an icon there is nothing to look up; without one the store is asked again.
     setLookup(p.iconUrl ? { state: 'found', app: { platform: p.platform as StoreApp['platform'], storeId: p.storeId, name: p.name, iconUrl: p.iconUrl, developer: null } } : { state: 'idle' });
   }
@@ -354,6 +357,17 @@ export function CampaignWizard({ t, lang, products: initialProducts, initial, ca
                       </div>
                     </div>
                   )}
+                  {newApp.screenshots.length > 0 && (
+                    <div className="grid gap-1.5 text-sm">
+                      <span className="text-muted">{t.app.screenshots}</span>
+                      <div className="flex gap-2 overflow-x-auto pb-1">
+                        {newApp.screenshots.map((u) => (
+                          // eslint-disable-next-line @next/next/no-img-element -- store screenshot preview
+                          <img key={u} src={u} alt="" referrerPolicy="no-referrer" className="h-28 shrink-0 rounded-lg border border-line object-cover" />
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   <label className="grid gap-1.5 text-sm">
                     <span className="text-muted">{t.app.name}</span>
@@ -454,6 +468,26 @@ export function CampaignWizard({ t, lang, products: initialProducts, initial, ca
                       <span className="text-muted">{t.app.descEn}</span>
                       <input className="field" value={c.descriptionEn ?? ''} onChange={(e) => set({ descriptionEn: e.target.value })} />
                     </label>
+                    <label className="grid gap-1.5 text-sm">
+                      <span className="text-muted">{t.app.category}</span>
+                      <select className="field" value={c.category ?? 'other'} onChange={(e) => set({ category: e.target.value as CampaignInput['category'] })}>
+                        {Object.entries(t.app.categories).map(([k, label]) => (
+                          <option key={k} value={k}>
+                            {label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <span className="hidden sm:block" />
+                    <label className="grid gap-1.5 text-sm">
+                      <span className="text-muted">{t.app.instrEn}</span>
+                      <textarea className="field min-h-24" maxLength={2000} value={c.instructionsEn ?? ''} onChange={(e) => set({ instructionsEn: e.target.value })} />
+                    </label>
+                    <label className="grid gap-1.5 text-sm">
+                      <span className="text-muted">{t.app.instrTr}</span>
+                      <textarea className="field min-h-24" maxLength={2000} value={c.instructionsTr ?? ''} onChange={(e) => set({ instructionsTr: e.target.value })} />
+                    </label>
+                    <p className="-mt-2 text-xs text-subtle sm:col-span-2">{t.app.instrHint}</p>
                     <label className="grid gap-1.5 text-sm sm:col-span-2">
                       <span className="text-muted">{t.app.internalName}</span>
                       <input className="field" value={c.name} onChange={(e) => set({ name: e.target.value })} />

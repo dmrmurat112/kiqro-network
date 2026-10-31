@@ -146,6 +146,11 @@ export const productInput = z.object({
     .refine((v) => v.startsWith('https://'), 'url_https')
     .optional()
     .or(z.literal('').transform(() => undefined)),
+  /** Store screenshots (https), up to 8; filled from the store lookup. */
+  screenshots: z
+    .array(z.string().trim().max(500))
+    .default([])
+    .transform((list) => list.filter((u) => /^https:\/\/[^\s"'<>]+$/.test(u)).slice(0, 8)),
   mmp: z.enum(['appsflyer', 'adjust', 'singular', 'kochava', 'branch', 'tenjin', 'none']),
 });
 
@@ -154,7 +159,7 @@ export async function createProduct(db: Db, actor: AdminUser, orgId: string, inp
   const data = parse(productInput, input);
   const id = newId('product');
   await db.transaction(async (tx) => {
-    await tx.insert(products).values({ id, orgId, platform: data.platform, storeId: data.storeId, name: data.name, iconUrl: data.iconUrl ?? null, coverUrl: data.coverUrl ?? null, mmp: data.mmp });
+    await tx.insert(products).values({ id, orgId, platform: data.platform, storeId: data.storeId, name: data.name, iconUrl: data.iconUrl ?? null, coverUrl: data.coverUrl ?? null, screenshots: data.screenshots, mmp: data.mmp });
     await audit(tx, actor.id, 'product.create', 'product', id, { orgId, name: data.name });
   });
   return id;

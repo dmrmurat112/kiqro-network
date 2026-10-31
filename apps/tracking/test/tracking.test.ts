@@ -635,3 +635,69 @@ describe('ROAS and offer ranking', () => {
     expect(res.offers.map((o) => o.offerId)).toEqual([strong.campaignId, weak.campaignId]);
   });
 });
+
+describe('publisher tools', () => {
+  const offersUrl = (s: DemoSetup, user: string, extra = '') => `/v1/offers?app_key=${s.appKey}&user_id=${user}&country=TR&sig=${sign(s.placementSecret, [s.appKey, user])}${extra}`;
+
+  it('filters by platform and category and returns custom values and new macros in postbacks', async () => {
+    const s = await setup();
+    const app = server(db);
+    expect((await app.inject({ url: offersUrl(s, 'u1', '&platform=ios') })).json().offers).toEqual([]);
+    expect((await app.inject({ url: offersUrl(s, 'u1', '&category=finance') })).json().offers).toEqual([]);
+    const [offer] = (await app.inject({ url: offersUrl(s, 'u1', '&platform=android,ios&custom_1=camp%2042&custom_3=v2') })).json().offers;
+    expect(offer).toMatchObject({ category: 'other', instructions: '', screenshots: [] });
+    // Custom values ride on the click URL (unsigned) and come back in the postback.
+    const clickUrl = new URL(offer.clickUrl);
+    expect(clickUrl.searchParams.get('custom_1')).toBe('camp 42');
+    await db
+      .update(schema.placements)
+      .set({ postbackUrl: 'https://pub.test/cb?u={user_id}&c1={custom_1}&c3={custom_3}&ip={ip}&key={app_key}&ct={click_time}&sb={is_sandbox}&sig={signature}' })
+      .where(eq(schema.placements.appKey, s.appKey));
+    const c = await handleClick(db, { campaignId: s.campaignId, appKey: s.appKey, publisherUserId: 'u1', signature: clickUrl.searchParams.get('sig')!, country: 'TR', ip: '203.0.113.9', userAgent: null, query: Object.fromEntries(clickUrl.searchParams), now: T0 });
+    if (!c.ok) throw new Error(c.reason);
+    // The advertiser's tracking link never sees the publisher's custom values.
+    expect(c.redirectUrl).not.toContain('camp');
+    await postback(s, c.clickId, 'install', at(60));
+    const sent = new URL((await db.select().from(publisherPostbacks))[0]!.url).searchParams;
+    expect(Object.fromEntries(sent)).toMatchObject({ u: 'u1', c1: 'camp 42', c3: 'v2', ip: '203.0.113.9', key: s.appKey, ct: String(T0.getTime() / 1000), sb: '0' });
+  });
+
+  it('bans users from offers and clicks, and serves signed daily stats', async () => {
+    const s = await setup();
+    const app = server(db);
+    const post = (path: string, body: Record<string, string>) => app.inject({ method: 'POST', url: path, payload: body });
+    // The offerwall signature (app_key|user_id) must not authorize bans.
+    expect((await post('/v1/publisher/unbans', { app_key: s.appKey, user_id: 'u9', sig: sign(s.placementSecret, [s.appKey, 'u9']) })).statusCode).toBe(403);
+    expect((await post('/v1/publisher/bans', { app_key: s.appKey, user_id: 'u9', reason: 'fraud', sig: sign(s.placementSecret, ['ban', s.appKey, 'u9']) })).json()).toEqual({ user_id: 'u9', banned: true });
+    expect((await app.inject({ url: offersUrl(s, 'u9') })).json().offers).toEqual([]);
+    const refused = await handleClick(db, { campaignId: s.campaignId, appKey: s.appKey, publisherUserId: 'u9', signature: sign(s.placementSecret, [s.campaignId, 'u9']), country: 'TR', ip: null, userAgent: null, query: {}, now: T0 });
+    expect(refused).toMatchObject({ ok: false, status: 403, reason: 'user_banned' });
+    await post('/v1/publisher/unbans', { app_key: s.appKey, user_id: 'u9', sig: sign(s.placementSecret, ['unban', s.appKey, 'u9']) });
+    expect((await app.inject({ url: offersUrl(s, 'u9') })).json().offers).toHaveLength(1);
+
+    await postback(s, await click(s), 'install', at(60));
+    const day = T0.toISOString().slice(0, 10);
+    const stats = (from: string, to: string, sig = sign(s.placementSecret, ['stats', s.appKey, from, to])) => app.inject({ url: `/v1/publisher/stats?app_key=${s.appKey}&from=${from}&to=${to}&sig=${sig}` });
+    expect((await stats(day, day, 'bad')).statusCode).toBe(403);
+    expect((await stats('2026-01-01', '2026-12-31')).statusCode).toBe(400);
+    expect((await stats(day, day)).json().days).toEqual([{ date: day, clicks: 1, users: 1, rewards: 1, reversals: 0, earnings_usd: '0.28', points: '280' }]);
+  });
+
+  it('multiplies rewards of offers clicked during a currency sale', async () => {
+    const s = await setup();
+    const placement = (await db.query.placements.findFirst({ where: eq(schema.placements.appKey, s.appKey) }))!;
+    await db.insert(schema.currencySales).values({ id: 'sal_test', placementId: placement.id, multiplierBps: 15_000, startsAt: at(-3600), endsAt: at(3600) });
+    const list = await listOffers(db, { appKey: s.appKey, publisherUserId: 'u1', signature: sign(s.placementSecret, [s.appKey, 'u1']), country: 'TR', lang: 'en', trackingBaseUrl: TRACKING_BASE, now: at(0) });
+    if (!list.ok) throw new Error(list.reason);
+    expect(list.placement.sale).toEqual({ multiplier: 1.5, endsAt: at(3600).toISOString() });
+    expect(list.offers[0]!.tasks[0]!.rewardPoints).toBe('420'); // 280 × 1.5
+    // Clicked during the sale, completed after it: still multiplied.
+    const clickId = await click(s, { now: at(0) });
+    await postback(s, clickId, 'install', at(2 * 3600));
+    expect((await db.select().from(conversions))[0]!.userRewardPoints).toBe(420n);
+    // A click after the sale earns the normal rate.
+    const later = await click(s, { user: 'user-2', now: at(4 * 3600) });
+    await postback(s, later, 'install', at(5 * 3600));
+    expect((await db.select().from(conversions).where(eq(conversions.clickId, later)))[0]!.userRewardPoints).toBe(280n);
+  });
+});

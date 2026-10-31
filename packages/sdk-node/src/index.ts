@@ -39,6 +39,12 @@ export interface Offer {
   coverUrl: string | null;
   /** Live for less than 14 days. */
   isNew: boolean;
+  /** Store screenshots (https). */
+  screenshots: string[];
+  /** games, finance, shopping, entertainment, lifestyle, utilities or other. */
+  category: string;
+  /** Step-by-step instructions in the requested language (may be empty). */
+  instructions: string;
   clickUrl: string;
   totalRewardPoints: string;
   started: boolean;
@@ -53,6 +59,22 @@ export interface UserOptions {
   risk?: number;
   /** Two-letter country when you call from your server (Kiqro sees your server's IP). */
   country?: string;
+  /** Only offers for these platforms. */
+  platform?: ('android' | 'ios' | 'web')[];
+  /** Only offers in these categories. */
+  category?: string[];
+  /** Your own values (custom_1..custom_5), returned in your postbacks as {custom_1}..{custom_5}. */
+  custom?: Partial<Record<'custom_1' | 'custom_2' | 'custom_3' | 'custom_4' | 'custom_5', string>>;
+}
+
+export interface StatsDay {
+  date: string;
+  clicks: number;
+  users: number;
+  rewards: number;
+  reversals: number;
+  earnings_usd: string;
+  points: string;
 }
 
 export interface Claim {
@@ -99,6 +121,9 @@ export class KiqroDirect {
     if (o.risk !== undefined) q.set('risk', String(o.risk));
     if (o.lang) q.set('lang', o.lang);
     if (o.country) q.set('country', o.country.toUpperCase());
+    if (o.platform?.length) q.set('platform', o.platform.join(','));
+    if (o.category?.length) q.set('category', o.category.join(','));
+    for (const [k, v] of Object.entries(o.custom ?? {})) if (v) q.set(k, v);
     return q;
   }
 
@@ -156,6 +181,25 @@ export class KiqroDirect {
         sig: this.sign([this.opts.appKey, input.userId, input.offerId, input.taskId]),
       }),
     });
+  }
+
+  /** Daily statistics of this placement (UTC dates "YYYY-MM-DD", at most 92 days). */
+  async getStats(from: string, to: string): Promise<StatsDay[]> {
+    const q = new URLSearchParams({ app_key: this.opts.appKey, from, to, sig: this.sign(['stats', this.opts.appKey, from, to]) });
+    return (await this.request<{ days: StatsDay[] }>(`/v1/publisher/stats?${q}`)).days;
+  }
+
+  /** Blocks a user on all of your placements: no offers, clicks refused. */
+  async banUser(userId: string, reason?: string): Promise<void> {
+    await this.post('/v1/publisher/bans', { app_key: this.opts.appKey, user_id: userId, reason, sig: this.sign(['ban', this.opts.appKey, userId]) });
+  }
+
+  async unbanUser(userId: string): Promise<void> {
+    await this.post('/v1/publisher/unbans', { app_key: this.opts.appKey, user_id: userId, sig: this.sign(['unban', this.opts.appKey, userId]) });
+  }
+
+  private post<T>(path: string, body: Record<string, unknown>): Promise<T> {
+    return this.request<T>(path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
   }
 
   /** The user's claims and their status. */

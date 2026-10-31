@@ -4,10 +4,13 @@ import { newId, schema, type Db } from '@kiqro/db';
 import { creditPosition } from './billing/credit.ts';
 import { acceptsNewUsers } from './campaigns.ts';
 import { defaultFraudContext, screenClick, type FraudContext } from './fraud/rules.ts';
+import { isUserBanned } from './publisher/tools.ts';
 
 const { campaigns, clicks, placements } = schema;
 
 const SUB_ID_KEYS = ['sub1', 'sub2', 'sub3', 'sub4', 'sub5'] as const;
+/** Publisher's own values, returned in its postbacks; never sent to the advertiser. */
+const CUSTOM_KEYS = ['custom_1', 'custom_2', 'custom_3', 'custom_4', 'custom_5'] as const;
 const DAY_MS = 86_400_000;
 
 export interface ClickInput {
@@ -58,6 +61,8 @@ export async function handleClick(db: Db, input: ClickInput): Promise<ClickResul
   const publisherRisk = parseRisk(input.publisherRisk);
   if (Number.isNaN(publisherRisk)) return { ok: false, status: 400, reason: 'invalid_risk' };
 
+  if (await isUserBanned(db, placement.publisherOrgId, input.publisherUserId)) return { ok: false, status: 403, reason: 'user_banned' };
+
   const campaign = await db.query.campaigns.findFirst({ where: eq(campaigns.id, input.campaignId) });
   if (!campaign) return { ok: false, status: 404, reason: 'unknown_campaign' };
 
@@ -81,7 +86,7 @@ export async function handleClick(db: Db, input: ClickInput): Promise<ClickResul
   });
 
   const subIds: Record<string, string> = {};
-  for (const key of SUB_ID_KEYS) {
+  for (const key of [...SUB_ID_KEYS, ...CUSTOM_KEYS]) {
     const value = input.query[key];
     if (value) subIds[key] = value.slice(0, 200);
   }

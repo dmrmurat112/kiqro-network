@@ -12,6 +12,8 @@ export default async function PublisherIntegrationPage() {
   const [, lang] = await Promise.all([requirePublisherOrg(), panelLocale()]);
   const t = PANEL[lang].pub;
   const track = process.env.TRACKING_BASE_URL ?? 'https://track.kiqronetwork.com';
+  // Outbound IPs of the worker that sends postbacks (Render → Connect → Outbound), for allowlists.
+  const ips = (process.env.POSTBACK_SOURCE_IPS ?? '').split(',').map((x) => x.trim()).filter(Boolean);
 
   return (
     <>
@@ -60,6 +62,11 @@ app.get('/kiqro/postback', (req, res) => {
           <h2 className="font-semibold">{t.postbackTitle}</h2>
           <p className="mt-1 text-sm text-muted">{t.postbackBody}</p>
           <p className="mt-3 text-sm text-subtle">{t.guide}</p>
+          {ips.length > 0 && (
+            <p className="mt-3 text-sm text-muted">
+              {t.sourceIps} <span className="font-mono text-xs text-fg">{ips.join(', ')}</span>
+            </p>
+          )}
         </Card>
       </div>
     </>

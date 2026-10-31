@@ -1,10 +1,11 @@
 import { and, desc, eq, gte, inArray } from 'drizzle-orm';
-import { applyBps, toPoints, verify } from '@kiqro/core';
+import { applyBps, verify } from '@kiqro/core';
 import { getAccountId, lockAccount, newId, schema, type Db, type Tx } from '@kiqro/db';
 import { creditPosition } from './billing/credit.ts';
 import { priceFor } from './campaigns.ts';
 import { creditConversion } from './conversions.ts';
 import { enqueuePublisherPostback } from './outbox.ts';
+import { rewardPoints } from './publisher/tools.ts';
 import { conversionEventData, emitWebhook } from './webhooks.ts';
 
 const { auditLog, campaignTasks, campaigns, claims, clicks, conversions, placements } = schema;
@@ -178,7 +179,7 @@ async function creditClaim(tx: Tx, { claim, campaign, click, placement }: ClaimR
     status: 'approved' as const,
     advertiserPrice: price,
     publisherPayout,
-    userRewardPoints: toPoints(publisherPayout, placement.pointsPerUsd),
+    userRewardPoints: await rewardPoints(tx, placement, publisherPayout, click.createdAt),
   };
   let conversionId: string;
   if (existing) {

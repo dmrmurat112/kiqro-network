@@ -27,6 +27,9 @@ function readCampaign(form: FormData): CampaignInput {
     titleTr: field(form, 'titleTr'),
     descriptionEn: field(form, 'descriptionEn'),
     descriptionTr: field(form, 'descriptionTr'),
+    instructionsEn: field(form, 'instructionsEn'),
+    instructionsTr: field(form, 'instructionsTr'),
+    category: field(form, 'category') as 'other',
     tasks,
   };
 }

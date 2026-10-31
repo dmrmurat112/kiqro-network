@@ -55,10 +55,10 @@ On the web, the wall can also be shown in an `<iframe>`.
 ## Option 2 — Offers API (your own UI)
 
 ```
-GET https://track.kiqronetwork.com/v1/offers?app_key&user_id&sig[&risk][&lang][&country]
+GET https://track.kiqronetwork.com/v1/offers?app_key&user_id&sig[&risk][&lang][&country][&platform=android,ios][&category=games][&custom_1..5]
 ```
 
-Returns `{ offers: [{ offerId, title, description, platform, iconUrl, clickUrl, totalRewardPoints, started, completed, tasks: [{ taskId, seq, name, timeLimitDays, payoutUsd, rewardPoints, state }] }] }`. Open `clickUrl` unchanged. `payoutUsd` is your earning, not for display. Call from your server; pass `country` (ISO code) since Kiqro sees your server's address.
+Returns `{ offers: [{ offerId, title, description, instructions, category, platform, iconUrl, coverUrl, screenshots, isNew, clickUrl, totalRewardPoints, started, completed, tasks: [{ taskId, seq, name, timeLimitDays, payoutUsd, rewardPoints, state }] }], currency_sale: { multiplier, endsAt } | null }`. `platform` and `category` filter the list; `custom_1`..`custom_5` (your values, up to 200 characters, not signed) are carried in click URLs and returned in postbacks. During a currency sale the points are already multiplied. Open `clickUrl` unchanged. `payoutUsd` is your earning, not for display. Call from your server; pass `country` (ISO code) since Kiqro sees your server's address.
 
 ## Option 3 — Node.js SDK
 
@@ -83,9 +83,18 @@ Set your postback URL in the panel (**Placements**) with macros, for example:
 https://api.yourapp.com/kiqro?user={user_id}&amount={amount}&tx={transaction_id}&status={status}&sig={signature}
 ```
 
-Macros: `{user_id} {amount} {payout_usd} {transaction_id} {offer_id} {offer_name} {offer_name_tr} {task_id} {task_name} {task_name_tr} {status} {country} {signature}`. `amount` is in your points; `*_tr` names fall back to English; `status` is `1` (reward) or `2` (reversal: take the points back).
+Macros: `{user_id} {amount} {payout_usd} {transaction_id} {offer_id} {offer_name} {offer_name_tr} {task_id} {task_name} {task_name_tr} {status} {country} {ip} {click_time} {event_time} {app_key} {reversal_reason} {custom_1}..{custom_5} {is_sandbox} {signature}`. Times are Unix seconds; `is_sandbox=1` marks postbacks sent from the panel tester (do not change balances). `amount` is in your points; `*_tr` names fall back to English; `status` is `1` (reward) or `2` (reversal: take the points back).
 
-Your endpoint must: verify `signature`; credit at most once per `transaction_id` + `status`; answer `200` (anything else is retried with backoff). Use **Send test postback** in the panel to check it.
+Your endpoint must: verify `signature`; credit at most once per `transaction_id` + `status`; answer `200` (anything else is retried with backoff). Use **Send test postback** or the **Postback tester** (any user, amount, reward or reversal) in the panel to check it. The IP addresses postbacks come from are listed on the panel’s Integration page (optional allowlist; always verify the signature).
+
+## Publisher API
+
+Signed with the placement secret; each call signs its own prefix so the offerwall's per-user signature never authorizes it.
+
+- `GET /v1/publisher/stats?app_key&from=YYYY-MM-DD&to=YYYY-MM-DD&sig=HMAC(secret, "stats|app_key|from|to")`: daily `clicks, users, rewards, reversals, earnings_usd, points` (UTC, at most 92 days).
+- `POST /v1/publisher/bans { app_key, user_id, reason, sig=HMAC(secret, "ban|app_key|user_id") }` and `POST /v1/publisher/unbans { app_key, user_id, sig=HMAC(secret, "unban|app_key|user_id") }`: banned users see no offers on any of your placements and their clicks are refused (`user_banned`).
+
+Currency sales (a reward multiplier for a period) are set per placement in the panel.
 
 ## Missing rewards — claims
 

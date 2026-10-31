@@ -13,7 +13,7 @@ export async function setupTestDb(): Promise<{ db: Db; close: () => Promise<void
 /** Empties every application table. */
 export async function resetTestDb(db: Db): Promise<void> {
   await db.execute(sql`
-    truncate revenue_events, webhook_deliveries, webhook_endpoints, advertiser_api_keys, claims, payments, invoices, audit_log, email_messages, advertiser_tokens, leads, advertiser_login_attempts, advertiser_sessions, advertiser_users, admin_login_attempts, admin_sessions, admin_users, publisher_postbacks, ledger_entries, ledger_transactions,
+    truncate currency_sales, publisher_user_bans, revenue_events, webhook_deliveries, webhook_endpoints, advertiser_api_keys, claims, payments, invoices, audit_log, email_messages, advertiser_tokens, leads, advertiser_login_attempts, advertiser_sessions, advertiser_users, admin_login_attempts, admin_sessions, admin_users, publisher_postbacks, ledger_entries, ledger_transactions,
       ledger_accounts, conversions, postbacks_raw, clicks, placements, task_payouts, campaign_tasks, campaigns,
       products, organizations cascade`);
 }

@@ -18,7 +18,8 @@ describe('store lookup', () => {
 
   it('reads name, icon and developer from a Play page', async () => {
     const html = `<meta property="og:title" content="Aurora Quest &amp; Friends - Apps on Google Play"><meta property="og:image" content="https://play-lh.googleusercontent.com/abc=w526-h296">
-      <a href="/store/apps/dev?id=123"><span>Nordic Dragon</span></a>`;
+      <a href="/store/apps/dev?id=123"><span>Nordic Dragon</span></a>
+      <img src="https://play-lh.googleusercontent.com/shot1=w526-h296" srcset="x" alt="Screenshot image"><img src="https://play-lh.googleusercontent.com/other=w48" alt="Logo">`;
     const urls: string[] = [];
     const fetcher = async (url: string) => (urls.push(url), respond(html)());
     expect(await lookupStoreApp({ platform: 'android', storeId: 'fi.test.aurora' }, fetcher)).toEqual({
@@ -27,6 +28,7 @@ describe('store lookup', () => {
       name: 'Aurora Quest & Friends',
       iconUrl: 'https://play-lh.googleusercontent.com/abc=s256',
       developer: 'Nordic Dragon',
+      screenshots: ['https://play-lh.googleusercontent.com/shot1=h720'],
     });
     expect(urls[0]).toMatch(/^https:\/\/play\.google\.com\/store\/apps\/details\?id=fi\.test\.aurora/);
   });
