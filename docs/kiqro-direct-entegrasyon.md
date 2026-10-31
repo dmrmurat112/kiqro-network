@@ -1,6 +1,6 @@
 # Kiqro Direct — Kiqro uygulaması entegrasyon kılavuzu
 
-**Sürüm 1.0 · 30 Ekim 2026 · Kiqro Network**
+**Sürüm 1.1 · 31 Ekim 2026 · Kiqro Network**
 
 Bu kılavuz, Kiqro uygulamasının (web, iOS, Android) Kiqro'nun kendi offerwall ağı **Kiqro Direct**'i yeni bir teklif sağlayıcısı olarak bağlaması içindir. Entegrasyon, bugün bağlı olan diğer offerwall'lara (Torox, ayeT-Studios, AdscendMedia vb.) çok benzer: teklifler bir API'den çekilir, kullanıcı tıklama linkine yönlendirilir, ödül sunucudan sunucuya bildirim (postback) ile gelir.
 
@@ -37,16 +37,20 @@ Bu kılavuz, Kiqro uygulamasının (web, iOS, Android) Kiqro'nun kendi offerwall
 
 ## 2. Başlamadan önce Kiqro'dan alınacaklar
 
-Kiqro ekibi admin panelinde Kiqro uygulaması için bir **placement** oluşturur ve size iletir:
+Kiqro ekibi admin panelinde Kiqro uygulaması için bir **placement** oluşturur. Bilgilere Kiqro Network yayıncı panelinden de ulaşılır: `https://kiqronetwork.com` (test: `https://staging.kiqronetwork.com`) → **Placement'lar**.
 
 | Bilgi | Örnek | Not |
 |---|---|---|
 | `app_key` | `app_8f2c1d9e0a7b3c45` | Herkese açık kimlik |
 | `secret` | `…` (48 karakter) | **Gizli.** Yalnızca backend'de, ortam değişkeninde saklanır. Uygulamaya, web istemcisine ya da loglara asla konmaz. |
 | Puan kuru | `1 USD = 1000 puan` | Kullanıcı ödülü bu kurla hesaplanır; Kiqro panelinden değiştirilir. |
-| Postback adresiniz | `https://…/callbacks/kiqro-direct?…` | Sizin vereceğiniz adres; Kiqro panele girer (bkz. bölüm 6). |
+| Postback adresiniz | `https://…/callbacks/kiqro-direct?…` | Sizin vereceğiniz adres; panelde **Placement'lar → Postback adresi** alanına girilir (bkz. bölüm 6). |
 
 > Test ve canlı ortam için **ayrı** `app_key` / `secret` verilir.
+
+Panelde ayrıca:
+- **Test postback gönder** düğmesi, girilen adrese imzalı bir deneme ödülü gönderir ve sunucunuzun HTTP cevabını gösterir (bkz. bölüm 6.3).
+- **Test offerwall** kutusu, kendi test kullanıcınız için imzalı bir link ve QR kod üretir; tekliflerin canlıda nasıl göründüğünü telefonda hemen görebilirsiniz.
 
 ---
 
@@ -133,6 +137,8 @@ export async function kiqroDirectOffers(userId, country, lang, risk) {
       "description": "Install and reach the milestones within the time limit.",
       "platform": "android",
       "iconUrl": "https://…/icon.png",
+      "coverUrl": "https://…/banner.jpg",
+      "isNew": false,
       "clickUrl": "https://track.kiqronetwork.com/c/cmp_01JTESTCAMPAIGN0000000000?app_key=app_8f2c1d9e0a7b3c45&uid=u_102938&sig=516c6a…",
       "totalRewardPoints": "6020",
       "started": true,
@@ -152,6 +158,9 @@ export async function kiqroDirectOffers(userId, country, lang, risk) {
 | `offerId` | Teklifin kalıcı kimliği. Postback'teki `offer_id` ile aynı. |
 | `title`, `description` | İstenen dilde. |
 | `platform` | `android`, `ios` veya `web`. Kullanıcının cihazına uymayan teklifleri gizleyin. |
+| `iconUrl` | Uygulama ikonu (kare). `null` olabilir. |
+| `coverUrl` | Geniş kapak görseli (yaklaşık 2:1), reklamveren eklediyse. `null` ise ikonu kullanın. |
+| `isNew` | Teklif son 14 gün içinde yayına girdi; "Yeni" rozeti için. |
 | `clickUrl` | **Olduğu gibi** açılacak, imzalı tıklama linki (bölüm 5). |
 | `totalRewardPoints` | Tüm adımların toplam ödülü (puan). Sayı **string** olarak gelir. |
 | `started` | Kullanıcı bu teklife daha önce tıkladı mı. Başlanmış teklifler, kampanya yeni kullanıcı almayı durdursa bile süreleri bitene kadar listede kalır. |
@@ -162,7 +171,9 @@ export async function kiqroDirectOffers(userId, country, lang, risk) {
 | `tasks[].payoutUsd` | Kiqro uygulamasının bu adımdan aldığı USD payı. **Kullanıcıya gösterilmez**; muhasebe / kâr hesabı içindir. |
 | `tasks[].state` | `open` (yapılmadı), `credited` (ödül verildi), `in_review` (inceleniyor), `rejected` (ödül verilmedi), `reversed` (geri alındı). |
 
-Liste, başlanmış teklifler önce, sonra en yüksek ödüllü olacak şekilde sıralı gelir.
+Liste sıralı gelir: önce başlanmış teklifler, sonra tıklama başına en çok kazandırması beklenenler, eşitlikte en yüksek ödüllü. Bu sırayı korumanız gelirinizi artırır.
+
+Görsel adresleri (`iconUrl`, `coverUrl`) https'tir; uygulamada doğrudan gösterilebilir.
 
 ### 3.5 Önbellek
 
@@ -176,7 +187,7 @@ Liste, başlanmış teklifler önce, sonra en yüksek ödüllü olacak şekilde 
 
 Kiqro Direct, mevcut sağlayıcı birleştirme katmanına **"Kiqro Direct" adlı yeni bir sağlayıcı** olarak eklenir. Teklifler diğerleriyle aynı listede gösterilir; "Öne çıkan" rozeti ile işaretlenebilir.
 
-**Teklif kartı:** ikon, başlık, toplam ödül (`totalRewardPoints`).
+**Teklif kartı:** kapak görseli (`coverUrl`, yoksa ikon), ikon, başlık, adım sayısı, toplam ödül (`totalRewardPoints`); `isNew` ise "Yeni" rozeti.
 
 **Teklif detayı:**
 - Adım listesi: her adımın adı, ödülü, süresi ve durumu (`state`). `credited` adımlar ✓ ile, `in_review` "inceleniyor" ile gösterilmeli.
@@ -187,6 +198,16 @@ Kiqro Direct, mevcut sağlayıcı birleştirme katmanına **"Kiqro Direct" adlı
 - **Görevi başlat** düğmesi → `clickUrl`.
 
 `payoutUsd` hiçbir yerde kullanıcıya gösterilmez.
+
+### Alternatif: hazır offerwall
+
+Kendi arayüzünüzü yapmadan önce ya da web sürümü için, Kiqro Network'ün hazır offerwall sayfası da kullanılabilir. Sayfa mobil uyumludur; kartlar, teklif detayı ve kayıp ödül formu içinde gelir. Renk, logo ve başlık panelde **Placement'lar → Offerwall görünümü** bölümünden ayarlanır.
+
+```
+{TRACK}/wall?app_key={app_key}&user_id={user_id}&lang=tr&sig={sig}          (sig: Offers API ile aynı)
+```
+
+İsteğe bağlı parametreler: `theme=light` (açık tema), `offer={offerId}` (bir teklifi doğrudan açar), `risk` (bölüm 7; imzaya dahil). Link backend'de üretilir ve WebView'da ya da `<iframe>` içinde açılır. WebView kullanılıyorsa `{TRACK}/c/…` linkleri sistem tarayıcısında açılmalıdır (bölüm 5). Ödüller yine bölüm 6'daki postback ile gelir.
 
 ---
 
@@ -207,7 +228,7 @@ Kiqro Direct, mevcut sağlayıcı birleştirme katmanına **"Kiqro Direct" adlı
 Bir HTTPS uç noktası açıp Kiqro'ya bildirin. Örnek şablon:
 
 ```
-https://api.kiqro.com/callbacks/kiqro-direct?uid={user_id}&amount={amount}&payout={payout_usd}&tx={transaction_id}&offer={offer_id}&task={task_name}&status={status}&sig={signature}
+https://api.kiqro.com/callbacks/kiqro-direct?uid={user_id}&amount={amount}&payout={payout_usd}&tx={transaction_id}&offer={offer_id}&task={task_id}&title={offer_name_tr}&step={task_name_tr}&status={status}&sig={signature}
 ```
 
 Parametre adlarını (`uid`, `tx` …) siz seçersiniz; süslü parantezli makroları Kiqro Network doldurur. Kullanılabilen makrolar:
@@ -218,12 +239,16 @@ Parametre adlarını (`uid`, `tx` …) siz seçersiniz; süslü parantezli makro
 | `{amount}` | Kullanıcıya verilecek ödül (puan, tam sayı) |
 | `{payout_usd}` | Kiqro uygulamasının USD payı (ör. `0.28`) |
 | `{transaction_id}` | Bu adımın benzersiz işlem kimliği (`cnv_…`). Ödül ve geri alma aynı kimlikle gelir. |
-| `{offer_id}`, `{offer_name}`, `{task_name}` | Teklif ve adım bilgisi |
+| `{offer_id}`, `{task_id}` | Teklif ve adım kimliği; Offers API'deki `offerId` ve `tasks[].taskId` ile aynı. |
+| `{offer_name}`, `{task_name}` | Teklif ve adım adı (İngilizce) |
+| `{offer_name_tr}`, `{task_name_tr}` | Teklif ve adım adı (Türkçe; çevirisi yoksa İngilizce) |
 | `{status}` | `1` = ödül ver, `2` = geri al (chargeback) |
 | `{country}` | Tıklamadaki ülke |
 | `{signature}` | İmza (aşağıda) |
 
 **Zorunlu makrolar:** `{user_id}`, `{amount}`, `{transaction_id}`, `{status}`, `{signature}`.
+
+Adres **https** olmalı ve herkese açık bir sunucuya gitmelidir (iç ağ / özel IP adreslerine postback gönderilmez). Değerler URL için kodlanmış gelir; çoğu framework bunları otomatik çözer.
 
 ### 6.2 İmza doğrulama
 
@@ -233,7 +258,7 @@ Parametre adlarını (`uid`, `tx` …) siz seçersiniz; süslü parantezli makro
 
 1. **İmzayı doğrula.** Tutmazsa `403` dön.
 2. **Tekrarı yok say (idempotency).** `transaction_id` + `status` çifti daha önce işlendiyse hiçbir şey yapmadan `200` dön. Ağ hatalarında aynı postback birden fazla gelebilir.
-3. **`status=1` (ödül):** `amount` kadar puanı kullanıcının bakiyesine **hemen** ekleyin, işlem geçmişine "Kiqro Direct — {offer_name}: {task_name}" olarak yazın.
+3. **`status=1` (ödül):** `amount` kadar puanı kullanıcının bakiyesine **hemen** ekleyin, işlem geçmişine "Kiqro Direct — {offer_name_tr}: {task_name_tr}" olarak yazın.
 4. **`status=2` (geri alma):** Aynı `transaction_id` ile verilen ödülü bakiyeden düşün.
    - Bakiye **eksiye düşebilir.**
    - Bakiyesi eksi olan kullanıcı, eksi kapanana kadar **para çekemez**.
@@ -241,6 +266,7 @@ Parametre adlarını (`uid`, `tx` …) siz seçersiniz; süslü parantezli makro
    - Tekrarlayan geri almalar Kiqro fraud skorunu yükseltmelidir.
 5. **Hızlı cevap:** `2xx` dönün, en geç 10 saniye içinde. Ağır işleri kuyruğa alın.
 6. **Kayıt:** Her postback'i ham haliyle saklayın (destek ve mutabakat için).
+7. **Panel testi:** "Test postback gönder" düğmesi `user_id=kiqro_test_user`, `transaction_id=test_…`, `offer_id=cmp_TEST`, `task_id=tsk_TEST` değerleriyle, geçerli imzayla gelir. Bu kullanıcı sizde yoksa bakiye değiştirmeden `200` dönün; amaç uç noktanın erişilebilir olduğunu ve imzanın tuttuğunu görmektir.
 
 `2xx` dışındaki her cevap ya da zaman aşımı **başarısız** sayılır ve tekrar gönderilir: 1, 2, 4, 8 … dakika aralıklarla (en fazla 6 saat), toplam **10 deneme**. Sonra Kiqro admin panelinde "başarısız" olarak görünür ve elle yeniden gönderilebilir.
 
@@ -377,7 +403,7 @@ Kiqro ekibi test ortamında, test reklamvereni ve test kampanyasıyla bir placem
 
 **3. Tıklama** — "Görevi başlat" sistem tarayıcısında açılmalı ve test mağaza sayfasına yönlenmeli.
 
-**4. Ödül** — Kiqro ekibi test postback'i tetikler. Bakiye artmalı, işlem geçmişinde görünmeli, Offers API'de adım `credited` olmalı.
+**4. Ödül** — Önce paneldeki **Test postback gönder** ile uç noktanızın `200` döndüğünü görün. Sonra Kiqro ekibi test kampanyasında gerçek bir dönüşüm tetikler (MMP yerine sunucudan sunucuya postback ile). Bakiye artmalı, işlem geçmişinde Türkçe adla görünmeli, Offers API'de adım `credited` olmalı.
 
 **5. Tekrar** — Kiqro ekibi aynı postback'i yeniden gönderir. Bakiye **değişmemeli**.
 

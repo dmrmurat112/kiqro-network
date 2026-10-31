@@ -65,6 +65,7 @@ export async function fileClaim(
   if (existing) return { ok: true, claimId: existing.id, status: existing.status };
 
   const claimId = newId('claim');
+  const note = input.note?.trim().slice(0, 1000) || null;
   const campaign = (await db.query.campaigns.findFirst({ where: eq(campaigns.id, input.campaignId), columns: { orgId: true } }))!;
   await db.transaction(async (tx) => {
     await tx.insert(claims).values({
@@ -74,7 +75,7 @@ export async function fileClaim(
       campaignId: input.campaignId,
       taskId: task.id,
       clickId: click.id,
-      userNote: input.note?.trim().slice(0, 1000) || null,
+      userNote: note,
       createdAt: now,
     });
     await emitWebhook(tx, campaign.orgId, 'claim.created', {
@@ -82,7 +83,7 @@ export async function fileClaim(
       campaign_id: input.campaignId,
       task_event: task.mmpEventName,
       click_id: click.id,
-      user_note: input.note?.trim() || null,
+      user_note: note,
     }, now);
   });
   return { ok: true, claimId, status: 'open' };

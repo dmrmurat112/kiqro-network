@@ -583,10 +583,17 @@ describe('publisher SDK against the tracking service', () => {
     await expect(new KiqroDirect({ appKey: s.appKey, secret: 'wrong', baseUrl: TRACKING_BASE, fetch: fetcher }).getOffers('user-1')).rejects.toMatchObject({ status: 403, code: 'invalid_signature' });
 
     // The reward postback Kiqro would send is accepted by verifyPostback.
-    await db.update(schema.placements).set({ postbackUrl: 'https://pub.test/cb?user_id={user_id}&amount={amount}&transaction_id={transaction_id}&status={status}&signature={signature}' }).where(eq(schema.placements.appKey, s.appKey));
+    await db
+      .update(schema.placements)
+      .set({ postbackUrl: 'https://pub.test/cb?user_id={user_id}&amount={amount}&transaction_id={transaction_id}&status={status}&signature={signature}&task={task_id}&name={task_name_tr}' })
+      .where(eq(schema.placements.appKey, s.appKey));
     await postback(s, await click(s), 'install', at(60));
     const [outbox] = await db.select().from(publisherPostbacks);
-    expect(kiqro.verifyPostback(Object.fromEntries(new URL(outbox!.url).searchParams))).toBe(true);
+    const sent = Object.fromEntries(new URL(outbox!.url).searchParams);
+    expect(kiqro.verifyPostback(sent)).toBe(true);
+    // The step id matches the Offers API, so the publisher can label the reward in the user's language.
+    expect(sent.task).toBe(offers[0]!.tasks[0]!.taskId);
+    expect(sent.name).toBe(offers[0]!.tasks[0]!.name);
 
     const filed = await kiqro.fileClaim({ userId: 'user-1', offerId: s.campaignId, taskId: offers[0]!.tasks[1]!.taskId, note: 'done' });
     expect(filed.status).toBe('open');

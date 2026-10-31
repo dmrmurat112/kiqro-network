@@ -83,7 +83,7 @@ Set your postback URL in the panel (**Placements**) with macros, for example:
 https://api.yourapp.com/kiqro?user={user_id}&amount={amount}&tx={transaction_id}&status={status}&sig={signature}
 ```
 
-Macros: `{user_id} {amount} {payout_usd} {transaction_id} {offer_id} {offer_name} {task_name} {status} {country} {signature}`. `amount` is in your points; `status` is `1` (reward) or `2` (reversal: take the points back).
+Macros: `{user_id} {amount} {payout_usd} {transaction_id} {offer_id} {offer_name} {offer_name_tr} {task_id} {task_name} {task_name_tr} {status} {country} {signature}`. `amount` is in your points; `*_tr` names fall back to English; `status` is `1` (reward) or `2` (reversal: take the points back).
 
 Your endpoint must: verify `signature`; credit at most once per `transaction_id` + `status`; answer `200` (anything else is retried with backoff). Use **Send test postback** in the panel to check it.
 
