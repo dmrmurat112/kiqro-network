@@ -59,8 +59,8 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
 
       <div className="grid gap-4 lg:grid-cols-5">
         <Card className="relative overflow-hidden p-6 lg:col-span-2">
-          <div className="absolute -top-20 -right-16 h-48 w-48 rounded-full bg-violet-500/20 blur-3xl" />
-          <div className="absolute -bottom-24 -left-10 h-40 w-40 rounded-full bg-orange-400/10 blur-3xl" />
+          <div className="absolute -top-32 -right-28 h-72 w-72 bg-[radial-gradient(closest-side,rgb(139_92_246/0.24),transparent)]" />
+          <div className="absolute -bottom-36 -left-24 h-64 w-64 bg-[radial-gradient(closest-side,rgb(251_146_60/0.12),transparent)]" />
           <div className="relative">
             <div className="flex items-center gap-2 text-sm text-muted">
               <Wallet size={16} className="text-violet-400" /> {t.available}

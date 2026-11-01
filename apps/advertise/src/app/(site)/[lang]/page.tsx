@@ -46,9 +46,9 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
       {/* ---------- Hero ---------- */}
       <section className="relative overflow-hidden pt-32 pb-20 lg:pt-40 lg:pb-28">
         <div className="bg-grid absolute inset-0 [mask-image:radial-gradient(ellipse_at_top,black_30%,transparent_75%)]" />
-        <div className="absolute -top-40 left-1/2 h-[560px] w-[900px] -translate-x-1/2 rounded-full bg-violet-500/25 blur-[140px]" />
-        <div className="absolute top-40 -right-40 h-[380px] w-[380px] animate-drift rounded-full bg-orange-500/15 blur-[120px]" />
-        <div className="absolute top-72 -left-32 h-[300px] w-[300px] animate-drift rounded-full bg-emerald-400/[0.07] blur-[110px] [animation-delay:-9s]" />
+        <div className="absolute -top-64 left-1/2 h-[820px] w-[1200px] -translate-x-1/2 bg-[radial-gradient(closest-side,rgb(139_92_246/0.3),transparent)]" />
+        <div className="absolute top-24 -right-64 h-[620px] w-[620px] animate-drift bg-[radial-gradient(closest-side,rgb(249_115_22/0.17),transparent)]" />
+        <div className="absolute top-56 -left-56 h-[520px] w-[520px] animate-drift bg-[radial-gradient(closest-side,rgb(52_211_153/0.08),transparent)] [animation-delay:-9s]" />
 
         <div className="relative mx-auto grid max-w-7xl items-center gap-16 px-5 lg:grid-cols-[1.1fr_0.9fr] lg:px-8">
           <div>
@@ -147,7 +147,7 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
               return (
                 <Reveal key={item.title} delay={(i % 3) * 100} className={wide ? 'lg:col-span-2' : ''}>
                   <div className="card-glow group relative h-full overflow-hidden rounded-2xl p-7">
-                    {wide && <div className="absolute -right-20 -bottom-20 h-64 w-64 rounded-full bg-violet-500/10 blur-3xl transition-all duration-700 group-hover:scale-125 group-hover:bg-violet-500/20" />}
+                    {wide && <div className="absolute -right-32 -bottom-32 h-96 w-96 bg-[radial-gradient(closest-side,rgb(139_92_246/0.16),transparent)] opacity-70 transition-[transform,opacity] duration-700 group-hover:scale-125 group-hover:opacity-100" />}
                     <Icon size={22} className="text-violet-300 transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:-translate-y-0.5 group-hover:scale-110" />
                     <h3 className="mt-5 text-lg font-semibold">{item.title}</h3>
                     <p className="mt-2.5 max-w-lg leading-relaxed text-muted">{item.body}</p>
@@ -184,7 +184,7 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
       <section id="fraud" className="scroll-mt-20 py-24 lg:py-32">
         <div className="mx-auto max-w-7xl px-5 lg:px-8">
           <div className="relative overflow-hidden rounded-3xl border border-line bg-gradient-to-br from-elevated to-bg p-8 sm:p-12 lg:p-16">
-            <div className="absolute -top-32 -left-32 h-96 w-96 rounded-full bg-violet-500/15 blur-[100px]" />
+            <div className="absolute -top-56 -left-56 h-[560px] w-[560px] bg-[radial-gradient(closest-side,rgb(139_92_246/0.2),transparent)]" />
             <div className="relative grid gap-12 lg:grid-cols-2 lg:items-center">
               <Reveal>
                 <SectionHeader eyebrow={t.fraud.eyebrow} title={t.fraud.title} sub={t.fraud.sub} center={false} />

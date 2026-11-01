@@ -53,7 +53,7 @@ export default async function PublisherOverviewPage({ searchParams }: { searchPa
           />
         </Card>
         <Card className="relative overflow-hidden p-5">
-          <div className="absolute -top-16 -right-16 h-40 w-40 rounded-full bg-violet-500/20 blur-3xl" />
+          <div className="absolute -top-28 -right-28 h-64 w-64 bg-[radial-gradient(closest-side,rgb(139_92_246/0.24),transparent)]" />
           <div className="relative text-sm text-muted">{t.payable}</div>
           <div className="relative mt-2 font-mono text-3xl font-semibold tabular-nums">{usd(o.payable, lang)}</div>
           <p className="relative mt-3 text-xs text-subtle">{t.payableHint}</p>

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AppWindow, Ban, Code2, CreditCard, LayoutDashboard, LifeBuoy, LogOut, Users, Megaphone, Menu, Moon, Plug, Sun, UserRound, X, ListChecks } from 'lucide-react';
 import type { Locale, PanelDictT } from '@/lib/i18n';
 import { logoutAction, setPreferenceAction } from '@/app/(panel)/actions';
@@ -43,6 +43,19 @@ const PUBLISHER_ITEMS = [
 export function Sidebar({ t, lang, theme, company, userName, kind }: Props) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  // Close on navigation and Escape; keep the page behind from scrolling while open.
+  useEffect(() => setOpen(false), [pathname]);
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = overflow;
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
   const home = kind === 'publisher' ? '/app/publisher' : '/app';
   const active = (href: string) => (href === home ? pathname === home : pathname.startsWith(href));
   const items = kind === 'publisher' ? PUBLISHER_ITEMS : ITEMS;
@@ -105,17 +118,22 @@ export function Sidebar({ t, lang, theme, company, userName, kind }: Props) {
           <Menu size={20} />
         </button>
       </div>
-      {open && (
-        <div className="fixed inset-0 z-50 lg:hidden">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setOpen(false)} />
-          <aside className="absolute inset-y-0 left-0 flex w-72 flex-col border-r border-line bg-elevated py-6">
-            <button onClick={() => setOpen(false)} className="absolute top-5 right-4 text-muted" aria-label="Close">
-              <X size={20} />
-            </button>
-            {content}
-          </aside>
-        </div>
-      )}
+      {/* Mobile drawer: always mounted so it can slide in and out; inert while closed. */}
+      <div className={`fixed inset-0 z-50 lg:hidden ${open ? '' : 'pointer-events-none'}`} inert={!open} aria-hidden={!open}>
+        <div className={`absolute inset-0 bg-black/55 transition-opacity duration-300 ease-out ${open ? 'opacity-100' : 'opacity-0'}`} onClick={() => setOpen(false)} />
+        <aside
+          role="dialog"
+          aria-modal="true"
+          className={`absolute inset-y-0 left-0 flex w-[min(18rem,85vw)] flex-col border-r border-line bg-elevated py-6 shadow-2xl transition-transform duration-[380ms] ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform ${
+            open ? 'translate-x-0' : '-translate-x-full'
+          }`}
+        >
+          <button onClick={() => setOpen(false)} className="absolute top-5 right-4 grid h-9 w-9 place-items-center rounded-lg text-muted transition-colors hover:bg-surface-strong hover:text-fg" aria-label="Close">
+            <X size={20} />
+          </button>
+          {content}
+        </aside>
+      </div>
     </>
   );
 }

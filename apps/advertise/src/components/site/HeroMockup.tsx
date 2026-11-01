@@ -92,9 +92,9 @@ export function HeroMockup({ t }: { t: SiteDict['mockup'] }) {
 
   return (
     <div className="relative animate-float">
-      <div className="absolute -inset-10 -z-10 animate-aurora rounded-[3rem] bg-[conic-gradient(from_180deg,rgb(108_87_240/0.45),rgb(255_107_44/0.28),rgb(52_211_153/0.18),rgb(108_87_240/0.45))] opacity-70 blur-3xl" />
+      <div className="absolute -inset-20 -z-10 animate-aurora bg-[radial-gradient(closest-side_at_35%_35%,rgb(108_87_240/0.5),transparent),radial-gradient(closest-side_at_70%_65%,rgb(255_107_44/0.3),transparent),radial-gradient(closest-side_at_40%_80%,rgb(52_211_153/0.18),transparent)] opacity-80" />
       <div className="mockup-border relative rounded-2xl p-px">
-        <div className="glass relative overflow-hidden rounded-[calc(1rem-1px)] !border-0 bg-elevated/80 shadow-[0_40px_120px_-30px_rgb(0_0_0/0.8)]">
+        <div className="relative overflow-hidden rounded-[calc(1rem-1px)] bg-elevated shadow-[0_40px_120px_-30px_rgb(0_0_0/0.8)]">
           <div className="flex items-center gap-3 border-b border-line px-5 py-3.5">
             <AppIcon />
             <span className="text-sm font-semibold">{t.title}</span>

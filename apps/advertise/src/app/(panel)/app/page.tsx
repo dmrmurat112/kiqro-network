@@ -92,7 +92,7 @@ export default async function OverviewPage({ searchParams }: { searchParams: Pro
 
         <div className="grid gap-4">
           <Card className="relative overflow-hidden p-5">
-            <div className="absolute -top-16 -right-16 h-40 w-40 rounded-full bg-violet-500/20 blur-3xl" />
+            <div className="absolute -top-28 -right-28 h-64 w-64 bg-[radial-gradient(closest-side,rgb(139_92_246/0.24),transparent)]" />
             <div className="relative flex items-center justify-between gap-2 text-sm text-muted">
               <span className="flex items-center gap-2">
                 <Wallet size={16} className="text-violet-400" /> {credit.creditLimit > 0n ? t.overview.available : t.overview.balance}

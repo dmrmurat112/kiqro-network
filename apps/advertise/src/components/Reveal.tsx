@@ -1,33 +1,39 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 
 /**
- * Fades its children up once they scroll into view. Use `immediate` above the fold: the
- * animation then runs from the server-rendered HTML without waiting for JavaScript.
+ * Fades its children up when they scroll into view. The server renders them visible, so the
+ * page reads at once on slow phones even before JavaScript runs; after hydration only blocks
+ * still below the viewport are hidden and then revealed as the user scrolls. `immediate` plays
+ * the fade at once (above the fold), straight from the server-rendered HTML.
  */
 export function Reveal({ children, delay = 0, className = '', immediate = false }: { children: React.ReactNode; delay?: number; className?: string; immediate?: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
-  const [visible, setVisible] = useState(immediate);
+  const [state, setState] = useState<'shown' | 'waiting' | 'revealed'>('shown');
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const node = ref.current;
-    if (!node || immediate) return;
+    if (!node || immediate || typeof IntersectionObserver === 'undefined') return;
+    // Already on screen (or above it): leave it as rendered.
+    if (node.getBoundingClientRect().top < window.innerHeight) return;
+    setState('waiting');
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry?.isIntersecting) {
-          setVisible(true);
+          setState('revealed');
           observer.disconnect();
         }
       },
-      { rootMargin: '0px 0px -10% 0px' },
+      { rootMargin: '0px 0px -8% 0px' },
     );
     observer.observe(node);
     return () => observer.disconnect();
   }, [immediate]);
 
+  const motion = immediate || state === 'revealed' ? 'animate-fade-up' : state === 'waiting' ? 'opacity-0' : '';
   return (
-    <div ref={ref} className={`${className} ${visible ? 'animate-fade-up' : 'opacity-0'}`} style={{ animationDelay: `${delay}ms` }}>
+    <div ref={ref} className={`${className} ${motion}`} style={motion === 'animate-fade-up' ? { animationDelay: `${delay}ms` } : undefined}>
       {children}
     </div>
   );

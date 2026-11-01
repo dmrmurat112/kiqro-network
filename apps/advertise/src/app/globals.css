@@ -70,6 +70,26 @@
   --animate-drift: drift 18s ease-in-out infinite;
 }
 
+/* Page transitions: each route fades and rises in (template.tsx); the skeleton shimmers while data loads. */
+@keyframes page-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes skeleton {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.page-enter { animation: page-in 0.42s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.skeleton {
+  border-radius: 0.75rem;
+  background: linear-gradient(90deg, var(--surface) 25%, var(--surface-strong) 50%, var(--surface) 75%);
+  background-size: 200% 100%;
+  animation: skeleton 1.4s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-enter, .skeleton { animation: none !important; }
+}
+
 @keyframes fade-up {
   from { opacity: 0; transform: translateY(14px); }
   to { opacity: 1; transform: none; }
@@ -99,8 +119,8 @@
   to { opacity: 1; transform: none; }
 }
 @keyframes feed-in {
-  from { opacity: 0; transform: translateY(-14px) scale(0.97); filter: blur(2px); }
-  to { opacity: 1; transform: none; filter: none; }
+  from { opacity: 0; transform: translateY(-14px) scale(0.97); }
+  to { opacity: 1; transform: none; }
 }
 @keyframes shimmer {
   0%, 100% { background-position: 0% 50%; }
@@ -112,12 +132,7 @@
   66% { transform: translate(-30px, 20px) scale(0.95); }
 }
 @keyframes spin-border {
-  to { --border-angle: 360deg; }
-}
-@property --border-angle {
-  syntax: '<angle>';
-  inherits: false;
-  initial-value: 0deg;
+  to { transform: rotate(1turn); }
 }
 
 /* Smooth height animation for <details> (FAQ) where the browser supports it. */
@@ -141,12 +156,21 @@ body { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
-    animation: var(--animate-shimmer);
   }
-  /* Slowly rotating gradient border for the hero product card. */
-  .mockup-border {
-    background: conic-gradient(from var(--border-angle), rgb(255 255 255 / 0.06), rgb(140 123 255 / 0.7), rgb(255 138 76 / 0.6), rgb(255 255 255 / 0.06) 40%, rgb(255 255 255 / 0.06));
+  /* The moving shimmer repaints the heading every frame; only where there is a fine pointer (desktop). */
+  @media (hover: hover) and (pointer: fine) {
+    .text-gradient { animation: var(--animate-shimmer); }
+  }
+  /*
+   * Slowly rotating gradient border for the hero product card: a conic gradient behind the
+   * card turns with transform (composited, no repaint per frame).
+   */
+  .mockup-border { position: relative; overflow: hidden; isolation: isolate; background: rgb(255 255 255 / 0.06); }
+  .mockup-border::before {
+    content: ''; position: absolute; inset: -75%; z-index: -1;
+    background: conic-gradient(rgb(255 255 255 / 0.06), rgb(140 123 255 / 0.7), rgb(255 138 76 / 0.6), rgb(255 255 255 / 0.06) 40%, rgb(255 255 255 / 0.06));
     animation: spin-border 9s linear infinite;
+    will-change: transform;
   }
   .bg-grid {
     background-image:
@@ -243,7 +267,7 @@ body { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
  */
 @media (prefers-reduced-motion: reduce) {
   .animate-float, .animate-ticker, .animate-aurora, .animate-drift, .animate-ping, .animate-pulse-dot,
-  .text-gradient, .mockup-border { animation: none !important; }
+  .text-gradient, .mockup-border::before { animation: none !important; }
   *, *::before, *::after { transition-duration: min(var(--tw-duration, 0.3s), 0.3s) !important; }
 }
 

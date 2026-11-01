@@ -223,7 +223,7 @@ export function CampaignWizard({ t, lang, products: initialProducts, initial, ca
   const PlatformIcon = ({ platform }: { platform: string }) => (platform === 'ios' ? <Apple size={18} /> : platform === 'web' ? <Globe size={18} /> : <Smartphone size={18} />);
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_18rem]">
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
       <div className="min-w-0">
         {reviewNote && (
           <div className="mb-5 rounded-2xl border border-warn/30 bg-warn/8 p-4">
@@ -777,8 +777,8 @@ export function CampaignWizard({ t, lang, products: initialProducts, initial, ca
       </div>
 
       {/* Live summary */}
-      <aside className="hidden lg:block">
-        <div className="sticky top-8 grid gap-4 rounded-2xl border border-line bg-surface p-5">
+      <aside className="hidden min-w-0 lg:block">
+        <div className="sticky top-8 grid min-w-0 grid-cols-1 gap-4 overflow-hidden rounded-2xl border border-line bg-surface p-5">
           <div className="flex items-center gap-3">
             {product?.iconUrl ? (
               <AppIcon iconUrl={product.iconUrl} platform={product.platform} />

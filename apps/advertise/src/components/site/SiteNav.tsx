@@ -29,7 +29,7 @@ export function SiteNav({ lang, t, altHref }: { lang: Locale; t: SiteDict['nav']
   const otherHref = altHref ?? `/${other}`;
 
   return (
-    <header className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${scrolled || open ? 'border-b border-line bg-bg/75 backdrop-blur-xl' : 'border-b border-transparent'}`}>
+    <header className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${open ? 'border-b border-line bg-bg/95 backdrop-blur-xl' : scrolled ? 'border-b border-line bg-bg/75 backdrop-blur-xl' : 'border-b border-transparent'}`}>
       <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 lg:px-8">
         <Link href={`/${lang}`} aria-label="Kiqro Network">
           <Logo />
@@ -56,28 +56,41 @@ export function SiteNav({ lang, t, altHref }: { lang: Locale; t: SiteDict['nav']
           {open ? <X size={22} /> : <Menu size={22} />}
         </button>
       </nav>
-      {open && (
-        <div className="border-t border-line px-5 pb-5 lg:hidden">
-          <div className="flex flex-col py-2">
-            {links.map((l) => (
-              <a key={l.href} href={l.href} onClick={() => setOpen(false)} className="py-2.5 text-muted hover:text-fg">
-                {l.label}
+      {/* Mobile menu: always mounted; opens by animating its row height (0fr → 1fr) and fading in. */}
+      <div
+        className={`grid transition-[grid-template-rows,opacity] duration-[380ms] ease-[cubic-bezier(0.22,1,0.36,1)] lg:hidden ${open ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}
+        inert={!open}
+        aria-hidden={!open}
+      >
+        <div className="overflow-hidden">
+          <div className="border-t border-line px-5 pb-5">
+            <div className="flex flex-col py-2">
+              {links.map((l, i) => (
+                <a
+                  key={l.href}
+                  href={l.href}
+                  onClick={() => setOpen(false)}
+                  className={`py-2.5 text-muted transition-[opacity,transform,color] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] hover:text-fg ${open ? 'translate-y-0 opacity-100' : '-translate-y-1 opacity-0'}`}
+                  style={{ transitionDelay: open ? `${60 + i * 35}ms` : '0ms' }}
+                >
+                  {l.label}
+                </a>
+              ))}
+            </div>
+            <div className="flex items-center gap-3">
+              <a href={`/${lang}#demo`} onClick={() => setOpen(false)} className="btn-primary flex-1 justify-center">
+                {t.demo}
               </a>
-            ))}
-          </div>
-          <div className="flex items-center gap-3">
-            <a href={`/${lang}#demo`} onClick={() => setOpen(false)} className="btn-primary flex-1 justify-center">
-              {t.demo}
-            </a>
-            <Link href="/login" className="btn-ghost">
-              {t.login}
-            </Link>
-            <Link href={otherHref} className="btn-ghost uppercase">
-              {other}
-            </Link>
+              <Link href="/login" className="btn-ghost">
+                {t.login}
+              </Link>
+              <Link href={otherHref} className="btn-ghost uppercase">
+                {other}
+              </Link>
+            </div>
           </div>
         </div>
-      )}
+      </div>
     </header>
   );
 }
