@@ -206,12 +206,14 @@ export interface ReversalInput {
   clickId: string;
   eventName: string;
   reason: string;
+  /** Required when the advertiser has a postback secret: HMAC(secret, "reversal|click_id|event"). */
+  signature?: string;
   now?: Date;
 }
 
 export type ReversalResult =
   | { ok: true; conversionId: string }
-  | { ok: false; reason: 'unknown_advertiser' | 'not_found' | 'not_approved' | 'outside_reversal_window' };
+  | { ok: false; reason: 'unknown_advertiser' | 'invalid_signature' | 'not_found' | 'not_approved' | 'outside_reversal_window' };
 
 /**
  * Reverses an approved conversion (advertiser or MMP fraud finding). Rewards were paid
@@ -222,6 +224,10 @@ export async function reverseConversion(db: Db, input: ReversalInput): Promise<R
   const now = input.now ?? new Date();
   const advertiser = await db.query.organizations.findFirst({ where: eq(organizations.postbackKey, input.advertiserKey) });
   if (!advertiser) return { ok: false, reason: 'unknown_advertiser' };
+  // Prefixed so an event postback's signature cannot be replayed as a reversal.
+  if (advertiser.postbackSecret && !verify(advertiser.postbackSecret, ['reversal', input.clickId, input.eventName], input.signature)) {
+    return { ok: false, reason: 'invalid_signature' };
+  }
 
   return db.transaction(async (tx) => {
     const [row] = await tx

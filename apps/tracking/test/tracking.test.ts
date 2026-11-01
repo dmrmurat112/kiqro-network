@@ -321,6 +321,24 @@ describe('reversals (chargeback)', () => {
     expect(res.statusCode).toBe(200);
     expect(res.json().outcome).toBe('reversed');
   });
+
+  it('requires a reversal signature when the advertiser has a postback secret', async () => {
+    const s = await setup({ advertiserPostbackSecret: 'adv-secret' });
+    const now = new Date();
+    const clickId = await click(s, { now });
+    await postback(s, clickId, 'install', new Date(now.getTime() + 60_000), { sig: sign('adv-secret', [clickId, 'install']) });
+    const url = `/v1/mmp/${s.postbackKey}/reversal?click_id=${clickId}&event=install`;
+
+    expect((await server(db).inject({ url })).statusCode).toBe(403);
+    // The event postback's signature must not work as a reversal signature.
+    expect((await server(db).inject({ url: `${url}&sig=${sign('adv-secret', [clickId, 'install'])}` })).statusCode).toBe(403);
+    const [stillApproved] = await db.select().from(conversions);
+    expect(stillApproved!.status).toBe('approved');
+
+    const res = await server(db).inject({ url: `${url}&sig=${sign('adv-secret', ['reversal', clickId, 'install'])}` });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().outcome).toBe('reversed');
+  });
 });
 
 describe('publisher postback delivery', () => {

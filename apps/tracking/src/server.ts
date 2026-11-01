@@ -171,10 +171,13 @@ export function buildServer(opts: ServerOptions): FastifyInstance {
   });
 
   app.get<{ Params: { key: string }; Querystring: Query }>('/v1/mmp/:key/reversal', async (req, reply) => {
-    const { click_id: clickId, event, reason } = req.query;
+    const { click_id: clickId, event, reason, sig } = req.query;
     if (!clickId || !event) return reply.code(400).send({ error: 'click_id and event are required' });
-    const result = await reverseConversion(opts.db, { advertiserKey: req.params.key, clickId, eventName: event, reason: reason ?? 'mmp_rejected' });
-    if (!result.ok) return reply.code(result.reason === 'unknown_advertiser' ? 403 : 409).send({ error: result.reason });
+    const result = await reverseConversion(opts.db, { advertiserKey: req.params.key, clickId, eventName: event, reason: reason ?? 'mmp_rejected', signature: sig });
+    if (!result.ok) {
+      const forbidden = result.reason === 'unknown_advertiser' || result.reason === 'invalid_signature';
+      return reply.code(forbidden ? 403 : 409).send({ error: result.reason });
+    }
     return { outcome: 'reversed', conversion_id: result.conversionId };
   });
 

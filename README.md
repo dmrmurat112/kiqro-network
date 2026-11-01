@@ -113,7 +113,7 @@ The guide for the Kiqro app's developers (Offers API, click URLs, postbacks, sig
 | GET | `/v1/offers?app_key&user_id&country&lang&sig` | Offers for one publisher user. `sig = HMAC(placement.secret, app_key\|user_id)` |
 | GET | `/c/:campaignId?app_key&uid&sub1..sub5&sig` | Click → 302 to the advertiser tracking URL. `sig = HMAC(secret, campaign_id\|uid)`. Country from `CF-IPCountry` |
 | GET/POST | `/v1/mmp/:postbackKey?click_id&event&event_ts&country&sig` | Install / in-app event postback. `sig = HMAC(advertiser secret, click_id\|event)` when the advertiser has a secret |
-| GET | `/v1/mmp/:postbackKey/reversal?click_id&event&reason` | Chargeback of an approved conversion |
+| GET | `/v1/mmp/:postbackKey/reversal?click_id&event&reason[&sig]` | Chargeback of an approved conversion; with a postback secret, `sig = HMAC(secret, "reversal\|click_id\|event")` |
 | POST | `/v1/claims` (`app_key, user_id, offer_id, task_id, note, sig`) | Missing-credit claim filed by the publisher for a user. `sig = HMAC(secret, app_key|user_id|offer_id|task_id)`. Matched to the user's click (last 30 days); advertisers decide it in the panel (Claims), Kiqro in the admin panel; approval bills the step and sends the normal reward postback |
 | GET | `/v1/claims?app_key&user_id&sig` | A user's claims and their status |
 
