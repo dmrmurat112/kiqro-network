@@ -95,3 +95,11 @@ button:disabled { opacity: .6; cursor: progress; }
 
 .login { min-height: 100vh; display: grid; place-items: center; }
 .login .card { width: 360px; }
+
+/* Site content editor: label, English and Turkish side by side. */
+details.card > summary { list-style: none; }
+details.card[open] > summary { margin-bottom: 14px; }
+.copy-head, .copy-row { display: grid; grid-template-columns: 180px 1fr 1fr; gap: 10px; align-items: start; }
+.copy-head { font-size: 12px; font-weight: 600; color: var(--muted); }
+.copy-label { font-size: 12px; color: var(--muted); padding-top: 8px; display: grid; gap: 4px; justify-items: start; word-break: break-word; }
+.copy-row textarea { resize: vertical; }

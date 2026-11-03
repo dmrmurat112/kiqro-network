@@ -4,11 +4,12 @@ import { useEffect, useRef, useState } from 'react';
 import { ShieldCheck } from 'lucide-react';
 import type { SiteDict } from '@/lib/i18n';
 
-const COUNTRIES = ['FI', 'DE', 'TR', 'SE', 'DE', 'TR', 'NO'];
-const PRICES = [0.6, 3, 6, 0.6, 5.5];
 /** Row height + gap of the event feed (px); rows slide by exactly this much. */
 const ROW = 44;
 const VISIBLE = 4;
+
+/** "4,812" / "41,6" / "$5 529" → number (admins type figures freely). */
+const num = (v: string) => Number(v.replace(/[^\d.,-]/g, '').replace(/,(?=\d{3}\b)/g, '').replace(',', '.')) || 0;
 
 /** Counts smoothly from the previous value to `value`. */
 function useTween(value: number, ms = 900): number {
@@ -66,6 +67,9 @@ function AppIcon() {
  * animated chart and a feed of verified events that slides smoothly as new ones arrive.
  */
 export function HeroMockup({ t }: { t: SiteDict['mockup'] }) {
+  // Starting figures, prices and countries come from the (admin-editable) copy.
+  const prices = t.prices.map((p) => Number(p.replace(',', '.')) || 0);
+  const countries = t.countries.length ? t.countries : ['TR'];
   const [tick, setTick] = useState(0);
   useEffect(() => {
     const id = setInterval(() => setTick((n) => n + 1), 2600);
@@ -76,25 +80,25 @@ export function HeroMockup({ t }: { t: SiteDict['mockup'] }) {
   const feed = Array.from({ length: VISIBLE + 1 }, (_, i) => {
     const n = tick - i;
     const m = ((n % 1000) + 1000) % 1000;
-    return { key: n, index: i, label: t.events[m % t.events.length]!, country: COUNTRIES[m % COUNTRIES.length]!, price: PRICES[m % PRICES.length]!, filtered: m % 7 === 3 };
+    return { key: n, index: i, label: t.events[m % t.events.length]!, country: countries[m % countries.length]!, price: prices[m % prices.length] ?? 0, filtered: m % 7 === 3 };
   });
 
-  const billed = Array.from({ length: tick }, (_, i) => (i % 7 === 3 ? 0 : PRICES[i % PRICES.length]!)).reduce((a, b) => a + b, 0);
-  const spend = useTween(4812 + billed);
-  const installs = useTween(7346 + Math.floor(tick * 0.6));
-  const rate = useTween(41.6 + Math.min(tick, 30) * 0.02);
+  const billed = Array.from({ length: tick }, (_, i) => (i % 7 === 3 ? 0 : (prices[i % prices.length] ?? 0))).reduce((a, b) => a + b, 0);
+  const spend = useTween(num(t.spendValue) + billed);
+  const installs = useTween(num(t.installsValue) + Math.floor(tick * 0.6));
+  const rate = useTween(num(t.roasValue) + Math.min(tick, 30) * 0.02);
 
   const kpis = [
-    { label: t.spend, value: `$${Math.round(spend).toLocaleString('en-US')}`, delta: '+18%' },
-    { label: t.installs, value: Math.round(installs).toLocaleString('en-US'), delta: '+22%' },
-    { label: t.roas, value: `${rate.toFixed(1)}%`, delta: '+3.1pt' },
+    { label: t.spend, value: `$${Math.round(spend).toLocaleString('en-US')}`, delta: t.spendDelta },
+    { label: t.installs, value: Math.round(installs).toLocaleString('en-US'), delta: t.installsDelta },
+    { label: t.roas, value: `${rate.toFixed(1)}%`, delta: t.roasDelta },
   ];
 
   return (
     <div className="relative animate-float">
       <div className="absolute -inset-20 -z-10 animate-aurora bg-[radial-gradient(closest-side_at_35%_35%,rgb(108_87_240/0.5),transparent),radial-gradient(closest-side_at_70%_65%,rgb(255_107_44/0.3),transparent),radial-gradient(closest-side_at_40%_80%,rgb(52_211_153/0.18),transparent)] opacity-80" />
       <div className="mockup-border relative rounded-2xl p-px">
-        <div className="relative overflow-hidden rounded-[calc(1rem-1px)] bg-elevated shadow-[0_40px_120px_-30px_rgb(0_0_0/0.8)]">
+        <div className="relative overflow-hidden rounded-[calc(1rem-1px)] bg-elevated shadow-[0_40px_120px_-30px_var(--mockup-shadow)]">
           <div className="flex items-center gap-3 border-b border-line px-5 py-3.5">
             <AppIcon />
             <span className="text-sm font-semibold">{t.title}</span>
@@ -102,7 +106,7 @@ export function HeroMockup({ t }: { t: SiteDict['mockup'] }) {
 
           <div className="grid grid-cols-3 divide-x divide-line border-b border-line">
             {kpis.map((k) => (
-              <div key={k.label} className="group px-5 py-4 transition-colors duration-500 hover:bg-white/[0.03]">
+              <div key={k.label} className="group px-5 py-4 transition-colors duration-500 hover:bg-surface-strong">
                 <div className="text-[0.7rem] text-subtle">{k.label}</div>
                 <div className="mt-1 font-mono text-lg font-semibold tabular-nums">{k.value}</div>
                 <div className="text-[0.7rem] font-medium text-good">{k.delta}</div>
@@ -152,7 +156,7 @@ export function HeroMockup({ t }: { t: SiteDict['mockup'] }) {
                   style={{ transform: `translateY(${e.index * ROW}px)`, opacity: e.index >= VISIBLE ? 0 : 1 }}
                 >
                   <span className="flex items-center gap-2.5">
-                    <span className="rounded-md bg-white/[0.06] px-1.5 py-0.5 font-mono text-[0.62rem] font-semibold tracking-wide text-muted">{e.country}</span>
+                    <span className="rounded-md bg-surface-strong px-1.5 py-0.5 font-mono text-[0.62rem] font-semibold tracking-wide text-muted">{e.country}</span>
                     <span className={e.filtered ? 'text-subtle line-through' : ''}>{e.label}</span>
                   </span>
                   {e.filtered ? (

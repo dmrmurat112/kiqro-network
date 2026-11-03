@@ -2,9 +2,30 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { Menu, X } from 'lucide-react';
+import { Menu, Moon, Sun, X } from 'lucide-react';
 import type { Locale, SiteDict } from '@/lib/i18n';
 import { Logo } from '../Logo';
+
+/** Light/dark switch: remembered in the kq_theme cookie (THEME_COOKIE, shared with the panel). */
+function ThemeToggle({ label }: { label: string }) {
+  const [theme, setTheme] = useState<'dark' | 'light' | null>(null);
+  useEffect(() => setTheme(document.documentElement.dataset.theme === 'light' ? 'light' : 'dark'), []);
+  const toggle = () => {
+    const next = theme === 'light' ? 'dark' : 'light';
+    const apply = () => {
+      document.documentElement.dataset.theme = next;
+      setTheme(next);
+    };
+    document.cookie = `kq_theme=${next}; path=/; max-age=31536000; samesite=lax`;
+    if (document.startViewTransition && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) document.startViewTransition(apply);
+    else apply();
+  };
+  return (
+    <button type="button" onClick={toggle} aria-label={label} title={label} className="grid h-9 w-9 place-items-center rounded-full text-muted transition-colors duration-300 hover:bg-surface-strong hover:text-fg">
+      {theme === 'light' ? <Moon size={17} /> : <Sun size={17} />}
+    </button>
+  );
+}
 
 /** altHref: the same page in the other language (defaults to its home page). */
 export function SiteNav({ lang, t, altHref }: { lang: Locale; t: SiteDict['nav']; altHref?: string }) {
@@ -42,6 +63,7 @@ export function SiteNav({ lang, t, altHref }: { lang: Locale; t: SiteDict['nav']
           ))}
         </div>
         <div className="hidden items-center gap-2 lg:flex">
+          <ThemeToggle label={t.theme} />
           <Link href={otherHref} className="rounded-lg px-2.5 py-2 text-xs font-semibold uppercase tracking-wider text-subtle hover:text-fg">
             {other}
           </Link>
@@ -52,9 +74,12 @@ export function SiteNav({ lang, t, altHref }: { lang: Locale; t: SiteDict['nav']
             {t.demo}
           </a>
         </div>
-        <button className="rounded-lg p-2 text-muted lg:hidden" onClick={() => setOpen((v) => !v)} aria-label="Menu" aria-expanded={open}>
-          {open ? <X size={22} /> : <Menu size={22} />}
-        </button>
+        <div className="flex items-center gap-1 lg:hidden">
+          <ThemeToggle label={t.theme} />
+          <button className="rounded-lg p-2 text-muted" onClick={() => setOpen((v) => !v)} aria-label="Menu" aria-expanded={open}>
+            {open ? <X size={22} /> : <Menu size={22} />}
+          </button>
+        </div>
       </nav>
       {/* Mobile menu: always mounted; opens by animating its row height (0fr → 1fr) and fading in. */}
       <div

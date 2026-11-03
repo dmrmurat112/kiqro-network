@@ -646,3 +646,15 @@ export const revenueEvents = pgTable(
   },
   (t) => [index('revenue_events_campaign_idx').on(t.campaignId, t.eventAt), uniqueIndex('revenue_events_external_uq').on(t.clickId, t.externalId)],
 );
+
+/**
+ * Marketing-site settings edited in the admin panel: "texts" holds per-locale overrides of the
+ * landing copy by dotted path ({ "hero.title1": { "en": "…", "tr": "…" } }), "theme" the
+ * default colour scheme. The copy in code stays the fallback for anything not overridden.
+ */
+export const siteSettings = pgTable('site_settings', {
+  key: text('key').primaryKey(),
+  value: jsonb('value').$type<unknown>().notNull(),
+  updatedBy: text('updated_by').references(() => adminUsers.id),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});

@@ -17,9 +17,9 @@ import { HeroMockup } from '@/components/site/HeroMockup';
 import { PointerGlow } from '@/components/site/PointerGlow';
 import { SiteFooter } from '@/components/site/SiteFooter';
 import { SiteNav } from '@/components/site/SiteNav';
-import { isLocale, SITE, type Locale } from '@/lib/i18n';
+import { isLocale, type Locale } from '@/lib/i18n';
+import { siteCopy } from '@/lib/site';
 
-const MMPS = ['AppsFlyer', 'Adjust', 'Singular', 'Kochava', 'Branch', 'Tenjin', 'Airbridge', 'S2S'];
 const WHY_ICONS = [Layers, ShieldCheck, Globe2, BarChart3, Wallet, Zap];
 const STEP_ICONS = [Workflow, Sparkles, Fingerprint];
 
@@ -36,7 +36,7 @@ function SectionHeader({ eyebrow, title, sub, center = true }: { eyebrow: string
 export default async function Home({ params }: { params: Promise<{ lang: string }> }) {
   const { lang: raw } = await params;
   const lang: Locale = isLocale(raw) ? raw : 'en';
-  const t = SITE[lang];
+  const t = await siteCopy(lang);
 
   return (
     <>
@@ -96,7 +96,7 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
         <p className="px-5 text-center text-sm text-subtle">{t.mmps.title}</p>
         <div className="relative mt-6 overflow-hidden [mask-image:linear-gradient(90deg,transparent,black_15%,black_85%,transparent)]">
           <div className="flex w-max animate-ticker gap-14 pr-14">
-            {[...MMPS, ...MMPS].map((name, i) => (
+            {[...t.mmps.names, ...t.mmps.names].map((name, i) => (
               <span key={i} className="cursor-default text-xl font-semibold tracking-tight text-fg/40 transition-colors duration-500 hover:text-fg">
                 {name}
               </span>
@@ -153,10 +153,10 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
                     <p className="mt-2.5 max-w-lg leading-relaxed text-muted">{item.body}</p>
                     {i === 0 && (
                       <div className="mt-7 flex flex-wrap items-center gap-2 text-xs">
-                        {['Install · $0.60', 'Level 10 · $3.00', 'Level 25 · $4.50', 'Purchase · $6.00'].map((step, k) => (
+                        {t.why.journey.map((step, k, all) => (
                           <span key={step} className="flex items-center gap-2">
                             <span className="rounded-lg border border-line-strong bg-surface-strong px-2.5 py-1.5 font-mono text-fg/80 transition-colors duration-500 group-hover:border-violet-400/40">{step}</span>
-                            {k < 3 && <ArrowRight size={13} className="text-subtle" />}
+                            {k < all.length - 1 && <ArrowRight size={13} className="text-subtle" />}
                           </span>
                         ))}
                       </div>
@@ -203,7 +203,7 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
                 <div className="mt-6 flex items-center gap-4 rounded-xl border border-warn/25 bg-warn/5 px-4 py-3.5">
                   <ShieldCheck className="shrink-0 text-warn" size={22} />
                   <p className="text-sm text-muted">
-                    <span className="font-semibold text-fg">$0 {t.fraud.stat}.</span> {t.fraud.statLabel}
+                    <span className="font-semibold text-fg">{t.fraud.statValue} {t.fraud.stat}.</span> {t.fraud.statLabel}
                   </p>
                 </div>
               </Reveal>
@@ -255,7 +255,7 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
           </Reveal>
           <div className="mt-12 divide-y divide-line rounded-2xl border border-line bg-surface">
             {t.faq.items.map((item) => (
-              <details key={item.q} className="group px-6 py-5 transition-colors duration-500 hover:bg-white/[0.02] [&_summary::-webkit-details-marker]:hidden">
+              <details key={item.q} className="group px-6 py-5 transition-colors duration-500 hover:bg-surface-strong/50 [&_summary::-webkit-details-marker]:hidden">
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-6 font-medium transition-colors duration-300 group-hover:text-violet-200">
                   {item.q}
                   <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full border border-line-strong text-muted transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] group-open:rotate-45 group-open:border-violet-400/60 group-open:bg-violet-500/15 group-open:text-violet-200">+</span>

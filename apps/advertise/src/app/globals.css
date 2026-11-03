@@ -2,7 +2,8 @@
 
 /* ---------- Theme tokens ----------
    Brand: Kiqro indigo (#13111F), violet K-mark (#6C57F0), Kiqro Ads orange (#FF6B2C).
-   Semantic colors switch with [data-theme]; the marketing site is always dark. */
+   Semantic colors switch with [data-theme] (panel and marketing site; the visitor's choice is
+   kept in the kq_theme cookie, the site's default is set in the admin panel). */
 :root { --ease-out: cubic-bezier(0.22, 1, 0.36, 1); }
 
 :root,
@@ -17,6 +18,13 @@
   --fg-muted: #a7a3c2;
   --fg-subtle: #6f6a8e;
   --grid: rgb(255 255 255 / 0.035);
+  --violet-200: #ddd6fe;
+  --violet-300: #b3a8ff;
+  --good: #34d399;
+  --bad: #fb7185;
+  --warn: #fbbf24;
+  --mockup-shadow: rgb(0 0 0 / 0.8);
+  --mockup-edge: rgb(255 255 255 / 0.06);
   color-scheme: dark;
 }
 
@@ -30,7 +38,15 @@
   --fg: #16142a;
   --fg-muted: #5c5878;
   --fg-subtle: #8d88a8;
-  --grid: rgb(19 17 31 / 0.04);
+  --grid: rgb(19 17 31 / 0.05);
+  /* Light accents are darker so text keeps its contrast on white. */
+  --violet-200: #4c3bc9;
+  --violet-300: #5641d6;
+  --good: #059669;
+  --bad: #e11d48;
+  --warn: #d97706;
+  --mockup-shadow: rgb(76 59 201 / 0.28);
+  --mockup-edge: rgb(19 17 31 / 0.08);
   color-scheme: light;
 }
 
@@ -45,15 +61,16 @@
   --color-muted: var(--fg-muted);
   --color-subtle: var(--fg-subtle);
 
-  --color-violet-300: #b3a8ff;
+  --color-violet-200: var(--violet-200);
+  --color-violet-300: var(--violet-300);
   --color-violet-400: #8c7bff;
   --color-violet-500: #6c57f0;
   --color-violet-600: #5641d6;
   --color-orange-400: #ff8a4c;
   --color-orange-500: #ff6b2c;
-  --color-good: #34d399;
-  --color-bad: #fb7185;
-  --color-warn: #fbbf24;
+  --color-good: var(--good);
+  --color-bad: var(--bad);
+  --color-warn: var(--warn);
 
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
@@ -145,6 +162,8 @@ details::details-content {
 details[open]::details-content { height: auto; }
 
 html { background: var(--bg); color: var(--fg); }
+/* Theme switch on the site: a short cross-fade (View Transitions, where supported). */
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: 0.35s; animation-timing-function: var(--ease-out); }
 body { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
 ::selection { background: rgb(108 87 240 / 0.45); color: #fff; }
 
@@ -157,6 +176,7 @@ body { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
     background-clip: text;
     color: transparent;
   }
+  [data-theme="light"] .text-gradient { background-image: linear-gradient(100deg, #6c57f0 0%, #5641d6 30%, #f25a1c 60%, #5641d6 100%); }
   /* The moving shimmer repaints the heading every frame; only where there is a fine pointer (desktop). */
   @media (hover: hover) and (pointer: fine) {
     .text-gradient { animation: var(--animate-shimmer); }
@@ -165,10 +185,10 @@ body { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
    * Slowly rotating gradient border for the hero product card: a conic gradient behind the
    * card turns with transform (composited, no repaint per frame).
    */
-  .mockup-border { position: relative; overflow: hidden; isolation: isolate; background: rgb(255 255 255 / 0.06); }
+  .mockup-border { position: relative; overflow: hidden; isolation: isolate; background: var(--mockup-edge); }
   .mockup-border::before {
     content: ''; position: absolute; inset: -75%; z-index: -1;
-    background: conic-gradient(rgb(255 255 255 / 0.06), rgb(140 123 255 / 0.7), rgb(255 138 76 / 0.6), rgb(255 255 255 / 0.06) 40%, rgb(255 255 255 / 0.06));
+    background: conic-gradient(var(--mockup-edge), rgb(140 123 255 / 0.7), rgb(255 138 76 / 0.6), var(--mockup-edge) 40%, var(--mockup-edge));
     animation: spin-border 9s linear infinite;
     will-change: transform;
   }
@@ -245,6 +265,8 @@ body { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
   }
   .btn-ghost:hover { background: var(--surface-strong); border-color: rgb(140 123 255 / 0.5); transform: translateY(-2px); box-shadow: 0 12px 30px -16px rgb(108 87 240 / 0.6); }
   .btn-ghost:active { transform: scale(0.98); transition-duration: 0.15s; }
+  /* Marketing site: pill-shaped buttons. */
+  [data-site] .btn-primary, [data-site] .btn-ghost { border-radius: 999px; padding-inline: 1.4rem; white-space: nowrap; }
   .field {
     width: 100%; border-radius: 0.7rem; padding: 0.7rem 0.85rem; font-size: 0.925rem;
     background: var(--surface); border: 1px solid var(--line-strong); color: var(--fg);

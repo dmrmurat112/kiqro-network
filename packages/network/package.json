@@ -7,7 +7,9 @@
     ".": "./src/index.ts",
     "./admin": "./src/admin/index.ts",
     "./advertiser": "./src/advertiser/index.ts",
-    "./publisher": "./src/publisher/index.ts"
+    "./publisher": "./src/publisher/index.ts",
+    "./site": "./src/site/index.ts",
+    "./site-copy": "./src/site/copy.ts"
   },
   "dependencies": {
     "@kiqro/core": "*",

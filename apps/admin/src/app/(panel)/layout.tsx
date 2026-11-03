@@ -18,6 +18,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
         <Link href="/leads">Demo talepleri</Link>
         <Link href="/publishers">Yayıncılar</Link>
         <Link href="/postbacks">Postback'ler</Link>
+        <Link href="/site">Site içeriği</Link>
         <div className="user">
           <div>{admin.name}</div>
           <div>{ROLE_LABELS[admin.role]}</div>

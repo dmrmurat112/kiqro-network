@@ -4,14 +4,15 @@ import { ArrowRight, FileText } from 'lucide-react';
 import { SiteFooter } from '@/components/site/SiteFooter';
 import { SiteNav } from '@/components/site/SiteNav';
 import { LEGAL_DOCS } from '@/content/legal';
-import { isLocale, SITE } from '@/lib/i18n';
+import { isLocale } from '@/lib/i18n';
+import { siteCopy } from '@/lib/site';
 
 export const metadata = { robots: { index: false } };
 
 export default async function LegalIndex({ params }: { params: Promise<{ lang: string }> }) {
   const { lang } = await params;
   if (!isLocale(lang)) notFound();
-  const t = SITE[lang];
+  const t = await siteCopy(lang);
 
   return (
     <>

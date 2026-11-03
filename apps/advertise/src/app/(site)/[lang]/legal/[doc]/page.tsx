@@ -5,7 +5,8 @@ import { LegalArticle } from '@/components/site/LegalArticle';
 import { SiteFooter } from '@/components/site/SiteFooter';
 import { SiteNav } from '@/components/site/SiteNav';
 import { LEGAL_DOCS, legalDoc } from '@/content/legal';
-import { isLocale, LOCALES, SITE } from '@/lib/i18n';
+import { isLocale, LOCALES } from '@/lib/i18n';
+import { siteCopy } from '@/lib/site';
 
 export function generateStaticParams() {
   return LOCALES.flatMap((lang) => LEGAL_DOCS.map((d) => ({ lang, doc: d.slug })));
@@ -22,7 +23,7 @@ export default async function LegalPage({ params }: { params: Promise<{ lang: st
   const { lang, doc: slug } = await params;
   const doc = legalDoc(slug);
   if (!isLocale(lang) || !doc) notFound();
-  const t = SITE[lang];
+  const t = await siteCopy(lang);
 
   return (
     <>
