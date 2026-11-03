@@ -35,10 +35,6 @@ export async function panelLocale(): Promise<Locale> {
   return isLocale(value) ? value : 'en';
 }
 
-export async function panelTheme(): Promise<'dark' | 'light'> {
-  return (await cookies()).get(THEME_COOKIE)?.value === 'light' ? 'light' : 'dark';
-}
-
 /** Advertiser-only pages: publishers are sent to their own panel. */
 export async function requireAdvertiserOrg(): Promise<AdvertiserSession> {
   const session = await requireAdvertiser();

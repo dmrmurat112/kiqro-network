@@ -49,8 +49,8 @@ describe('landing site content', () => {
     await expect(saveSiteTexts(db, actor, { 'hero.nope': { en: 'x' } })).rejects.toThrow();
     await expect(saveSiteTexts(db, await staff('viewer'), { 'hero.title1': { en: 'x' } })).rejects.toThrow();
     await expect(setSiteDefaultTheme(db, actor, 'blue')).rejects.toThrow();
-    expect((await loadSiteContent(db)).defaultTheme).toBe('dark');
-    await setSiteDefaultTheme(db, actor, 'light');
     expect((await loadSiteContent(db)).defaultTheme).toBe('light');
+    await setSiteDefaultTheme(db, actor, 'dark');
+    expect((await loadSiteContent(db)).defaultTheme).toBe('dark');
   });
 });

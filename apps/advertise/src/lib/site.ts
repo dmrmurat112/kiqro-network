@@ -7,7 +7,7 @@ import { THEME_COOKIE } from './session';
 
 /** Admin edits reach the site within this long (each server instance caches the settings). */
 const TTL_MS = 30_000;
-const FALLBACK: SiteContent = { texts: {}, defaultTheme: 'dark' };
+const FALLBACK: SiteContent = { texts: {}, defaultTheme: 'light' };
 let cached: { at: number; content: Promise<SiteContent> } | null = null;
 
 function siteContent(): Promise<SiteContent> {

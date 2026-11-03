@@ -56,11 +56,11 @@ export default async function SitePage() {
 
       <div className="card">
         <h2>Varsayılan tema</h2>
-        <p className="muted">Ziyaretçi menüdeki düğmeyle temayı kendisi değiştirebilir; seçimi tarayıcısında saklanır. Bu ayar, seçim yapmamış ziyaretçiler içindir.</p>
+        <p className="muted">Ziyaretçi menüdeki düğmeyle temayı kendisi değiştirebilir; seçimi tarayıcısında saklanır. Bu ayar, seçim yapmamış ziyaretçiler içindir ve reklamveren paneli için de geçerlidir.</p>
         <ActionForm action={setSiteThemeAction} submitLabel="Kaydet" className="row">
           <select name="theme" defaultValue={content.defaultTheme} style={{ width: 'auto' }}>
-            <option value="dark">Koyu</option>
             <option value="light">Açık</option>
+            <option value="dark">Koyu</option>
           </select>
         </ActionForm>
       </div>

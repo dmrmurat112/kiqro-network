@@ -63,7 +63,7 @@ export async function loadSiteContent(db: Db): Promise<SiteContent> {
   const theme = rows.find((r) => r.key === 'theme')?.value;
   return {
     texts: texts && typeof texts === 'object' ? (texts as SiteTexts) : {},
-    defaultTheme: theme === 'light' ? 'light' : 'dark',
+    defaultTheme: theme === 'dark' ? 'dark' : 'light',
   };
 }
 

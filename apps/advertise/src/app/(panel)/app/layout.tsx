@@ -2,10 +2,11 @@ import { redirect } from 'next/navigation';
 import { Sidebar } from '@/components/panel/Sidebar';
 import { CURRENT_TERMS_VERSION } from '@/content/legal';
 import { PANEL } from '@/lib/i18n';
-import { panelLocale, panelTheme, requireAdvertiser } from '@/lib/session';
+import { panelLocale, requireAdvertiser } from '@/lib/session';
+import { siteTheme } from '@/lib/site';
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const [{ user, org }, lang, theme] = await Promise.all([requireAdvertiser(), panelLocale(), panelTheme()]);
+  const [{ user, org }, lang, theme] = await Promise.all([requireAdvertiser(), panelLocale(), siteTheme()]);
   // Turned on once the lawyer-approved terms are published; until then drafts are not binding.
   if (process.env.TERMS_REQUIRED === 'true' && user.termsAcceptedVersion !== CURRENT_TERMS_VERSION) redirect('/accept-terms');
   return (
