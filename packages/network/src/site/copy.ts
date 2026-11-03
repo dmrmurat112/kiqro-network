@@ -28,6 +28,7 @@ const en = {
   mockup: {
     title: 'Campaign · Dragon Realm',
     live: 'Example',
+    platforms: 'Android · iOS',
     spend: 'Spend (7d)',
     installs: 'Installs',
     roas: 'Level 10 rate',
@@ -170,6 +171,7 @@ const tr: SiteCopy = {
   mockup: {
     title: 'Kampanya · Dragon Realm',
     live: 'Örnek',
+    platforms: 'Android · iOS',
     spend: 'Harcama (7g)',
     installs: 'Kurulum',
     roas: '10. seviye oranı',

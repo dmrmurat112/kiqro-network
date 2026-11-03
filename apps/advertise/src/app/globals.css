@@ -74,6 +74,8 @@
 
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --font-card: var(--font-plus-jakarta), var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-figure: var(--font-sora), var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
 
   --animate-fade-up: fade-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
   --animate-float: float 7s ease-in-out infinite;
@@ -147,6 +149,29 @@
   0%, 100% { transform: translate(0, 0) scale(1); }
   33% { transform: translate(40px, 30px) scale(1.08); }
   66% { transform: translate(-30px, 20px) scale(0.95); }
+}
+/* Hero card: gloss over the app icon, a light running along the chart, the "+$" bubble and the price pop. */
+@keyframes gloss {
+  0%, 62% { transform: translateX(-140%) skewX(-18deg); }
+  82%, 100% { transform: translateX(160%) skewX(-18deg); }
+}
+@keyframes comet {
+  from { stroke-dashoffset: 0.1; }
+  to { stroke-dashoffset: -1; }
+}
+@keyframes bubble-up {
+  0% { opacity: 0; transform: translateY(6px) scale(0.9); }
+  18% { opacity: 1; transform: none; }
+  100% { opacity: 0; transform: translateY(-22px); }
+}
+@keyframes pop {
+  0% { transform: scale(0.6); opacity: 0; }
+  55% { transform: scale(1.14); opacity: 1; }
+  100% { transform: none; }
+}
+@keyframes row-shine {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(100%); }
 }
 @keyframes spin-border {
   to { transform: rotate(1turn); }
@@ -289,7 +314,7 @@ body { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
  */
 @media (prefers-reduced-motion: reduce) {
   .animate-float, .animate-ticker, .animate-aurora, .animate-drift, .animate-ping, .animate-pulse-dot,
-  .text-gradient, .mockup-border::before { animation: none !important; }
+  .text-gradient, .mockup-border::before, .hero-motion { animation: none !important; }
   *, *::before, *::after { transition-duration: min(var(--tw-duration, 0.3s), 0.3s) !important; }
 }
 

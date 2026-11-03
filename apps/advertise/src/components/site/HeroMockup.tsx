@@ -1,11 +1,11 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { ShieldCheck } from 'lucide-react';
+import { ArrowUpRight, ShieldCheck } from 'lucide-react';
 import type { SiteDict } from '@/lib/i18n';
 
 /** Row height + gap of the event feed (px); rows slide by exactly this much. */
-const ROW = 44;
+const ROW = 46;
 const VISIBLE = 4;
 
 /** "4,812" / "41,6" / "$5 529" → number (admins type figures freely). */
@@ -32,32 +32,54 @@ function useTween(value: number, ms = 900): number {
   return shown;
 }
 
-/** Stylised game icon for the example campaign (an original mark, not a real game's logo). */
+/**
+ * Tilts the card towards a mouse pointer and moves a soft spotlight with it. Written straight to CSS
+ * variables, so moving the mouse does not re-render React. Off for touch and reduced motion.
+ */
+function useTilt() {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || !matchMedia('(hover: hover) and (pointer: fine)').matches || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    let raf = 0;
+    const move = (e: PointerEvent) => {
+      const r = el.getBoundingClientRect();
+      const x = (e.clientX - r.left) / r.width;
+      const y = (e.clientY - r.top) / r.height;
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        el.style.setProperty('--rx', `${(0.5 - y) * 7}deg`);
+        el.style.setProperty('--ry', `${(x - 0.5) * 9}deg`);
+        el.style.setProperty('--mx', `${x * 100}%`);
+        el.style.setProperty('--my', `${y * 100}%`);
+        el.style.setProperty('--spot', '1');
+      });
+    };
+    const leave = () => {
+      cancelAnimationFrame(raf);
+      el.style.setProperty('--rx', '0deg');
+      el.style.setProperty('--ry', '0deg');
+      el.style.setProperty('--spot', '0');
+    };
+    el.addEventListener('pointermove', move);
+    el.addEventListener('pointerleave', leave);
+    return () => {
+      cancelAnimationFrame(raf);
+      el.removeEventListener('pointermove', move);
+      el.removeEventListener('pointerleave', leave);
+    };
+  }, []);
+  return ref;
+}
+
+/** The example campaign's app icon, with a gloss that sweeps across it now and then. */
 function AppIcon() {
   return (
-    <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-[10px] shadow-[0_6px_18px_-6px_rgb(255_107_44/0.7)] ring-1 ring-white/15">
-      <svg viewBox="0 0 64 64" className="h-full w-full" aria-hidden="true">
-        <defs>
-          <linearGradient id="ic-bg" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stopColor="#ff9a4d" />
-            <stop offset="0.55" stopColor="#e2456b" />
-            <stop offset="1" stopColor="#6c57f0" />
-          </linearGradient>
-          <linearGradient id="ic-wing" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor="#fff" stopOpacity="0.95" />
-            <stop offset="1" stopColor="#ffe3c7" stopOpacity="0.85" />
-          </linearGradient>
-        </defs>
-        <rect width="64" height="64" fill="url(#ic-bg)" />
-        <circle cx="48" cy="14" r="18" fill="#fff" opacity="0.12" />
-        {/* Dragon: head, wing and tail in one silhouette. */}
-        <path
-          d="M14 44c6-2 9-7 10-13 3 3 7 4 11 3-2-4-1-9 3-12 1 4 4 6 8 6l-3 4c3 1 5 3 6 6-4-1-7 0-9 2 1 4-1 8-5 10 0-3-1-5-4-6-3 3-8 4-13 3 2-1 3-2 3-4-3 1-5 1-7 1z"
-          fill="url(#ic-wing)"
-        />
-        <circle cx="41.5" cy="25.5" r="1.4" fill="#6c57f0" />
-        <rect width="64" height="32" fill="#fff" opacity="0.08" />
-      </svg>
+    <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-[13px] shadow-[0_10px_24px_-10px_rgb(255_170_40/0.85)] ring-1 ring-black/5">
+      {/* eslint-disable-next-line @next/next/no-img-element -- 7 KB local webp, no optimisation needed */}
+      <img src="/site/app-icon.webp" alt="" width={44} height={44} className="h-full w-full object-cover" />
+      <span className="pointer-events-none absolute inset-0 rounded-[13px] ring-1 ring-inset ring-white/25" />
+      <span className="hero-motion pointer-events-none absolute inset-y-0 left-0 w-2/3 animate-[gloss_5s_ease-in-out_1.2s_infinite] bg-gradient-to-r from-transparent via-white/45 to-transparent" />
     </div>
   );
 }
@@ -70,6 +92,7 @@ export function HeroMockup({ t }: { t: SiteDict['mockup'] }) {
   // Starting figures, prices and countries come from the (admin-editable) copy.
   const prices = t.prices.map((p) => Number(p.replace(',', '.')) || 0);
   const countries = t.countries.length ? t.countries : ['TR'];
+  const tilt = useTilt();
   const [tick, setTick] = useState(0);
   useEffect(() => {
     const id = setInterval(() => setTick((n) => n + 1), 2600);
@@ -82,6 +105,7 @@ export function HeroMockup({ t }: { t: SiteDict['mockup'] }) {
     const m = ((n % 1000) + 1000) % 1000;
     return { key: n, index: i, label: t.events[m % t.events.length]!, country: countries[m % countries.length]!, price: prices[m % prices.length] ?? 0, filtered: m % 7 === 3 };
   });
+  const newest = feed[0]!;
 
   const billed = Array.from({ length: tick }, (_, i) => (i % 7 === 3 ? 0 : (prices[i % prices.length] ?? 0))).reduce((a, b) => a + b, 0);
   const spend = useTween(num(t.spendValue) + billed);
@@ -89,27 +113,51 @@ export function HeroMockup({ t }: { t: SiteDict['mockup'] }) {
   const rate = useTween(num(t.roasValue) + Math.min(tick, 30) * 0.02);
 
   const kpis = [
-    { label: t.spend, value: `$${Math.round(spend).toLocaleString('en-US')}`, delta: t.spendDelta },
-    { label: t.installs, value: Math.round(installs).toLocaleString('en-US'), delta: t.installsDelta },
-    { label: t.roas, value: `${rate.toFixed(1)}%`, delta: t.roasDelta },
+    { label: t.spend, value: `$${Math.round(spend).toLocaleString('en-US')}`, delta: t.spendDelta, bubble: true },
+    { label: t.installs, value: Math.round(installs).toLocaleString('en-US'), delta: t.installsDelta, bubble: false },
+    { label: t.roas, value: `${rate.toFixed(1)}%`, delta: t.roasDelta, bubble: false },
   ];
 
   return (
-    <div className="relative animate-float">
+    <div className="relative animate-float font-card">
       <div className="absolute -inset-20 -z-10 animate-aurora bg-[radial-gradient(closest-side_at_35%_35%,rgb(108_87_240/0.5),transparent),radial-gradient(closest-side_at_70%_65%,rgb(255_107_44/0.3),transparent),radial-gradient(closest-side_at_40%_80%,rgb(52_211_153/0.18),transparent)] opacity-80" />
-      <div className="mockup-border relative rounded-2xl p-px">
-        <div className="relative overflow-hidden rounded-[calc(1rem-1px)] bg-elevated shadow-[0_40px_120px_-30px_var(--mockup-shadow)]">
-          <div className="flex items-center gap-3 border-b border-line px-5 py-3.5">
+      <div
+        ref={tilt}
+        className="mockup-border relative rounded-[1.35rem] p-px transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] [transform:perspective(1100px)_rotateX(var(--rx,0deg))_rotateY(var(--ry,0deg))]"
+      >
+        <div className="relative overflow-hidden rounded-[calc(1.35rem-1px)] bg-elevated shadow-[0_40px_120px_-30px_var(--mockup-shadow)]">
+          {/* Spotlight that follows the mouse. */}
+          <div className="pointer-events-none absolute inset-0 z-10 bg-[radial-gradient(420px_circle_at_var(--mx,50%)_var(--my,0%),rgb(140_123_255/0.12),transparent_60%)] opacity-[var(--spot,0)] transition-opacity duration-500" />
+
+          <div className="flex items-center gap-3.5 border-b border-line bg-gradient-to-b from-surface-strong/70 to-transparent px-5 py-4">
             <AppIcon />
-            <span className="text-sm font-semibold">{t.title}</span>
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-[0.95rem] font-bold tracking-[-0.01em]">{t.title}</div>
+              <div className="mt-0.5 text-xs font-medium text-subtle">{t.platforms}</div>
+            </div>
+            <span className="flex items-center gap-1.5 rounded-full border border-good/25 bg-good/10 px-2.5 py-1 text-[0.7rem] font-semibold text-good">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="absolute inset-0 animate-ping rounded-full bg-good/70" />
+                <span className="relative h-1.5 w-1.5 rounded-full bg-good" />
+              </span>
+              {t.live}
+            </span>
           </div>
 
           <div className="grid grid-cols-3 divide-x divide-line border-b border-line">
             {kpis.map((k) => (
-              <div key={k.label} className="group px-5 py-4 transition-colors duration-500 hover:bg-surface-strong">
-                <div className="text-[0.7rem] text-subtle">{k.label}</div>
-                <div className="mt-1 font-mono text-lg font-semibold tabular-nums">{k.value}</div>
-                <div className="text-[0.7rem] font-medium text-good">{k.delta}</div>
+              <div key={k.label} className="relative px-5 py-4 transition-colors duration-500 hover:bg-surface-strong/60">
+                <div className="truncate text-[0.72rem] font-medium text-subtle">{k.label}</div>
+                <div className="mt-1.5 font-figure text-[1.35rem] leading-none font-semibold tracking-[-0.03em] tabular-nums">{k.value}</div>
+                <div className="mt-2 inline-flex items-center gap-0.5 rounded-full bg-good/10 px-1.5 py-0.5 text-[0.66rem] font-semibold text-good">
+                  <ArrowUpRight size={11} strokeWidth={2.6} />
+                  {k.delta.replace(/^\+/, '')}
+                </div>
+                {k.bubble && tick > 0 && !newest.filtered && (
+                  <span key={tick} className="hero-motion pointer-events-none absolute right-3 bottom-4 animate-[bubble-up_1.8s_cubic-bezier(0.22,1,0.36,1)_both] rounded-full bg-good px-1.5 py-0.5 font-figure text-[0.62rem] font-semibold text-white shadow-[0_6px_16px_-6px_var(--good)]">
+                    +${newest.price.toFixed(2)}
+                  </span>
+                )}
               </div>
             ))}
           </div>
@@ -118,7 +166,7 @@ export function HeroMockup({ t }: { t: SiteDict['mockup'] }) {
             <svg viewBox="0 0 400 110" className="h-28 w-full overflow-visible" preserveAspectRatio="none" aria-hidden="true">
               <defs>
                 <linearGradient id="hero-area" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0" stopColor="#8c7bff" stopOpacity="0.5" />
+                  <stop offset="0" stopColor="#8c7bff" stopOpacity="0.45" />
                   <stop offset="1" stopColor="#8c7bff" stopOpacity="0" />
                 </linearGradient>
                 <linearGradient id="hero-line" x1="0" y1="0" x2="1" y2="0">
@@ -126,6 +174,9 @@ export function HeroMockup({ t }: { t: SiteDict['mockup'] }) {
                   <stop offset="1" stopColor="#ff8a4c" />
                 </linearGradient>
               </defs>
+              {[30, 60, 90].map((y) => (
+                <line key={y} x1="0" x2="400" y1={y} y2={y} stroke="var(--line)" strokeDasharray="3 5" vectorEffect="non-scaling-stroke" />
+              ))}
               <path className="animate-area-in" d="M0 88 C40 80 60 84 90 70 S150 64 180 52 S240 58 270 40 S330 30 360 22 S390 16 400 12 V110 H0Z" fill="url(#hero-area)" />
               <path
                 className="animate-draw"
@@ -133,9 +184,23 @@ export function HeroMockup({ t }: { t: SiteDict['mockup'] }) {
                 d="M0 88 C40 80 60 84 90 70 S150 64 180 52 S240 58 270 40 S330 30 360 22 S390 16 400 12"
                 fill="none"
                 stroke="url(#hero-line)"
-                strokeWidth="2.5"
+                strokeWidth="2.75"
                 strokeLinecap="round"
                 vectorEffect="non-scaling-stroke"
+              />
+              {/* A short light that keeps running along the line. */}
+              <path
+                className="hero-motion animate-[comet_3.4s_cubic-bezier(0.45,0,0.25,1)_2.6s_infinite_both]"
+                pathLength={1}
+                d="M0 88 C40 80 60 84 90 70 S150 64 180 52 S240 58 270 40 S330 30 360 22 S390 16 400 12"
+                fill="none"
+                stroke="#fff"
+                strokeOpacity="0.9"
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeDasharray="0.1 1.2"
+                vectorEffect="non-scaling-stroke"
+                style={{ filter: 'drop-shadow(0 0 4px rgb(255 138 76 / 0.9))' }}
               />
             </svg>
             {/* Pulsing "now" marker at the end of the line. */}
@@ -145,26 +210,36 @@ export function HeroMockup({ t }: { t: SiteDict['mockup'] }) {
           </div>
 
           <div className="px-5 pb-5">
-            <div className="mb-2 text-[0.7rem] font-medium uppercase tracking-wider text-subtle">{t.feedTitle}</div>
+            <div className="mb-2.5 flex items-center justify-between text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-subtle">
+              {t.feedTitle}
+              <ShieldCheck size={13} className="text-good" />
+            </div>
             <ul className="relative overflow-hidden" style={{ height: ROW * VISIBLE - 6 }}>
               {feed.map((e) => (
                 <li
                   key={e.key}
-                  className={`absolute inset-x-0 flex h-[38px] items-center justify-between rounded-xl border px-3 text-sm transition-[transform,opacity,background-color,border-color] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-                    e.index === 0 ? 'animate-feed-in border-violet-400/40 bg-violet-500/[0.12] shadow-[0_8px_24px_-12px_rgb(108_87_240/0.8)]' : 'border-line bg-surface'
+                  className={`absolute inset-x-0 flex h-10 items-center justify-between overflow-hidden rounded-2xl border px-3 text-[0.84rem] font-medium transition-[transform,opacity,background-color,border-color,box-shadow] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+                    e.index === 0 ? 'animate-feed-in border-violet-400/40 bg-violet-500/[0.1] shadow-[0_10px_28px_-14px_rgb(108_87_240/0.9)]' : 'border-line bg-surface'
                   }`}
-                  style={{ transform: `translateY(${e.index * ROW}px)`, opacity: e.index >= VISIBLE ? 0 : 1 }}
+                  style={{ transform: `translateY(${e.index * ROW}px) scale(${e.index >= VISIBLE ? 0.96 : 1})`, opacity: e.index >= VISIBLE ? 0 : 1 }}
                 >
+                  {e.index === 0 && (
+                    <span className="hero-motion pointer-events-none absolute inset-0 animate-[row-shine_1.4s_cubic-bezier(0.22,1,0.36,1)_0.25s_both] bg-gradient-to-r from-transparent via-white/25 to-transparent" />
+                  )}
                   <span className="flex items-center gap-2.5">
-                    <span className="rounded-md bg-surface-strong px-1.5 py-0.5 font-mono text-[0.62rem] font-semibold tracking-wide text-muted">{e.country}</span>
+                    <span className="rounded-lg bg-surface-strong px-1.5 py-0.5 font-figure text-[0.6rem] font-semibold tracking-wider text-muted">{e.country}</span>
                     <span className={e.filtered ? 'text-subtle line-through' : ''}>{e.label}</span>
                   </span>
                   {e.filtered ? (
-                    <span className="flex items-center gap-1 text-[0.7rem] font-medium text-warn">
+                    <span className="flex items-center gap-1 text-[0.7rem] font-semibold text-warn">
                       <ShieldCheck size={13} /> {t.filtered}
                     </span>
                   ) : (
-                    <span className="font-mono text-xs font-semibold text-good tabular-nums">${e.price.toFixed(2)}</span>
+                    <span
+                      className={`font-figure text-[0.8rem] font-semibold text-good tabular-nums ${e.index === 0 ? 'hero-motion animate-[pop_0.6s_cubic-bezier(0.22,1,0.36,1)_0.15s_both]' : ''}`}
+                    >
+                      ${e.price.toFixed(2)}
+                    </span>
                   )}
                 </li>
               ))}
