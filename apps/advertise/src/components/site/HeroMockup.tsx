@@ -135,13 +135,6 @@ export function HeroMockup({ t }: { t: SiteDict['mockup'] }) {
               <div className="truncate text-[0.95rem] font-bold tracking-[-0.01em]">{t.title}</div>
               <div className="mt-0.5 text-xs font-medium text-subtle">{t.platforms}</div>
             </div>
-            <span className="flex items-center gap-1.5 rounded-full border border-good/25 bg-good/10 px-2.5 py-1 text-[0.7rem] font-semibold text-good">
-              <span className="relative flex h-1.5 w-1.5">
-                <span className="absolute inset-0 animate-ping rounded-full bg-good/70" />
-                <span className="relative h-1.5 w-1.5 rounded-full bg-good" />
-              </span>
-              {t.live}
-            </span>
           </div>
 
           <div className="grid grid-cols-3 divide-x divide-line border-b border-line">
@@ -198,7 +191,7 @@ export function HeroMockup({ t }: { t: SiteDict['mockup'] }) {
                 strokeOpacity="0.9"
                 strokeWidth="3"
                 strokeLinecap="round"
-                strokeDasharray="0.1 1.2"
+                strokeDasharray="0.1 2"
                 vectorEffect="non-scaling-stroke"
                 style={{ filter: 'drop-shadow(0 0 4px rgb(255 138 76 / 0.9))' }}
               />

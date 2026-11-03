@@ -129,9 +129,15 @@
   0%, 100% { transform: rotate(0deg) scale(1); }
   50% { transform: rotate(18deg) scale(1.06); }
 }
+/*
+ * Line drawing. With vector-effect: non-scaling-stroke, Chrome measures dashes against the stretched
+ * line, so a dash of exactly pathLength stops short on wide cards. The dash grows past the end and
+ * finishes as a solid line (gap 0) instead.
+ */
 @keyframes draw {
-  from { stroke-dasharray: 1; stroke-dashoffset: 1; }
-  to { stroke-dasharray: 1; stroke-dashoffset: 0; }
+  0% { stroke-dasharray: 0 3; }
+  85% { stroke-dasharray: 1.3 3; }
+  100% { stroke-dasharray: 3 0; }
 }
 @keyframes area-in {
   from { opacity: 0; transform: translateY(8px); }
@@ -157,7 +163,7 @@
 }
 @keyframes comet {
   from { stroke-dashoffset: 0.1; }
-  to { stroke-dashoffset: -1; }
+  to { stroke-dashoffset: -1.5; }
 }
 @keyframes bubble-up {
   0% { opacity: 0; transform: translateY(6px) scale(0.9); }
