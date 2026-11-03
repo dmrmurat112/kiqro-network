@@ -50,7 +50,7 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
         <div className="absolute top-24 -right-64 h-[620px] w-[620px] animate-drift bg-[radial-gradient(closest-side,rgb(249_115_22/0.17),transparent)]" />
         <div className="absolute top-56 -left-56 h-[520px] w-[520px] animate-drift bg-[radial-gradient(closest-side,rgb(52_211_153/0.08),transparent)] [animation-delay:-9s]" />
 
-        <div className="relative mx-auto grid max-w-7xl items-center gap-16 px-5 lg:grid-cols-[1.1fr_0.9fr] lg:px-8">
+        <div className="relative mx-auto grid max-w-7xl grid-cols-1 items-center gap-16 px-5 lg:grid-cols-[1.1fr_0.9fr] lg:px-8">
           <div>
             <Reveal immediate>
               <h1 className="text-[2.6rem] font-semibold leading-[1.04] tracking-tight sm:text-6xl lg:text-[4.4rem]">
@@ -85,7 +85,7 @@ export default async function Home({ params }: { params: Promise<{ lang: string 
               <p className="mt-4 text-[0.7rem] text-subtle">{t.hero.statsNote}</p>
             </Reveal>
           </div>
-          <Reveal immediate delay={200} className="mx-auto w-full max-w-md lg:max-w-none">
+          <Reveal immediate delay={200} className="mx-auto w-full min-w-0 max-w-md lg:max-w-none">
             <HeroMockup t={t.mockup} />
           </Reveal>
         </div>

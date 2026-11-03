@@ -309,13 +309,16 @@ body { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
 }
 
 /*
+ * The hero product card (.hero-card) is exempt: it is a small, self-contained preview, and Windows
+ * turns reduced motion on for every site when its "Animation effects" setting is off.
+ *
  * Reduced motion: stop the looping decoration (floating card, ticker, glows, rotating border,
  * shimmer) but keep short hover and state transitions, which do not move the page around.
  */
 @media (prefers-reduced-motion: reduce) {
-  .animate-float, .animate-ticker, .animate-aurora, .animate-drift, .animate-ping, .animate-pulse-dot,
-  .text-gradient, .mockup-border::before, .hero-motion { animation: none !important; }
-  *, *::before, *::after { transition-duration: min(var(--tw-duration, 0.3s), 0.3s) !important; }
+  :is(.animate-float, .animate-ticker, .animate-aurora, .animate-drift, .animate-ping, .animate-pulse-dot, .text-gradient):not(.hero-card, .hero-card *),
+  .mockup-border:not(.hero-card *)::before { animation: none !important; }
+  :not(.hero-card, .hero-card *), ::before, ::after { transition-duration: min(var(--tw-duration, 0.3s), 0.3s) !important; }
 }
 
 /* Printing (invoices): only the document, on white A4, without the panel chrome. */

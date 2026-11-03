@@ -4,24 +4,24 @@ import { notFound } from 'next/navigation';
 import { LegalArticle } from '@/components/site/LegalArticle';
 import { SiteFooter } from '@/components/site/SiteFooter';
 import { SiteNav } from '@/components/site/SiteNav';
-import { LEGAL_DOCS, legalDoc } from '@/content/legal';
+import { LEGAL_SLUGS, legalDoc } from '@/content/legal';
 import { isLocale, LOCALES } from '@/lib/i18n';
 import { siteCopy } from '@/lib/site';
 
 export function generateStaticParams() {
-  return LOCALES.flatMap((lang) => LEGAL_DOCS.map((d) => ({ lang, doc: d.slug })));
+  return LOCALES.flatMap((lang) => LEGAL_SLUGS.map((doc) => ({ lang, doc })));
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ lang: string; doc: string }> }): Promise<Metadata> {
-  const { doc: slug } = await params;
-  const doc = legalDoc(slug);
+  const { lang, doc: slug } = await params;
+  const doc = isLocale(lang) ? legalDoc(slug, lang) : undefined;
   // Drafts are not binding, so keep them out of search results until legal review is done.
   return doc ? { title: `${doc.title} — Kiqro Network`, description: doc.summary, robots: doc.status === 'draft' ? { index: false } : undefined } : {};
 }
 
 export default async function LegalPage({ params }: { params: Promise<{ lang: string; doc: string }> }) {
   const { lang, doc: slug } = await params;
-  const doc = legalDoc(slug);
+  const doc = isLocale(lang) ? legalDoc(slug, lang) : undefined;
   if (!isLocale(lang) || !doc) notFound();
   const t = await siteCopy(lang);
 

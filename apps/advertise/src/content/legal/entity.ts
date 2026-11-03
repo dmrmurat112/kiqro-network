@@ -1,5 +1,3 @@
-import { TBD } from './types';
-
 /**
  * Contracting entity and contacts used across the legal documents. During the transition
  * Kiqro Inc. contracts and invoices; once Kiqro Oy (Finland) is incorporated, new
@@ -7,10 +5,13 @@ import { TBD } from './types';
  */
 export const ENTITY = {
   name: 'Kiqro Inc.',
-  address: TBD('registered address of Kiqro Inc.'),
-  registration: TBD('state of incorporation and company number'),
-  successor: 'Kiqro Oy (Finland), once incorporated',
+  /** Multi-line form for invoices (rendered with white-space: pre-line). */
+  address: '407 E Ayre St #1489\nWilmington, DE 19804\nUSA',
+  /** One-line form for running text. */
+  addressLine: '407 E Ayre St #1489, Wilmington, DE 19804, USA',
+  /** State of incorporation and company number, shown on invoices once known. */
+  registration: '',
   salesEmail: 'contact@kiqro.com',
-  privacyEmail: TBD('privacy contact e-mail, e.g. privacy@kiqro.com'),
+  privacyEmail: 'contact@kiqro.com',
   website: 'kiqronetwork.com',
 };

@@ -34,13 +34,13 @@ function useTween(value: number, ms = 900): number {
 
 /**
  * Tilts the card towards a mouse pointer and moves a soft spotlight with it. Written straight to CSS
- * variables, so moving the mouse does not re-render React. Off for touch and reduced motion.
+ * variables, so moving the mouse does not re-render React. Off for touch screens.
  */
 function useTilt() {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const el = ref.current;
-    if (!el || !matchMedia('(hover: hover) and (pointer: fine)').matches || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (!el || !matchMedia('(hover: hover) and (pointer: fine)').matches) return;
     let raf = 0;
     const move = (e: PointerEvent) => {
       const r = el.getBoundingClientRect();
@@ -119,7 +119,7 @@ export function HeroMockup({ t }: { t: SiteDict['mockup'] }) {
   ];
 
   return (
-    <div className="relative animate-float font-card">
+    <div className="hero-card relative animate-float font-card">
       <div className="absolute -inset-20 -z-10 animate-aurora bg-[radial-gradient(closest-side_at_35%_35%,rgb(108_87_240/0.5),transparent),radial-gradient(closest-side_at_70%_65%,rgb(255_107_44/0.3),transparent),radial-gradient(closest-side_at_40%_80%,rgb(52_211_153/0.18),transparent)] opacity-80" />
       <div
         ref={tilt}
@@ -146,15 +146,15 @@ export function HeroMockup({ t }: { t: SiteDict['mockup'] }) {
 
           <div className="grid grid-cols-3 divide-x divide-line border-b border-line">
             {kpis.map((k) => (
-              <div key={k.label} className="relative px-5 py-4 transition-colors duration-500 hover:bg-surface-strong/60">
+              <div key={k.label} className="relative min-w-0 px-3 py-3.5 transition-colors sm:px-5 sm:py-4 duration-500 hover:bg-surface-strong/60">
                 <div className="truncate text-[0.72rem] font-medium text-subtle">{k.label}</div>
-                <div className="mt-1.5 font-figure text-[1.35rem] leading-none font-semibold tracking-[-0.03em] tabular-nums">{k.value}</div>
+                <div className="mt-1.5 font-figure text-[1.1rem] leading-none sm:text-[1.35rem] font-semibold tracking-[-0.03em] tabular-nums">{k.value}</div>
                 <div className="mt-2 inline-flex items-center gap-0.5 rounded-full bg-good/10 px-1.5 py-0.5 text-[0.66rem] font-semibold text-good">
                   <ArrowUpRight size={11} strokeWidth={2.6} />
                   {k.delta.replace(/^\+/, '')}
                 </div>
                 {k.bubble && tick > 0 && !newest.filtered && (
-                  <span key={tick} className="hero-motion pointer-events-none absolute right-3 bottom-4 animate-[bubble-up_1.8s_cubic-bezier(0.22,1,0.36,1)_both] rounded-full bg-good px-1.5 py-0.5 font-figure text-[0.62rem] font-semibold text-white shadow-[0_6px_16px_-6px_var(--good)]">
+                  <span key={tick} className="hero-motion pointer-events-none absolute right-2 bottom-3.5 animate-[bubble-up_1.8s_cubic-bezier(0.22,1,0.36,1)_both] rounded-full bg-good px-1.5 py-0.5 font-figure text-[0.62rem] font-semibold text-white shadow-[0_6px_16px_-6px_var(--good)]">
                     +${newest.price.toFixed(2)}
                   </span>
                 )}

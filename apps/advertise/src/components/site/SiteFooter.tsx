@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { LEGAL_DOCS } from '@/content/legal';
+import { legalDocs } from '@/content/legal';
 import type { Locale, SiteDict } from '@/lib/i18n';
 import { Logo } from '../Logo';
 
@@ -23,7 +23,7 @@ export function SiteFooter({ lang, t }: { lang: Locale; t: SiteDict }) {
         <div className="text-sm">
           <div className="font-semibold">{t.footer.legal}</div>
           <ul className="mt-4 space-y-2.5 text-muted">
-            {LEGAL_DOCS.map((d) => (
+            {legalDocs(lang).map((d) => (
               <li key={d.slug}>
                 <Link href={`/${lang}/legal/${d.slug}`} className="hover:text-fg">
                   {d.title}

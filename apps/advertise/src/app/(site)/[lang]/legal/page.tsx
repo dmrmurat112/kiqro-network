@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { ArrowRight, FileText } from 'lucide-react';
 import { SiteFooter } from '@/components/site/SiteFooter';
 import { SiteNav } from '@/components/site/SiteNav';
-import { LEGAL_DOCS } from '@/content/legal';
+import { legalDocs } from '@/content/legal';
 import { isLocale } from '@/lib/i18n';
 import { siteCopy } from '@/lib/site';
 
@@ -21,7 +21,7 @@ export default async function LegalIndex({ params }: { params: Promise<{ lang: s
         <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">{t.legal.title}</h1>
         <p className="mt-3 text-muted">{t.legal.sub}</p>
         <ul className="mt-10 grid gap-3">
-          {LEGAL_DOCS.map((d) => (
+          {legalDocs(lang).map((d) => (
             <li key={d.slug}>
               <Link href={`/${lang}/legal/${d.slug}`} className="card-glow group flex items-center gap-4 rounded-2xl p-5">
                 <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-violet-500/10 text-violet-300">

@@ -20,3 +20,11 @@ export interface LegalDoc {
 
 /** Placeholder for facts only Kiqro or its lawyer can fill in. Rendered highlighted. */
 export const TBD = (what: string) => `[● ${what}]`;
+
+export type LegalLocale = 'en' | 'tr';
+
+/** One document in every site language. The English text prevails if the versions differ. */
+export type LocalizedDoc = Record<LegalLocale, LegalDoc>;
+
+/** Version and date shared by both languages of the documents published together. */
+export const PUBLISHED = { version: '1.0 (2026-11-03)', status: 'final' } as const;

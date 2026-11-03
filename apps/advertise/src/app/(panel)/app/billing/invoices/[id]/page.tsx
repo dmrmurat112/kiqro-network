@@ -71,7 +71,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
             <div className="mb-2 text-xs font-semibold tracking-wider text-[#8d88a8] uppercase">{t.from}</div>
             <div className="font-semibold">{entity.name}</div>
             <div className="whitespace-pre-line text-[#5c5878]">{entity.address}</div>
-            <div className="text-[#5c5878]">{entity.registration}</div>
+            {entity.registration && <div className="text-[#5c5878]">{entity.registration}</div>}
             <div className="text-[#5c5878]">{entity.salesEmail}</div>
           </div>
           <div>

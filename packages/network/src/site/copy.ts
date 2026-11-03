@@ -283,7 +283,7 @@ const tr: SiteCopy = {
     draft: 'Taslak — hukuki inceleme bekliyor. Bu belge henüz bağlayıcı değildir.',
     version: 'Sürüm',
     onThisPage: 'Bu sayfada',
-    translation: 'Sözleşme dili İngilizcedir. Türkçe çeviri, hukuki inceleme tamamlandıktan sonra yayınlanacaktır.',
+    translation: 'Türkçe metin kolaylık amacıyla yayınlanmıştır. İngilizce metinle farklılık olması halinde İngilizce metin geçerlidir.',
     all: 'Tüm hukuki belgeler',
   },
 };

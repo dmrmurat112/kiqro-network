@@ -23,7 +23,7 @@ export default async function AcceptTermsPage() {
       <div className="mt-5 text-xs font-semibold uppercase tracking-wider text-subtle">{t.docs}</div>
       <ul className="mt-2 grid gap-1.5">
         {DOCS.map((slug) => {
-          const doc = legalDoc(slug)!;
+          const doc = legalDoc(slug, lang)!;
           return (
             <li key={slug}>
               <Link href={`/${lang}/legal/${slug}`} target="_blank" className="flex items-center justify-between rounded-lg border border-line bg-surface px-3 py-2 text-sm hover:border-violet-400/50">
