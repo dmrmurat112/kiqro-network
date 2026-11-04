@@ -5,6 +5,9 @@ const { campaigns, conversions, taskPayouts } = schema;
 
 export type Campaign = typeof campaigns.$inferSelect;
 
+/** createdBy of campaigns seeded for sales demos; they are never offered to users or clicked. */
+export const DEMO_SEED = 'demo-seed';
+
 /** Advertiser price for a task in a country, falling back to the "*" default price. */
 export async function priceFor(db: DbOrTx, taskId: string, country: string | null): Promise<bigint | null> {
   const rows = await db
@@ -38,6 +41,8 @@ export function startOfUtcDay(now: Date): Date {
  * users who already started keep being paid for later events (see spec, Bölüm 8 Adım 4).
  */
 export async function acceptsNewUsers(db: DbOrTx, campaign: Campaign, country: string | null, now: Date): Promise<string | null> {
+  // Sales-demo campaigns (scripts/demo-campaign.ts) look active in the panels but never reach users.
+  if (campaign.createdBy === DEMO_SEED) return 'demo_campaign';
   if (campaign.status !== 'active') return 'campaign_not_active';
   if (campaign.startAt && now < campaign.startAt) return 'campaign_not_started';
   if (campaign.endAt && now >= campaign.endAt) return 'campaign_ended';

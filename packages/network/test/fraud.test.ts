@@ -5,6 +5,7 @@ import { schema, type Db } from '@kiqro/db';
 import { resetTestDb, setupTestDb } from '@kiqro/db/testing';
 import {
   createDemoSetup,
+  DEMO_SEED,
   defaultFraudConfig,
   handleClick,
   handlePostback,
@@ -100,6 +101,16 @@ describe('click screening', () => {
     const url = new URL(result.offers[0]!.clickUrl);
     expect(url.searchParams.get('risk')).toBe('40');
     expect(url.searchParams.get('sig')).toBe(sign(s.placementSecret, [s.campaignId, 'u1', '40']));
+  });
+
+  it('never offers or clicks a sales-demo campaign, even when it is active', async () => {
+    const s = await createDemoSetup(db);
+    await db.update(schema.campaigns).set({ createdBy: DEMO_SEED }).where(eq(schema.campaigns.id, s.campaignId));
+    const result = await listOffers(db, {
+      appKey: s.appKey, publisherUserId: 'u1', signature: sign(s.placementSecret, [s.appKey, 'u1']), country: 'TR', lang: 'en', trackingBaseUrl: 'https://t.test', now: T0,
+    });
+    expect(result).toMatchObject({ ok: true, offers: [] });
+    expect(await click(s)).toMatchObject({ ok: false, reason: 'demo_campaign' });
   });
 });
 
