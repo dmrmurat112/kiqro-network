@@ -139,6 +139,9 @@ async function remove(tx: Tx, everything: boolean) {
   await tx.delete(schema.currencySales).where(eq(schema.currencySales.placementId, PLACEMENT));
   await tx.delete(schema.publisherUserBans).where(inArray(schema.publisherUserBans.publisherOrgId, orgs));
   await tx.delete(schema.placements).where(inArray(schema.placements.publisherOrgId, orgs));
+  // Payments point at their ledger top-up, so they go first.
+  await tx.delete(schema.payments).where(inArray(schema.payments.orgId, orgs));
+  await tx.delete(schema.invoices).where(inArray(schema.invoices.orgId, orgs));
   if (txns.length) {
     await tx.delete(schema.ledgerEntries).where(inArray(schema.ledgerEntries.transactionId, txns));
     await tx.delete(schema.ledgerTransactions).where(inArray(schema.ledgerTransactions.id, txns));
@@ -147,8 +150,6 @@ async function remove(tx: Tx, everything: boolean) {
   await tx.execute(sql`delete from webhook_deliveries where endpoint_id in (select id from webhook_endpoints where org_id in (${ADV}, ${PUB}))`);
   await tx.delete(schema.webhookEndpoints).where(inArray(schema.webhookEndpoints.orgId, orgs));
   await tx.delete(schema.advertiserApiKeys).where(inArray(schema.advertiserApiKeys.orgId, orgs));
-  await tx.delete(schema.payments).where(inArray(schema.payments.orgId, orgs));
-  await tx.delete(schema.invoices).where(inArray(schema.invoices.orgId, orgs));
   if (!everything) return users.length;
   if (users.length) {
     await tx.delete(schema.advertiserSessions).where(inArray(schema.advertiserSessions.advertiserUserId, users));
@@ -349,18 +350,31 @@ async function seed(tx: Tx, now: Date) {
   const payout = approved.reduce((s, c) => s + c.publisherPayout, 0n);
   const balance = await getAccountId(tx, 'advertiser_balance', ADV);
   const cash = await getAccountId(tx, 'external_cash', null);
-  for (const amount of [usd(500)]) {
-    await postTransaction(tx, {
-      type: 'advertiser_topup',
-      refType: 'organization',
-      refId: ADV,
-      memo: 'Demo',
-      entries: [
-        { accountId: cash, amount: -amount },
-        { accountId: balance, amount },
-      ],
-    });
-  }
+  // The card top-up made when the campaign started, as a completed Stripe checkout records it
+  // (shown in Billing → Payment history).
+  const paymentId = newId('payment');
+  const topUp = usd(500);
+  const paidAt = new Date(start.getTime() - 2 * 3_600_000);
+  const topUpTxn = await postTransaction(tx, {
+    type: 'advertiser_topup',
+    refType: 'organization',
+    refId: ADV,
+    memo: `stripe ${paymentId}`,
+    entries: [
+      { accountId: cash, amount: -topUp },
+      { accountId: balance, amount: topUp },
+    ],
+  });
+  await tx.insert(schema.payments).values({
+    id: paymentId,
+    orgId: ADV,
+    method: 'stripe',
+    status: 'succeeded',
+    amount: topUp,
+    ledgerTransactionId: topUpTxn,
+    completedAt: paidAt,
+    createdAt: paidAt,
+  });
   await postTransaction(tx, {
     type: 'conversion',
     refType: 'campaign',
