@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>Kiqro Network — Reklamveren S2S Entegrasyon Kılavuzu</title>
+<!-- Source of docs/reklamveren-s2s-entegrasyon.pdf. Print with headless Chrome (A4); see the end of this file. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --violet: #6c57f0; --violet-dark: #4c3bc9; --violet-soft: #f1effe; --orange: #ff6b2c;
+    --ink: #16142a; --muted: #5c5878; --subtle: #8d88a8; --line: #e7e4f3; --surface: #f8f7fd;
+    --good: #059669; --warn: #b45309; --bad: #be123c;
+  }
+  @page { size: A4; margin: 18mm 17mm 20mm; }
+  @page :first { margin: 0; }
+  * { box-sizing: border-box; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { margin: 0; font-family: 'Plus Jakarta Sans', 'Segoe UI', sans-serif; color: var(--ink); font-size: 10pt; line-height: 1.6; }
+  code, pre, .mono { font-family: 'JetBrains Mono', Consolas, monospace; font-variant-ligatures: none; }
+
+  /* ---------- Cover ---------- */
+  .cover { height: 297mm; padding: 26mm 22mm; position: relative; overflow: hidden; color: #fff;
+    background: radial-gradient(120% 80% at 100% 0%, #8c7bff 0%, transparent 55%), radial-gradient(90% 70% at 0% 100%, #ff8a4c55 0%, transparent 60%), linear-gradient(160deg, #241b6b 0%, #120e33 100%);
+    page-break-after: always; display: flex; flex-direction: column; }
+  .cover .grid { position: absolute; inset: 0; background-image: linear-gradient(#ffffff0d 1px, transparent 1px), linear-gradient(90deg, #ffffff0d 1px, transparent 1px); background-size: 14mm 14mm; }
+  .brand { display: flex; align-items: center; gap: 10px; position: relative; }
+  .brand svg { width: 34px; height: 28px; }
+  .brand b { font-size: 20pt; letter-spacing: -0.02em; }
+  .brand span { border: 1px solid #ffffff55; border-radius: 6px; padding: 1px 7px; font-size: 7pt; letter-spacing: .18em; font-weight: 700; }
+  .cover .kicker { margin-top: auto; position: relative; font-size: 9pt; font-weight: 700; letter-spacing: .2em; text-transform: uppercase; color: #c9c0ff; }
+  .cover h1 { position: relative; font-size: 38pt; line-height: 1.04; letter-spacing: -0.03em; margin: 10px 0 14px; font-weight: 800; }
+  .cover h1 em { font-style: normal; background: linear-gradient(90deg, #b3a8ff, #ff8a4c); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .cover .lead { position: relative; font-size: 12.5pt; color: #dcd7ff; max-width: 135mm; line-height: 1.55; }
+  .cover .meta { position: relative; display: flex; gap: 26px; margin-top: 18mm; padding-top: 7mm; border-top: 1px solid #ffffff2e; font-size: 8.5pt; color: #c9c0ff; }
+  .cover .meta b { display: block; color: #fff; font-size: 10pt; margin-top: 2px; }
+
+  /* ---------- Body ---------- */
+  .page-head { display: flex; justify-content: space-between; align-items: center; font-size: 7.5pt; color: var(--subtle); border-bottom: 1px solid var(--line); padding-bottom: 6px; margin-bottom: 8mm; }
+  .page-head .brand svg { width: 18px; height: 15px; }
+  .page-head .brand b { font-size: 10pt; color: var(--ink); }
+  h2 { font-size: 17pt; letter-spacing: -0.02em; margin: 0 0 4mm; padding-top: 2mm; display: flex; align-items: baseline; gap: 10px; break-after: avoid; }
+  h2 .n { font-size: 10pt; color: var(--violet); font-weight: 800; background: var(--violet-soft); border-radius: 8px; padding: 2px 8px; }
+  h3 { font-size: 11.5pt; margin: 6mm 0 2mm; break-after: avoid; }
+  p { margin: 0 0 3mm; }
+  .muted { color: var(--muted); }
+  section { margin-bottom: 9mm; }
+  section.break { break-before: page; }
+  a { color: var(--violet-dark); text-decoration: none; }
+
+  table { width: 100%; border-collapse: separate; border-spacing: 0; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; margin: 2mm 0 4mm; font-size: 8.8pt; break-inside: avoid; }
+  th { background: var(--surface); text-align: left; font-weight: 700; color: var(--muted); font-size: 7.8pt; text-transform: uppercase; letter-spacing: .06em; padding: 7px 10px; border-bottom: 1px solid var(--line); }
+  td { padding: 7px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr:last-child td { border-bottom: 0; }
+  td code, p code, li code { background: var(--violet-soft); color: var(--violet-dark); border-radius: 4px; padding: 0 4px; font-size: 8.4pt; white-space: nowrap; }
+
+  pre { background: #15122b; color: #e9e6ff; border-radius: 10px; padding: 11px 13px; font-size: 7.9pt; line-height: 1.55; white-space: pre-wrap; word-break: break-all; margin: 2mm 0 4mm; break-inside: avoid; }
+  pre .c { color: #8f88b8; } pre .k { color: #b3a8ff; } pre .s { color: #ffb48a; }
+  .label { font-size: 7.4pt; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--subtle); margin: 3mm 0 1mm; }
+
+  .callout { border-radius: 10px; padding: 9px 12px; margin: 3mm 0 4mm; font-size: 9pt; break-inside: avoid; border: 1px solid; }
+  .callout > b:first-child { display: block; margin-bottom: 2px; }
+  .callout.info { background: var(--violet-soft); border-color: #d9d3fc; }
+  .callout.warn { background: #fff7ed; border-color: #fed7aa; }
+  .callout.good { background: #ecfdf5; border-color: #a7f3d0; }
+
+  .flow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 4mm 0 5mm; break-inside: avoid; }
+  .step { border: 1px solid var(--line); border-radius: 12px; padding: 10px; background: #fff; position: relative; }
+  .step .i { width: 22px; height: 22px; border-radius: 7px; background: linear-gradient(135deg, var(--violet), #8c7bff); color: #fff; font-weight: 800; font-size: 9pt; display: grid; place-items: center; margin-bottom: 6px; }
+  .step b { display: block; font-size: 9pt; margin-bottom: 2px; }
+  .step p { font-size: 8pt; color: var(--muted); margin: 0; line-height: 1.45; }
+  .step .who { display: inline-block; margin-top: 6px; font-size: 7pt; font-weight: 700; letter-spacing: .05em; border-radius: 99px; padding: 1px 7px; }
+  .who.you { background: #fff1e8; color: #c2410c; } .who.kq { background: var(--violet-soft); color: var(--violet-dark); } .who.user { background: #ecfdf5; color: var(--good); }
+
+  .pills { display: flex; flex-wrap: wrap; gap: 6px; }
+  .pill { font-size: 7.6pt; font-weight: 700; border-radius: 99px; padding: 1px 8px; }
+  .ok { background: #ecfdf5; color: var(--good); } .hold { background: #fff7ed; color: var(--warn); } .no { background: #fff1f2; color: var(--bad); }
+
+  ul.check { list-style: none; padding: 0; margin: 2mm 0; }
+  ul.check li { padding-left: 22px; position: relative; margin-bottom: 5px; }
+  ul.check li::before { content: ''; position: absolute; left: 0; top: 3px; width: 13px; height: 13px; border-radius: 4px; border: 1.5px solid var(--violet); }
+  ol { padding-left: 18px; } ol li { margin-bottom: 4px; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .contact { margin-top: 8mm; border-radius: 14px; padding: 14px 16px; color: #fff; background: linear-gradient(135deg, #2a1f7a, #4c3bc9); display: flex; justify-content: space-between; align-items: center; break-inside: avoid; }
+  .contact b { font-size: 12pt; } .contact span { color: #d6d0ff; font-size: 9pt; }
+</style>
+</head>
+<body>
+
+<!-- ======================= COVER ======================= -->
+<div class="cover">
+  <div class="grid"></div>
+  <div class="brand">
+    <svg viewBox="0 0 120 100"><path fill="#fff" d="M0 0h38v12c0 18-4 28-12 31-6 2-14 4-22 5 8 1 16 3 22 5 8 3 12 13 12 31v16H0z M44 21 68 0h52L66 45c-12 1-20-6-22-16z M44 79c2-10 10-17 22-16l54 37H68z"/></svg>
+    <b>kiqro</b><span>NETWORK</span>
+  </div>
+  <div class="kicker">Reklamveren entegrasyon kılavuzu</div>
+  <h1>Sunucudan sunucuya<br><em>(S2S) entegrasyon</em></h1>
+  <p class="lead">MMP (Adjust, AppsFlyer vb.) kullanmadan, uygulamanızın kurulum ve uygulama içi olaylarını Kiqro Network’e doğrudan kendi sunucunuzdan bildirmeniz için adım adım teknik kılavuz.</p>
+  <div class="meta">
+    <div>Sürüm<b>1.0</b></div>
+    <div>Tarih<b>10 Kasım 2026</b></div>
+    <div>Platformlar<b>Android · iOS</b></div>
+    <div>Hazırlayan<b>Kiqro Network</b></div>
+  </div>
+</div>
+
+<!-- ======================= BODY ======================= -->
+<div class="page-head">
+  <div class="brand"><svg viewBox="0 0 120 100"><path fill="#6c57f0" d="M0 0h38v12c0 18-4 28-12 31-6 2-14 4-22 5 8 1 16 3 22 5 8 3 12 13 12 31v16H0z M44 21 68 0h52L66 45c-12 1-20-6-22-16z M44 79c2-10 10-17 22-16l54 37H68z"/></svg><b>kiqro</b></div>
+  <div>Reklamveren S2S Entegrasyon Kılavuzu · Sürüm 1.0</div>
+</div>
+
+<section>
+  <h2><span class="n">01</span>Genel bakış</h2>
+  <p>Kiqro Network, ödüllü kullanıcıları uygulamanıza yönlendirir ve yalnızca <b>doğrulanmış olaylar</b> (kurulum, seviye, satın alma vb.) için ücretlendirir. S2S entegrasyonda bir olayın gerçekleştiğini Kiqro’ya bir MMP değil, <b>doğrudan sizin sunucunuz</b> bildirir.</p>
+  <p>Entegrasyonun tek kuralı şudur: Kiqro her tıklamaya benzersiz bir <code>click_id</code> verir. Siz bu kimliği kurulumla eşleştirip saklarsınız ve her olayda Kiqro’ya geri gönderirsiniz.</p>
+
+  <div class="flow">
+    <div class="step"><div class="i">1</div><b>Tıklama</b><p>Kullanıcı Kiqro offerwall’undaki teklife dokunur. Kiqro bir <code>click_id</code> üretir.</p><span class="who kq">Kiqro</span></div>
+    <div class="step"><div class="i">2</div><b>Yönlendirme</b><p>Kullanıcı, <code>{click_id}</code> doldurulmuş takip linkinizle mağazaya gider.</p><span class="who user">Kullanıcı</span></div>
+    <div class="step"><div class="i">3</div><b>Eşleştirme</b><p>Uygulama ilk açılışta <code>click_id</code>’yi okur; sunucunuz kullanıcıyla eşleştirip saklar.</p><span class="who you">Siz</span></div>
+    <div class="step"><div class="i">4</div><b>Postback</b><p>Kurulum ve her olay için sunucunuz Kiqro’ya <code>click_id</code> + <code>event</code> gönderir.</p><span class="who you">Siz</span></div>
+  </div>
+
+  <table>
+    <tr><th style="width:32%">Ne</th><th>Değer</th></tr>
+    <tr><td>Takip (postback) adresi</td><td><code>https://track.kiqronetwork.com</code></td></tr>
+    <tr><td>Postback anahtarınız</td><td>Reklamveren paneli → <b>Entegrasyon</b> sayfasındaki adreste yer alır. Bu kılavuzda <code>{POSTBACK_KEY}</code> olarak gösterilir.</td></tr>
+    <tr><td>İmza anahtarı (secret)</td><td>Kiqro temsilcinizden ayrı ve güvenli bir kanaldan alınır. <b>Yalnızca sunucunuzda</b> saklanır.</td></tr>
+    <tr><td>Olay adları</td><td>Kampanyadaki her görev için birlikte belirlenir. Kurulum her zaman <code>install</code>’dur. Örnek: <code>level_10</code>, <code>first_purchase</code>.</td></tr>
+  </table>
+</section>
+
+<section>
+  <h2><span class="n">02</span>Adım 1 — Takip linki</h2>
+  <p>Takip linki, kullanıcının tıklamadan sonra yönlendirildiği adrestir. Kampanyanızı açarken Kiqro’ya iletirsiniz. Kiqro, yönlendirmeden önce linkteki makroları doldurur.</p>
+
+  <h3>Desteklenen makrolar</h3>
+  <table>
+    <tr><th style="width:24%">Makro</th><th>Değer</th><th style="width:14%">Durum</th></tr>
+    <tr><td><code>{click_id}</code></td><td>Tıklamanın benzersiz kimliği (ör. <code>clk_01JC…</code>). Postback’te aynen geri gönderilir.</td><td><span class="pill ok">Zorunlu</span></td></tr>
+    <tr><td><code>{gaid}</code> / <code>{idfa}</code></td><td>Cihazın reklam kimliği: Android’de GAID, iOS’ta IDFA. Yayıncı uygulaması iletirse ve kullanıcı izin verdiyse dolar, aksi halde boş gelir.</td><td>İsteğe bağlı</td></tr>
+    <tr><td><code>{device_id}</code></td><td>Platformdan bağımsız reklam kimliği (yukarıdakiyle aynı değer).</td><td>İsteğe bağlı</td></tr>
+    <tr><td><code>{campaign_id}</code></td><td>Kiqro kampanya kimliği.</td><td>İsteğe bağlı</td></tr>
+    <tr><td><code>{source_id}</code> / <code>{sub_source}</code></td><td>Trafiğin geldiği yayıncı yerleşimi ve alt kaynak.</td><td>İsteğe bağlı</td></tr>
+    <tr><td><code>{country}</code></td><td>Tıklamanın ülkesi (ISO kodu, ör. <code>TR</code>).</td><td>İsteğe bağlı</td></tr>
+    <tr><td><code>{timestamp}</code></td><td>Tıklama zamanı (Unix saniye).</td><td>İsteğe bağlı</td></tr>
+  </table>
+  <p class="muted">Makro değerleri URL’ye kodlanmış (URL-encoded) olarak yerleştirilir. Bilinmeyen makrolar olduğu gibi bırakılır.</p>
+
+  <h3>Android — doğrudan Google Play linki</h3>
+  <p>Android’de ek bir sunucuya gerek yoktur. <code>click_id</code>, Google Play’in <code>referrer</code> parametresiyle uygulamanıza kadar taşınır:</p>
+  <pre>https://play.google.com/store/apps/details?id=<span class="s">com.sirketiniz.oyun</span>&amp;referrer=<span class="k">kiqro_click_id%3D{click_id}</span></pre>
+  <div class="callout info"><b>Neden %3D?</b><code>referrer</code> değerinin kendisi kodlanmış olmalıdır: <code>kiqro_click_id={click_id}</code> ifadesindeki <code>=</code> işareti <code>%3D</code> olarak yazılır. Uygulamanız referrer’ı okuduğunda <code>kiqro_click_id=clk_01JC…</code> metnini alır.</div>
+
+  <h3>iOS — kendi yönlendirme adresiniz</h3>
+  <p>App Store, tıklamadan uygulamaya veri taşımaz. Bu nedenle takip linki önce <b>sizin sunucunuzdaki</b> bir adrese gider. Bu adres tıklamayı kaydedip kullanıcıyı App Store’a yönlendirir:</p>
+  <pre>https://<span class="s">api.sirketiniz.com/kiqro/click</span>?click_id=<span class="k">{click_id}</span>&amp;idfa=<span class="k">{idfa}</span>&amp;country=<span class="k">{country}</span></pre>
+  <p>Sunucunuz <code>click_id</code>, <code>idfa</code> ve tıklama zamanını kaydeder, ardından <b>302</b> ile <code>https://apps.apple.com/app/id&lt;APP_ID&gt;</code> adresine yönlendirir. Eşleştirmenin nasıl yapılacağı ve sınırları <b>Bölüm 03</b>’te anlatılıyor.</p>
+</section>
+
+<section class="break">
+  <h2><span class="n">03</span>Adım 2 — Kurulumu tıklamayla eşleştirme</h2>
+  <p>Bu adım tamamen sizin uygulamanızda ve sunucunuzda gerçekleşir. Amaç: uygulama ilk açıldığında hangi Kiqro tıklamasından geldiğini bulmak ve <code>click_id</code>’yi o kullanıcının hesabıyla birlikte saklamak.</p>
+
+  <h3>Android — Google Play Install Referrer API</h3>
+  <p>Google’ın resmî <b>Play Install Referrer</b> kütüphanesi, mağaza linkindeki <code>referrer</code> değerini kurulumdan sonra uygulamaya güvenilir şekilde verir. Bu yöntem deterministiktir, yani tahmin içermez.</p>
+  <div class="label">build.gradle</div>
+  <pre>implementation <span class="s">"com.android.installreferrer:installreferrer:2.2"</span></pre>
+  <div class="label">Kotlin — ilk açılışta bir kez</div>
+<pre><span class="k">val</span> client = InstallReferrerClient.newBuilder(context).build()
+client.startConnection(<span class="k">object</span> : InstallReferrerStateListener {
+    <span class="k">override fun</span> onInstallReferrerSetupFinished(code: Int) {
+        <span class="k">if</span> (code == InstallReferrerClient.InstallReferrerResponse.OK) {
+            <span class="k">val</span> referrer = client.installReferrer.installReferrer   <span class="c">// "kiqro_click_id=clk_01JC…"</span>
+            <span class="k">val</span> clickId = Uri.parse(<span class="s">"?$referrer"</span>).getQueryParameter(<span class="s">"kiqro_click_id"</span>)
+            <span class="k">if</span> (clickId != <span class="k">null</span>) api.registerKiqroInstall(clickId)        <span class="c">// sunucunuza gönderin</span>
+        }
+        client.endConnection()
+    }
+    <span class="k">override fun</span> onInstallReferrerServiceDisconnected() {}
+})</pre>
+  <p>Sunucunuz <code>click_id</code>’yi kullanıcının hesabıyla birlikte saklar ve hemen <code>install</code> postback’ini gönderir (Bölüm 04). Sonraki her olayda aynı <code>click_id</code> kullanılır.</p>
+  <div class="callout good"><b>İpucu</b>Referrer değerini yalnızca ilk açılışta okuyun ve bir kullanıcı için bir kez kaydedin. Uygulama yeniden yüklendiğinde aynı değer tekrar gelebilir. Kiqro aynı tıklama ve olay için gelen tekrar postback’leri zaten <code>duplicate</code> olarak yok sayar.</div>
+
+  <h3>iOS — eşleştirme ve sınırları</h3>
+  <p>iOS’ta MMP olmadan tıklamayı kurulumla kesin olarak eşleştirmenin tek yolu <b>IDFA</b>’dır:</p>
+  <ol>
+    <li>Yönlendirme adresiniz tıklamadaki <code>idfa</code> değerini <code>click_id</code> ile birlikte saklar.</li>
+    <li>Uygulama, kullanıcı App Tracking Transparency (ATT) iznini verdiyse IDFA’yı okuyup sunucunuza gönderir.</li>
+    <li>Sunucunuz bu IDFA’yı son tıklamalarla eşleştirir. Eşleşme bulunursa o <code>click_id</code> ile <code>install</code> postback’i gönderir.</li>
+  </ol>
+  <div class="callout warn"><b>Önemli sınırlamalar</b>IDFA yalnızca hem yayıncı uygulamasında hem sizin uygulamanızda izin veren kullanıcılar için mevcuttur, bu yüzden iOS’ta eşleşme oranı Android’den belirgin şekilde düşük olur. IP adresi, cihaz modeli gibi sinyallerle cihaz parmak izi (fingerprinting) çıkarmak Apple’ın App Store kurallarına aykırıdır; bu yöntemi kullanmayın. Bu nedenle ilk aşamada kampanyayı <b>Android ile başlatmanızı</b> öneririz. iOS’ta tam kapsam gerekirse ileride bir MMP eklenebilir.</div>
+</section>
+
+<section class="break">
+  <h2><span class="n">04</span>Adım 3 — Postback gönderme</h2>
+  <p>Kurulum ve her olay için sunucunuz Kiqro’ya bir istek gönderir. Hem <b>GET</b> (sorgu parametreleri) hem <b>POST</b> (form veya JSON gövde) kabul edilir.</p>
+  <pre><span class="k">GET</span>  https://track.kiqronetwork.com/v1/mmp/<span class="s">{POSTBACK_KEY}</span>?click_id=…&amp;event=…&amp;event_ts=…&amp;sig=…
+<span class="k">POST</span> https://track.kiqronetwork.com/v1/mmp/<span class="s">{POSTBACK_KEY}</span>     (application/json veya x-www-form-urlencoded)</pre>
+
+  <h3>Parametreler</h3>
+  <table>
+    <tr><th style="width:20%">Parametre</th><th>Açıklama</th><th style="width:14%">Durum</th></tr>
+    <tr><td><code>click_id</code></td><td>Tıklamada aldığınız kimlik, değiştirilmeden.</td><td><span class="pill ok">Zorunlu</span></td></tr>
+    <tr><td><code>event</code></td><td>Olay adı. Kurulum için <code>install</code>, diğerleri için kampanyada belirlenen ad (ör. <code>level_10</code>). Büyük-küçük harf dahil birebir aynı olmalıdır.</td><td><span class="pill ok">Zorunlu</span></td></tr>
+    <tr><td><code>sig</code></td><td>HMAC-SHA256 imzası (Bölüm 05). Hesabınızda imza anahtarı tanımlıysa zorunludur.</td><td><span class="pill ok">Zorunlu*</span></td></tr>
+    <tr><td><code>event_ts</code></td><td>Olayın gerçekleştiği an: Unix saniye, Unix milisaniye veya ISO 8601. Gönderilmezse isteğin ulaştığı an kullanılır. <b>Gönderilmesi önerilir.</b></td><td>Önerilir</td></tr>
+    <tr><td><code>revenue_usd</code></td><td>Satın alma olaylarında USD cinsinden gelir (ör. <code>4.99</code>). Panelde ROAS hesaplanır. Alternatif olarak <code>revenue</code> ile birlikte <code>currency=USD</code> gönderebilirsiniz.</td><td>İsteğe bağlı</td></tr>
+    <tr><td><code>event_id</code></td><td>Olayın sizin sisteminizdeki benzersiz kimliği. Aynı gelirin iki kez sayılmasını önler.</td><td>İsteğe bağlı</td></tr>
+    <tr><td><code>country</code></td><td>Kullanıcının ülkesi (ISO). Tıklamanın ülkesinden farklıysa olay incelemeye alınır.</td><td>İsteğe bağlı</td></tr>
+  </table>
+
+  <div class="label">Örnek — kurulum</div>
+  <pre>curl <span class="s">"https://track.kiqronetwork.com/v1/mmp/{POSTBACK_KEY}?click_id=clk_01JC8Z3T5V&amp;event=install&amp;event_ts=1762790400&amp;sig=9f2c…"</span></pre>
+  <div class="label">Örnek — seviye olayı (JSON)</div>
+  <pre>curl -X POST <span class="s">"https://track.kiqronetwork.com/v1/mmp/{POSTBACK_KEY}"</span> \
+  -H <span class="s">"Content-Type: application/json"</span> \
+  -d <span class="s">'{"click_id":"clk_01JC8Z3T5V","event":"level_10","event_ts":"2026-11-12T18:04:00Z","sig":"4b71…"}'</span></pre>
+
+  <h3>Yanıtlar</h3>
+  <p>Kiqro’nun kaydettiği her istek <b>HTTP 200</b> ve aşağıdaki JSON ile yanıtlanır:</p>
+  <pre>{ <span class="k">"outcome"</span>: <span class="s">"approved"</span>, <span class="k">"conversion_id"</span>: <span class="s">"cnv_01JC…"</span>, <span class="k">"reasons"</span>: [] }</pre>
+  <table>
+    <tr><th style="width:24%">outcome</th><th>Anlamı</th></tr>
+    <tr><td><span class="pill ok">approved</span></td><td>Doğrulandı ve faturalandı.</td></tr>
+    <tr><td><span class="pill hold">held</span></td><td>Kalite kontrolü için incelemeye alındı; onaylanmadıkça faturalanmaz. Gerekçe <code>reasons</code> alanında yer alır.</td></tr>
+    <tr><td><span class="pill no">rejected</span></td><td>Kurallara uymadığı için reddedildi; faturalanmaz (aşağıdaki tabloya bakın).</td></tr>
+    <tr><td><code>duplicate</code></td><td>Bu tıklama ve olay daha önce kaydedildi. Tekrar göndermek güvenlidir, iki kez ücretlenmez.</td></tr>
+    <tr><td><code>orphan</code></td><td><code>click_id</code> bulunamadı veya başka bir reklamverene ait.</td></tr>
+    <tr><td><code>unknown_event</code></td><td>Olay adı kampanyadaki hiçbir görevle eşleşmiyor.</td></tr>
+    <tr><td><code>revenue_recorded</code></td><td>Görev olmayan bir olayın geliri ROAS için kaydedildi.</td></tr>
+  </table>
+  <table>
+    <tr><th style="width:24%">HTTP</th><th>Anlamı</th></tr>
+    <tr><td><code>400 bad_request</code></td><td><code>click_id</code> veya <code>event</code> eksik.</td></tr>
+    <tr><td><code>403 unknown_advertiser</code></td><td>Postback anahtarı hatalı.</td></tr>
+    <tr><td><code>403 invalid_signature</code></td><td><code>sig</code> eksik veya hatalı.</td></tr>
+  </table>
+  <div class="callout info"><b>Yeniden deneme</b>Yalnızca ağ hatası, zaman aşımı veya 5xx yanıtında, artan aralıklarla tekrar deneyin. 200 alan bir isteği tekrarlamayın; sonuç <code>rejected</code> olsa bile kayıt alınmıştır.</div>
+</section>
+
+<section class="break">
+  <h3 style="margin-top:0">Zamanlama kuralları ve red gerekçeleri</h3>
+  <table>
+    <tr><th style="width:32%">reasons</th><th>Ne zaman</th></tr>
+    <tr><td><code>ctit_too_short</code></td><td>Kurulum, tıklamadan çok kısa süre sonra bildirildi (varsayılan alt sınır 10 saniye). Genellikle sahte kurulum işaretidir.</td></tr>
+    <tr><td><code>outside_attribution_window</code></td><td>Kurulum, tıklamadan sonraki atıf süresi dışında (varsayılan 7 gün).</td></tr>
+    <tr><td><code>install_not_attributed</code></td><td>Olay geldi ama bu tıklama için onaylı bir <code>install</code> yok. <b>Önce kurulumu gönderin.</b></td></tr>
+    <tr><td><code>task_time_limit_exceeded</code></td><td>Olay, görevin kurulumdan sonraki süre sınırını aştı (ör. 10. seviye için 3 gün).</td></tr>
+    <tr><td><code>duplicate_user</code></td><td>Aynı yayıncı kullanıcısı bu görevi başka bir tıklamayla zaten tamamladı.</td></tr>
+    <tr><td><code>no_price</code></td><td>Tıklamanın ülkesi için görevde fiyat tanımlı değil.</td></tr>
+    <tr><td><code>insufficient_balance</code> <span class="pill hold">held</span></td><td>Bakiye yetersiz. Bakiye yüklendiğinde incelenir.</td></tr>
+    <tr><td><code>country_mismatch</code>, <code>ip_risky</code>, <code>ip_install_cluster</code>, <code>user_velocity</code>, <code>publisher_user_risk</code> <span class="pill hold">held</span></td><td>Fraud kontrolleri. Olay incelemeye alınır.</td></tr>
+  </table>
+  <p class="muted">Atıf süresi, görev süre sınırları ve geri alma süresi kampanyanıza göre değişebilir. Güncel değerleri panelde görebilirsiniz.</p>
+
+  <h2 style="margin-top:8mm"><span class="n">05</span>İmza (HMAC-SHA256)</h2>
+  <p>İmza, isteğin gerçekten sizden geldiğini kanıtlar. <code>click_id</code> ve <code>event</code> değerleri <code>|</code> ile birleştirilir; imza anahtarınızla HMAC-SHA256 hesaplanır ve sonuç <b>küçük harf hex</b> olarak <code>sig</code> parametresinde gönderilir.</p>
+  <pre>sig = hex( HMAC-SHA256( secret, <span class="s">"{click_id}|{event}"</span> ) )          <span class="c">// olay postback’i</span>
+sig = hex( HMAC-SHA256( secret, <span class="s">"reversal|{click_id}|{event}"</span> ) ) <span class="c">// geri alma</span></pre>
+  <div class="two">
+    <div>
+      <div class="label">Node.js</div>
+<pre><span class="k">import</span> { createHmac } <span class="k">from</span> <span class="s">'node:crypto'</span>;
+<span class="k">const</span> sig = createHmac(<span class="s">'sha256'</span>, SECRET)
+  .update(<span class="s">`${clickId}|${event}`</span>)
+  .digest(<span class="s">'hex'</span>);</pre>
+    </div>
+    <div>
+      <div class="label">PHP</div>
+<pre>$sig = hash_hmac(<span class="s">'sha256'</span>,
+  $clickId . <span class="s">'|'</span> . $event,
+  $secret);</pre>
+    </div>
+  </div>
+  <div class="label">Python</div>
+<pre><span class="k">import</span> hmac, hashlib
+sig = hmac.new(SECRET.encode(), <span class="s">f"{click_id}|{event}"</span>.encode(), hashlib.sha256).hexdigest()</pre>
+  <div class="callout warn"><b>Gizli anahtarı uygulamaya koymayın</b>İmza anahtarı yalnızca sunucunuzda bulunmalıdır. Postback’leri mobil uygulamadan değil, her zaman sunucunuzdan gönderin.</div>
+</section>
+
+<section>
+  <h2><span class="n">06</span>Geri alma (iade)</h2>
+  <p>Daha sonra geçersiz olduğunu tespit ettiğiniz bir kurulum veya olayı (iade, sahte hesap vb.) geri alabilirsiniz. Tutar bakiyenize otomatik olarak iade edilir.</p>
+  <pre><span class="k">GET</span> https://track.kiqronetwork.com/v1/mmp/<span class="s">{POSTBACK_KEY}</span>/reversal?click_id=…&amp;event=…&amp;reason=…&amp;sig=…</pre>
+  <table>
+    <tr><th style="width:24%">Parametre</th><th>Açıklama</th></tr>
+    <tr><td><code>click_id</code>, <code>event</code></td><td>Geri alınacak dönüşüm. Zorunlu.</td></tr>
+    <tr><td><code>reason</code></td><td>Kısa gerekçe (ör. <code>refund</code>, <code>fraud</code>). İsteğe bağlı.</td></tr>
+    <tr><td><code>sig</code></td><td><code>reversal|{click_id}|{event}</code> imzası. Hesabınızda imza anahtarı varsa zorunlu.</td></tr>
+  </table>
+  <p>Başarılı yanıt: <code>200 {"outcome":"reversed","conversion_id":"cnv_…"}</code>. Hatalarda <code>403</code> (<code>unknown_advertiser</code>, <code>invalid_signature</code>) veya <code>409</code> (<code>not_found</code>, <code>not_approved</code>, <code>outside_reversal_window</code>) döner. Geri alma süresi varsayılan olarak <b>30 gündür</b> ve panelde gösterilir.</p>
+</section>
+
+<section class="break">
+  <h2><span class="n">07</span>Test ve yayına alma</h2>
+  <ol>
+    <li><b>Hazırlık:</b> Olay adlarını, fiyatları ve takip linkinizi Kiqro temsilcinizle netleştirin. Postback anahtarınızı panelden, imza anahtarınızı temsilcinizden alın.</li>
+    <li><b>Test tıklaması:</b> Kiqro temsilciniz kampanyanız için bir test tıklaması oluşturur ve size <code>click_id</code>’yi iletir. Android’de bu tıklama, test cihazında mağaza üzerinden kurulum yapılarak da denenebilir.</li>
+    <li><b>Kurulum postback’i:</b> Sunucunuzdan <code>event=install</code> gönderin ve yanıtta <code>"outcome":"approved"</code> görün.</li>
+    <li><b>Olay postback’i:</b> Bir görev olayı gönderin. Panelde <b>Dönüşümler</b> sayfasında her ikisini de kontrol edin.</li>
+    <li><b>Yayın:</b> Testler başarılı olunca kampanya Kiqro tarafından yayına alınır.</li>
+  </ol>
+
+  <h3>Yayın öncesi kontrol listesi</h3>
+  <ul class="check">
+    <li>Takip linkinde <code>{click_id}</code> var ve Android’de <code>referrer</code> değeri kodlanmış (<code>%3D</code>).</li>
+    <li>Uygulama, Install Referrer’ı ilk açılışta okuyup <code>click_id</code>’yi sunucuya iletiyor.</li>
+    <li>Sunucu, <code>click_id</code>’yi kullanıcı hesabıyla birlikte kalıcı olarak saklıyor.</li>
+    <li>Önce <code>install</code>, sonra görev olayları gönderiliyor; olay adları birebir eşleşiyor.</li>
+    <li><code>event_ts</code> olayın gerçek zamanıyla gönderiliyor.</li>
+    <li>İmza sunucuda hesaplanıyor; gizli anahtar uygulamada veya istemci kodunda yok.</li>
+    <li>Ağ hatalarında yeniden deneme var, 200 yanıtında tekrar yok.</li>
+    <li>Postback’lerde ad, e-posta, telefon gibi kişisel veri gönderilmiyor.</li>
+  </ul>
+
+  <h2 style="margin-top:8mm"><span class="n">08</span>Veri ve güvenlik</h2>
+  <p>Kiqro, kullanıcılarınızın adını, e-posta adresini veya doğrudan kimlik belirleyen başka bir verisini almaz ve sizinle paylaşmaz. Taraflar arasında yalnızca takma adlı tanımlayıcılar (<code>click_id</code> ve, kullanıcı izin verdiyse, reklam kimliği) ile olay verileri paylaşılır. Tüm istekler HTTPS üzerinden yapılmalıdır. Ayrıntılar için kiqronetwork.com/tr/legal adresindeki <b>Veri Koruma Eki</b>’ne bakın.</p>
+
+  <div class="contact">
+    <div><b>Sorularınız için</b><br><span>Entegrasyon sırasında temsilciniz size eşlik eder.</span></div>
+    <div style="text-align:right"><b>contact@kiqro.com</b><br><span>kiqronetwork.com</span></div>
+  </div>
+</section>
+
+<!-- Print: chrome --headless --no-pdf-header-footer --virtual-time-budget=8000 --print-to-pdf=docs/reklamveren-s2s-entegrasyon.pdf docs/reklamveren-s2s-entegrasyon.html -->
+</body>
+</html>
