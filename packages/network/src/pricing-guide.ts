@@ -7,11 +7,12 @@ import { AdminError, requirePermission } from './admin/errors.ts';
 const { siteSettings } = schema;
 
 /**
- * Recommended minimum prices for the campaign wizard's quick-add events, per app platform, and
+ * Recommended minimum prices for some of the campaign wizard's quick-add events, per app platform, and
  * the help text shown next to the price field. Set by Kiqro in the admin panel; advertisers may
  * still price lower.
  */
-export const PRICING_EVENTS = ['install', 'registration', 'level', 'deposit', 'kyc', 'purchase', 'subscription', 'trial'] as const;
+/** Quick-add events with a recommended price; level, deposit, purchase and subscription have none. */
+export const PRICING_EVENTS = ['install', 'registration', 'kyc', 'trial'] as const;
 export type PricingEvent = (typeof PRICING_EVENTS)[number];
 /** Web apps use the Android prices. */
 export const PRICING_PLATFORMS = ['android', 'ios'] as const;
@@ -25,8 +26,8 @@ export interface PricingGuide {
 
 export const DEFAULT_PRICING_GUIDE: PricingGuide = {
   prices: {
-    android: { install: '0.60', registration: '1.50', level: '2.50', deposit: '15.00', kyc: '5.00', purchase: '6.00', subscription: '8.00', trial: '3.00' },
-    ios: { install: '1.00', registration: '2.00', level: '3.50', deposit: '18.00', kyc: '6.00', purchase: '8.00', subscription: '10.00', trial: '4.00' },
+    android: { install: '0.60', registration: '1.50', kyc: '5.00', trial: '3.00' },
+    ios: { install: '1.00', registration: '2.00', kyc: '6.00', trial: '4.00' },
   },
   help: {
     en: 'The recommended price is what users find worth completing this step for on offerwalls. Pricing at or above it puts your offer higher in the list and gets your campaign completed faster. You can set a lower price; completions may then come in more slowly.',
@@ -49,7 +50,11 @@ export async function loadPricingGuide(db: Db): Promise<PricingGuide> {
   const saved = (row?.value ?? {}) as Saved;
   // The first version stored one price list for every platform; it now seeds both.
   const legacy = saved.prices && typeof saved.prices.install === 'string' ? (saved.prices as Partial<Record<PricingEvent, string>>) : undefined;
-  const forPlatform = (p: PricingPlatform) => ({ ...DEFAULT_PRICING_GUIDE.prices[p], ...(legacy ?? (saved.prices?.[p] as Partial<Record<PricingEvent, string>> | undefined)) });
+  const forPlatform = (p: PricingPlatform) => {
+    const stored = legacy ?? (saved.prices?.[p] as Partial<Record<string, string>> | undefined) ?? {};
+    // Only events that still have a recommendation (older saves may hold prices for others).
+    return Object.fromEntries(PRICING_EVENTS.map((e) => [e, stored[e] ?? DEFAULT_PRICING_GUIDE.prices[p][e]])) as Record<PricingEvent, string>;
+  };
   return {
     prices: { android: forPlatform('android'), ios: forPlatform('ios') },
     help: { en: saved.help?.en || DEFAULT_PRICING_GUIDE.help.en, tr: saved.help?.tr || DEFAULT_PRICING_GUIDE.help.tr },

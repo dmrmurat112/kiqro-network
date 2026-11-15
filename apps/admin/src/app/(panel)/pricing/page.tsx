@@ -5,15 +5,11 @@ import { savePricingGuideAction } from './actions';
 
 export const dynamic = 'force-dynamic';
 
-/** Quick-add buttons of the advertiser's campaign wizard, in the order they appear there. */
+/** Quick-add events that have a recommended price (level, deposit, purchase and subscription have none). */
 const LABELS: Record<PricingEvent, string> = {
   install: 'Kurulum',
   registration: 'Kayıt',
-  level: 'Seviyeye ulaşma',
-  deposit: 'İlk yatırım',
   kyc: 'KYC (kimlik doğrulama)',
-  purchase: 'Satın alma',
-  subscription: 'Abonelik',
   trial: 'Ücretsiz deneme aboneliği',
 };
 
@@ -23,7 +19,8 @@ export default async function PricingPage() {
     <>
       <h1>Tavsiye edilen fiyatlar</h1>
       <p className="muted">
-        Reklamveren yeni kampanya ekranında &quot;Hızlı ekle&quot;den bir olay seçtiğinde fiyat alanı bu tutarla dolar. Reklamveren daha düşük bir fiyat da girebilir; bu tutarlar
+        Reklamveren yeni kampanya ekranında &quot;Hızlı ekle&quot;den bu olaylardan birini seçtiğinde fiyat alanı bu tutarla dolar. Seviyeye ulaşma, İlk yatırım, Satın
+        alma ve Abonelik için tavsiye edilen tutar yoktur; fiyatı reklamveren girer. Reklamveren daha düşük bir fiyat da girebilir; bu tutarlar
         yalnızca öneridir. Uygulamanın platformuna göre Android veya iOS tutarı kullanılır (web uygulamalarında Android). Tüm tutarlar USD, &quot;Tüm ülkeler&quot;
         varsayılan fiyatı içindir.
       </p>

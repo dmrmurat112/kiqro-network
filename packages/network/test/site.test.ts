@@ -69,15 +69,17 @@ describe('campaign pricing guide', () => {
     expect(guide.help).toEqual({ tr: 'Önerilen fiyat daha hızlı tamamlanır.', en: DEFAULT_PRICING_GUIDE.help.en });
     expect(await db.select().from(schema.auditLog).where(eq(schema.auditLog.action, 'pricing_guide.updated'))).toHaveLength(1);
 
-    await expect(savePricingGuide(db, actor, { prices: { ...prices, ios: { ...prices.ios, level: '-1' } }, help: {} })).rejects.toThrow();
+    await expect(savePricingGuide(db, actor, { prices: { ...prices, ios: { ...prices.ios, registration: '-1' } }, help: {} })).rejects.toThrow();
     await expect(savePricingGuide(db, actor, { prices: { android: prices.android }, help: {} })).rejects.toThrow();
     await expect(savePricingGuide(db, await staff('viewer'), { prices, help: {} })).rejects.toThrow();
   });
 
   it('reads a list saved before prices were per platform as the price for both platforms', async () => {
-    await db.insert(schema.siteSettings).values({ key: 'pricing_guide', value: { prices: { ...DEFAULT_PRICING_GUIDE.prices.android, kyc: '9.00' }, help: {} } });
+    await db.insert(schema.siteSettings).values({ key: 'pricing_guide', value: { prices: { install: '0.60', level: '2.50', kyc: '9.00' }, help: {} } });
     const guide = await loadPricingGuide(db);
     expect(guide.prices.android.kyc).toBe('9.00');
     expect(guide.prices.ios.kyc).toBe('9.00');
+    // Events that no longer have a recommendation are dropped.
+    expect(Object.keys(guide.prices.android)).toEqual(['install', 'registration', 'kyc', 'trial']);
   });
 });

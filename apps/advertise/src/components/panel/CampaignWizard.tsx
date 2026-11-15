@@ -51,7 +51,7 @@ function AppIcon({ iconUrl, platform, size = 40 }: { iconUrl?: string | null; pl
 }
 
 /** Suggested MMP event names per preset; Adjust uses per-app event tokens, so it gets none. */
-/** Prices are not here: Kiqro sets a recommended price per preset in the admin panel (pricing guide). */
+/** Prices are not here: Kiqro sets a recommended price for some presets in the admin panel (pricing guide); the rest start empty. */
 const PRESETS: { key: string; en: string; tr: string; days: number; events: Record<string, string> }[] = [
   { key: 'install', en: 'Install and open', tr: 'Yükle ve aç', days: 1, events: { '*': 'install' } },
   { key: 'registration', en: 'Create an account', tr: 'Hesap oluştur', days: 3, events: { appsflyer: 'af_complete_registration' } },
@@ -614,13 +614,13 @@ export function CampaignWizard({ t, lang, products: initialProducts, initial, ca
                           <div className="relative w-36">
                             <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm text-subtle">$</span>
                             <input
-                              className={`field !pl-7 font-mono ${price.country === '*' ? '!pr-9' : ''}`}
+                              className={`field !pl-7 font-mono ${recommended ? '!pr-9' : ''}`}
                               inputMode="decimal"
                               value={price.priceUsd}
                               onChange={(e) => setTask(i, { prices: task.prices.map((p, j) => (j === k ? { ...p, priceUsd: e.target.value.replace(',', '.') } : p)) })}
                             />
-                            {price.country === '*' && (
-                              <PriceHelp label={t.events.priceHelp} text={pricing.help} extra={recommended ? fill(t.events.recommendedFor, { price: money(Number(recommended), lang) }) : undefined} />
+                            {recommended && (
+                              <PriceHelp label={t.events.priceHelp} text={pricing.help} extra={fill(t.events.recommendedFor, { price: money(Number(recommended), lang) })} />
                             )}
                           </div>
                           {recommended && (
