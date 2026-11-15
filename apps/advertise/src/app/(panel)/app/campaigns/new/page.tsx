@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { advertiserProducts } from '@kiqro/network/advertiser';
+import { loadPricingGuide } from '@kiqro/network';
 import { CampaignWizard } from '@/components/panel/CampaignWizard';
 import { PageHeader } from '@/components/panel/ui';
 import { db } from '@/lib/db';
@@ -11,7 +12,7 @@ export const dynamic = 'force-dynamic';
 export default async function NewCampaignPage() {
   const [session, lang] = await Promise.all([requireAdvertiserOrg(), panelLocale()]);
   const t = PANEL[lang];
-  const products = await advertiserProducts(db, session);
+  const [products, guide] = await Promise.all([advertiserProducts(db, session), loadPricingGuide(db)]);
   return (
     <>
       <Link href="/app/campaigns" className="text-sm text-muted hover:text-fg">
@@ -24,6 +25,7 @@ export default async function NewCampaignPage() {
         t={t.wizard}
         lang={lang}
         returnedTitle={t.campaigns.returnedTitle}
+        pricing={{ prices: guide.prices, help: guide.help[lang] }}
         products={products.map((p) => ({ id: p.id, name: p.name, platform: p.platform, storeId: p.storeId, mmp: p.mmp, iconUrl: p.iconUrl, coverUrl: p.coverUrl, screenshots: p.screenshots }))}
       />
     </>

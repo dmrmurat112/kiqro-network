@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
-import { AlertCircle, Apple, Check, CheckCircle2, ChevronDown, Globe, Loader2, Pencil, Plus, SearchX, Smartphone, Trash2, X } from 'lucide-react';
+import { AlertCircle, Apple, Check, CheckCircle2, ChevronDown, CircleHelp, Globe, Info, Loader2, Pencil, Plus, SearchX, Smartphone, Trash2, X } from 'lucide-react';
 import type { CampaignInput } from '@kiqro/network/admin';
 import type { FieldIssue, StoreApp } from '@kiqro/network';
 import { createProductAction, deleteProductAction, lookupStoreAppAction, saveCampaignAction, updateProductAction } from '@/app/(panel)/app/campaigns/actions';
@@ -18,6 +18,8 @@ interface Props {
   campaignId?: string;
   reviewNote?: string | null;
   returnedTitle: string;
+  /** Recommended price per quick-add preset (USD) and the price help text, set by Kiqro. */
+  pricing: { prices: Record<string, string>; help: string };
 }
 
 const POPULAR = ['FI', 'SE', 'NO', 'DK', 'DE', 'AT', 'CH', 'NL', 'GB', 'US', 'TR', 'PL'];
@@ -49,14 +51,20 @@ function AppIcon({ iconUrl, platform, size = 40 }: { iconUrl?: string | null; pl
 }
 
 /** Suggested MMP event names per preset; Adjust uses per-app event tokens, so it gets none. */
-const PRESETS: { key: string; en: string; tr: string; days: number; price: string; events: Record<string, string> }[] = [
-  { key: 'install', en: 'Install and open', tr: 'Yükle ve aç', days: 1, price: '0.60', events: { '*': 'install' } },
-  { key: 'level', en: 'Reach level 10', tr: '10. seviyeye ulaş', days: 7, price: '2.50', events: { appsflyer: 'af_level_achieved_10' } },
-  { key: 'registration', en: 'Create an account', tr: 'Hesap oluştur', days: 3, price: '1.50', events: { appsflyer: 'af_complete_registration' } },
-  { key: 'deposit', en: 'Make a first deposit', tr: 'İlk yatırımı yap', days: 14, price: '15.00', events: { appsflyer: 'first_deposit' } },
-  { key: 'purchase', en: 'Make a purchase', tr: 'Satın alma yap', days: 14, price: '6.00', events: { appsflyer: 'af_purchase' } },
-  { key: 'subscription', en: 'Start a subscription', tr: 'Abonelik başlat', days: 14, price: '8.00', events: { appsflyer: 'af_subscribe' } },
+/** Prices are not here: Kiqro sets a recommended price per preset in the admin panel (pricing guide). */
+const PRESETS: { key: string; en: string; tr: string; days: number; events: Record<string, string> }[] = [
+  { key: 'install', en: 'Install and open', tr: 'Yükle ve aç', days: 1, events: { '*': 'install' } },
+  { key: 'registration', en: 'Create an account', tr: 'Hesap oluştur', days: 3, events: { appsflyer: 'af_complete_registration' } },
+  { key: 'level', en: 'Reach level 10', tr: '10. seviyeye ulaş', days: 7, events: { appsflyer: 'af_level_achieved_10' } },
+  { key: 'deposit', en: 'Make a first deposit', tr: 'İlk yatırımı yap', days: 14, events: { appsflyer: 'first_deposit' } },
+  { key: 'kyc', en: 'Verify your identity (KYC)', tr: 'Kimliğini doğrula (KYC)', days: 14, events: {} },
+  { key: 'purchase', en: 'Make a purchase', tr: 'Satın alma yap', days: 14, events: { appsflyer: 'af_purchase' } },
+  { key: 'subscription', en: 'Start a subscription', tr: 'Abonelik başlat', days: 14, events: { appsflyer: 'af_subscribe' } },
+  { key: 'trial', en: 'Start a free trial', tr: 'Ücretsiz denemeyi başlat', days: 7, events: { appsflyer: 'af_start_trial' } },
 ];
+
+/** The preset an existing task most likely came from (by event name), for its recommended price. */
+const presetOf = (event: string) => PRESETS.find((p) => Object.values(p.events).includes(event))?.key ?? null;
 
 const STEP_FIELDS: string[][] = [['productId', 'name', 'titleEn', 'titleTr', 'descriptionEn'], ['tasks'], ['countries', 'totalBudgetUsd', 'dailyBudgetUsd', 'startAt', 'endAt'], ['trackingUrl', 'attributionWindowDays', 'ctitMinSeconds']];
 const stepOf = (path: string) => {
@@ -86,10 +94,31 @@ const emptyCampaign = (product?: { id: string; name: string }): CampaignInput =>
 });
 
 const money = (v: number, lang: string) => new Intl.NumberFormat(lang === 'tr' ? 'tr-TR' : 'en-US', { style: 'currency', currency: 'USD' }).format(v);
+const fill = (s: string, vars: Record<string, string>) => s.replace(/\{(\w+)\}/g, (_, k: string) => vars[k] ?? '');
 
-export function CampaignWizard({ t, lang, products: initialProducts, initial, campaignId, reviewNote, returnedTitle }: Props) {
+/** (?) inside the price field: Kiqro's pricing advice on hover or keyboard focus. */
+function PriceHelp({ label, text, extra }: { label: string; text: string; extra?: string }) {
+  return (
+    <span className="group absolute top-1/2 right-2 -translate-y-1/2">
+      <button type="button" aria-label={label} className="grid h-6 w-6 place-items-center rounded-full text-subtle hover:text-violet-300 focus:text-violet-300 focus:outline-none">
+        <CircleHelp size={16} />
+      </button>
+      <span
+        role="tooltip"
+        className="pointer-events-none invisible absolute bottom-full left-1/2 z-30 mb-2 w-72 -translate-x-1/2 translate-y-1 rounded-xl border border-line-strong bg-elevated p-3 text-xs leading-relaxed text-muted opacity-0 shadow-xl transition-all duration-200 group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100"
+      >
+        {text}
+        {extra && <span className="mt-2 block font-semibold text-fg">{extra}</span>}
+      </span>
+    </span>
+  );
+}
+
+export function CampaignWizard({ t, lang, products: initialProducts, initial, campaignId, reviewNote, returnedTitle, pricing }: Props) {
   const [products, setProducts] = useState(initialProducts);
   const [c, setC] = useState<CampaignInput>(initial ?? emptyCampaign(initialProducts.length === 1 ? initialProducts[0] : undefined));
+  // Which quick-add preset each task came from (null for custom events), for its recommended price.
+  const [taskPresets, setTaskPresets] = useState<(string | null)[]>(() => (initial?.tasks ?? []).map((task) => presetOf(task.event)));
   const [step, setStepState] = useState(0);
   // Furthest step reached; an existing campaign is complete, so every step is reachable.
   const [maxStep, setMaxStep] = useState(initial ? 4 : 0);
@@ -155,7 +184,8 @@ export function CampaignWizard({ t, lang, products: initialProducts, initial, ca
   function addPreset(key: string) {
     const preset = PRESETS.find((p) => p.key === key)!;
     const event = preset.events[product?.mmp ?? ''] ?? preset.events['*'] ?? '';
-    set({ tasks: [...c.tasks, { event, timeLimitDays: preset.days, nameEn: preset.en, nameTr: preset.tr, prices: [{ country: '*', priceUsd: preset.price }] }] });
+    set({ tasks: [...c.tasks, { event, timeLimitDays: preset.days, nameEn: preset.en, nameTr: preset.tr, prices: [{ country: '*', priceUsd: pricing.prices[key] ?? '' }] }] });
+    setTaskPresets((list) => [...list, key]);
   }
 
   function toggleCountry(cc: string) {
@@ -525,7 +555,14 @@ export function CampaignWizard({ t, lang, products: initialProducts, initial, ca
                         <span className="grid h-6 w-6 place-items-center rounded-full bg-violet-500/15 text-xs text-violet-300">{i + 1}</span>
                         {t.events.step} {i + 1}
                       </span>
-                      <button type="button" onClick={() => set({ tasks: c.tasks.filter((_, j) => j !== i) })} className="flex items-center gap-1 text-xs text-subtle hover:text-bad">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          set({ tasks: c.tasks.filter((_, j) => j !== i) });
+                          setTaskPresets((list) => list.filter((_, j) => j !== i));
+                        }}
+                        className="flex items-center gap-1 text-xs text-subtle hover:text-bad"
+                      >
                         <Trash2 size={14} /> {t.events.remove}
                       </button>
                     </div>
@@ -551,7 +588,10 @@ export function CampaignWizard({ t, lang, products: initialProducts, initial, ca
                     </div>
                     <div className="mt-4 grid gap-2">
                       <span className="text-sm text-muted">{t.events.price}</span>
-                      {task.prices.map((price, k) => (
+                      {task.prices.map((price, k) => {
+                        const recommended = price.country === '*' && taskPresets[i] ? pricing.prices[taskPresets[i]!] : undefined;
+                        const below = recommended !== undefined && price.priceUsd !== '' && Number(price.priceUsd) < Number(recommended);
+                        return (
                         <div key={k} className="flex items-center gap-2">
                           {price.country === '*' ? (
                             <span className="w-36 shrink-0 rounded-lg bg-surface-strong px-3 py-2 text-sm text-muted">{t.events.defaultPrice}</span>
@@ -572,28 +612,59 @@ export function CampaignWizard({ t, lang, products: initialProducts, initial, ca
                           <div className="relative w-36">
                             <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm text-subtle">$</span>
                             <input
-                              className="field !pl-7 font-mono"
+                              className={`field !pl-7 font-mono ${price.country === '*' ? '!pr-9' : ''}`}
                               inputMode="decimal"
                               value={price.priceUsd}
                               onChange={(e) => setTask(i, { prices: task.prices.map((p, j) => (j === k ? { ...p, priceUsd: e.target.value.replace(',', '.') } : p)) })}
                             />
+                            {price.country === '*' && (
+                              <PriceHelp label={t.events.priceHelp} text={pricing.help} extra={recommended ? fill(t.events.recommendedFor, { price: money(Number(recommended), lang) }) : undefined} />
+                            )}
                           </div>
+                          {recommended && (
+                            <button
+                              type="button"
+                              onClick={() => setTask(i, { prices: task.prices.map((p, j) => (j === k ? { ...p, priceUsd: recommended } : p)) })}
+                              className={`text-xs font-medium ${below ? 'text-warn hover:underline' : 'text-subtle'}`}
+                              disabled={!below}
+                            >
+                              {fill(t.events.recommended, { price: money(Number(recommended), lang) })}
+                            </button>
+                          )}
                           {price.country !== '*' && (
                             <button type="button" onClick={() => setTask(i, { prices: task.prices.filter((_, j) => j !== k) })} className="text-subtle hover:text-bad" aria-label="Remove">
                               <X size={16} />
                             </button>
                           )}
                         </div>
-                      ))}
+                        );
+                      })}
                       <button type="button" onClick={() => setTask(i, { prices: [...task.prices, { country: '', priceUsd: '' }] })} className="self-start text-xs font-medium text-violet-400 hover:text-violet-300">
                         {t.events.addCountryPrice}
                       </button>
+                      {task.prices.length > 1 && (
+                        <p className="flex items-start gap-2 rounded-lg border border-violet-400/25 bg-violet-500/[0.07] px-3 py-2 text-xs leading-relaxed text-muted">
+                          <Info size={14} className="mt-0.5 shrink-0 text-violet-300" />
+                          <span>
+                            {fill(t.events.defaultApplies, {
+                              price: task.prices.find((p) => p.country === '*')?.priceUsd ? money(Number(task.prices.find((p) => p.country === '*')!.priceUsd), lang) : '—',
+                              others: (() => {
+                                const own = task.prices.filter((p) => p.country !== '*' && p.country && p.priceUsd);
+                                return own.length ? fill(t.events.defaultOthers, { list: own.map((p) => `${p.country} ${money(Number(p.priceUsd), lang)}`).join(', ') }) : '';
+                              })(),
+                            })}
+                          </span>
+                        </p>
+                      )}
                     </div>
                   </div>
                 ))}
                 <button
                   type="button"
-                  onClick={() => set({ tasks: [...c.tasks, { event: '', timeLimitDays: 7, nameEn: '', nameTr: '', prices: [{ country: '*', priceUsd: '' }] }] })}
+                  onClick={() => {
+                    set({ tasks: [...c.tasks, { event: '', timeLimitDays: 7, nameEn: '', nameTr: '', prices: [{ country: '*', priceUsd: '' }] }] });
+                    setTaskPresets((list) => [...list, null]);
+                  }}
                   className="rounded-xl border border-dashed border-line-strong py-3 text-sm font-medium text-muted hover:border-violet-400 hover:text-fg"
                 >
                   {t.events.addEvent}

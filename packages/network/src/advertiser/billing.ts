@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { parseMicros } from '@kiqro/core';
 import { newId, schema, type Db } from '@kiqro/db';
 import { creditPosition } from '../billing/credit.ts';
-import { closeStripeCheckout, completeStripeCheckout, listInvoices, listPayments, MAX_CARD_TOPUP_USD, MIN_TOPUP_USD, type Payment } from '../billing/payments.ts';
+import { closeStripeCheckout, completeStripeCheckout, listInvoices, listPayments, MAX_CARD_TOPUP_USD, minTopUpUsd, type Payment } from '../billing/payments.ts';
 import { StripeError, type PaymentGateway } from '../billing/stripe.ts';
 import { localizedIssues, translateMessage, type FieldIssue, type UiLocale } from '../validation.ts';
 import type { AdvertiserSession, LinkOptions } from './auth.ts';
@@ -22,7 +22,7 @@ export async function billingOverview(db: Db, orgId: string, now = new Date()) {
  * Starts a card payment: records a pending payment and returns the Stripe Checkout URL. The
  * balance changes only when Stripe confirms the payment (webhook), never on the redirect back.
  * With `invoiceId` the amount is what is left to pay on that invoice; otherwise the advertiser's
- * amount, at least MIN_TOPUP_USD.
+ * amount, at least minTopUpUsd (lower for the first top-up).
  */
 export async function startTopUp(
   db: Db,
@@ -48,7 +48,8 @@ export async function startTopUp(
     const raw = (input.amountUsd ?? '').trim().replace(/,/g, '');
     if (!/^\d+(\.\d{1,2})?$/.test(raw)) return fail('amount_cents');
     amount = parseMicros(raw);
-    if (amount < parseMicros(MIN_TOPUP_USD)) return fail(`topup_minimum|${MIN_TOPUP_USD}`);
+    const min = await minTopUpUsd(db, session.org.id);
+    if (amount < parseMicros(min)) return fail(`topup_minimum|${min}`);
   }
   if (amount > parseMicros(MAX_CARD_TOPUP_USD)) return fail(`topup_maximum|${MAX_CARD_TOPUP_USD}`);
 

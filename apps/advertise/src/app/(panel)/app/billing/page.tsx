@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { AlertTriangle, FileText, CheckCircle2, Clock, Landmark, Wallet, XCircle } from 'lucide-react';
-import { MAX_CARD_TOPUP_USD, MIN_TOPUP_USD } from '@kiqro/network';
+import { MAX_CARD_TOPUP_USD, MIN_TOPUP_USD, minTopUpUsd } from '@kiqro/network';
 import { advertiserPayment, billingOverview } from '@kiqro/network/advertiser';
 import { Card, Empty, PageHeader, StatusPill } from '@/components/panel/ui';
 import { db } from '@/lib/db';
@@ -21,7 +21,7 @@ const PAYMENT_PILL: Record<string, string> = { succeeded: 'active', pending: 'in
 export default async function BillingPage({ searchParams }: { searchParams: Promise<{ paid?: string; canceled?: string }> }) {
   const [{ org }, lang, sp] = await Promise.all([requireAdvertiserOrg(), panelLocale(), searchParams]);
   const t = PANEL[lang].billing;
-  const { position: pos, payments, invoices } = await billingOverview(db, org.id);
+  const [{ position: pos, payments, invoices }, minTopUp] = await Promise.all([billingOverview(db, org.id), minTopUpUsd(db, org.id)]);
   const returned = sp.paid ? await advertiserPayment(db, org.id, sp.paid) : undefined;
   const overdue = invoices.find((i) => i.overdue);
   const hasCredit = pos.creditLimit > 0n;
@@ -93,7 +93,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Prom
 
         <Card className="p-6 lg:col-span-3">
           <h2 className="mb-4 font-semibold">{t.topUpTitle}</h2>
-          <TopUpForm t={t} lang={lang} min={Number(MIN_TOPUP_USD)} max={Number(MAX_CARD_TOPUP_USD)} />
+          <TopUpForm t={t} lang={lang} min={Number(minTopUp)} next={Number(MIN_TOPUP_USD)} max={Number(MAX_CARD_TOPUP_USD)} />
         </Card>
       </div>
 

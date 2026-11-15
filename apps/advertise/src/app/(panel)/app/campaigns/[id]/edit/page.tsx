@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { advertiserCampaignForm, advertiserProducts } from '@kiqro/network/advertiser';
+import { loadPricingGuide } from '@kiqro/network';
 import { CampaignWizard } from '@/components/panel/CampaignWizard';
 import { PageHeader } from '@/components/panel/ui';
 import { db } from '@/lib/db';
@@ -16,7 +17,7 @@ export default async function EditCampaignPage({ params }: { params: Promise<{ i
   // Only drafts are editable; anything else goes back to the list.
   if (data.campaign.status !== 'draft') redirect('/app/campaigns');
   const t = PANEL[lang];
-  const products = await advertiserProducts(db, session);
+  const [products, guide] = await Promise.all([advertiserProducts(db, session), loadPricingGuide(db)]);
 
   return (
     <>
@@ -33,6 +34,7 @@ export default async function EditCampaignPage({ params }: { params: Promise<{ i
         initial={data.form}
         reviewNote={data.campaign.reviewNote}
         returnedTitle={t.campaigns.returnedTitle}
+        pricing={{ prices: guide.prices, help: guide.help[lang] }}
         products={products.map((p) => ({ id: p.id, name: p.name, platform: p.platform, storeId: p.storeId, mmp: p.mmp, iconUrl: p.iconUrl, coverUrl: p.coverUrl, screenshots: p.screenshots }))}
       />
     </>

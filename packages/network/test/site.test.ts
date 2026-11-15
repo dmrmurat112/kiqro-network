@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { schema, type Db } from '@kiqro/db';
 import { resetTestDb, setupTestDb } from '@kiqro/db/testing';
 import { createAdminUser, type AdminUser } from '../src/admin/index.ts';
+import { DEFAULT_PRICING_GUIDE, loadPricingGuide, savePricingGuide } from '../src/pricing-guide.ts';
 import { applySiteTexts, loadSiteContent, saveSiteTexts, setSiteDefaultTheme, SITE_COPY, siteTextEntries } from '../src/site/index.ts';
 
 let db: Db;
@@ -52,5 +53,22 @@ describe('landing site content', () => {
     expect((await loadSiteContent(db)).defaultTheme).toBe('light');
     await setSiteDefaultTheme(db, actor, 'dark');
     expect((await loadSiteContent(db)).defaultTheme).toBe('dark');
+  });
+});
+
+describe('campaign pricing guide', () => {
+  it('serves defaults, saves recommended prices and help text, and rejects bad input', async () => {
+    expect(await loadPricingGuide(db)).toEqual(DEFAULT_PRICING_GUIDE);
+    const actor = await staff();
+    const prices = { ...DEFAULT_PRICING_GUIDE.prices, kyc: '4,5', trial: '2' };
+    await savePricingGuide(db, actor, { prices, help: { tr: 'Önerilen fiyat daha hızlı tamamlanır.', en: '' } });
+    const guide = await loadPricingGuide(db);
+    expect(guide.prices).toMatchObject({ kyc: '4.50', trial: '2.00', install: '0.60' });
+    expect(guide.help).toEqual({ tr: 'Önerilen fiyat daha hızlı tamamlanır.', en: DEFAULT_PRICING_GUIDE.help.en });
+    expect(await db.select().from(schema.auditLog).where(eq(schema.auditLog.action, 'pricing_guide.updated'))).toHaveLength(1);
+
+    await expect(savePricingGuide(db, actor, { prices: { ...prices, level: '-1' }, help: {} })).rejects.toThrow();
+    await expect(savePricingGuide(db, actor, { prices: { ...prices, purchase: '' }, help: {} })).rejects.toThrow();
+    await expect(savePricingGuide(db, await staff('viewer'), { prices, help: {} })).rejects.toThrow();
   });
 });

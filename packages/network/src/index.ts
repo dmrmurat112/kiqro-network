@@ -13,6 +13,7 @@ export * from './validation.ts';
 export * from './billing/credit.ts';
 export * from './billing/invoices.ts';
 export * from './billing/payments.ts';
+export * from './pricing-guide.ts';
 export * from './billing/stripe.ts';
 export * from './store-lookup.ts';
 export * from './product-icons.ts';

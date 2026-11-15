@@ -6,12 +6,17 @@ import type { Locale, PanelDictT } from '@/lib/i18n';
 import { topUpAction } from './actions';
 
 const PRESETS = [500, 1000, 2500, 5000];
+/** The first top-up may be smaller (pilots), so its choices start lower. */
+const FIRST_PRESETS = [100, 250, 500, 1000];
 
 const fill = (s: string, vars: Record<string, string>) => s.replace(/\{(\w+)\}/g, (_, k: string) => vars[k] ?? '');
 
-export function TopUpForm({ t, lang, min, max }: { t: PanelDictT['billing']; lang: Locale; min: number; max: number }) {
+/** `min` is this advertiser's current minimum; `next` the regular one, when the first top-up is lower. */
+export function TopUpForm({ t, lang, min, next, max }: { t: PanelDictT['billing']; lang: Locale; min: number; next: number; max: number }) {
+  const first = min < next;
+  const presets = first ? FIRST_PRESETS : PRESETS;
   const [state, action, pending] = useActionState(topUpAction, undefined);
-  const [amount, setAmount] = useState('1000');
+  const [amount, setAmount] = useState(first ? String(min) : '1000');
   const fmt = (v: number) => new Intl.NumberFormat(lang === 'tr' ? 'tr-TR' : 'en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: v % 1 ? 2 : 0 }).format(v);
   const value = Number(amount.replace(/,/g, ''));
   const valid = Number.isFinite(value) && value >= min && value <= max;
@@ -19,7 +24,7 @@ export function TopUpForm({ t, lang, min, max }: { t: PanelDictT['billing']; lan
   return (
     <form action={action} className="grid gap-4">
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        {PRESETS.map((p) => (
+        {presets.map((p) => (
           <button
             key={p}
             type="button"
@@ -46,7 +51,7 @@ export function TopUpForm({ t, lang, min, max }: { t: PanelDictT['billing']; lan
             required
           />
         </div>
-        <span className="text-xs text-subtle">{fill(t.min, { min: fmt(min) })}</span>
+        <span className="text-xs text-subtle">{fill(first ? t.firstMin : t.min, { min: fmt(min), next: fmt(next) })}</span>
       </label>
       {state?.error && <p className="rounded-lg bg-bad/10 px-3 py-2 text-sm text-bad">{state.error}</p>}
       <button type="submit" className="btn-primary justify-center" disabled={pending || !valid}>

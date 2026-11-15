@@ -8,6 +8,7 @@ import {
   applyStripeRefund,
   closeStripeCheckout,
   completeStripeCheckout,
+  minTopUpUsd,
   creditPosition,
   issueMonthlyInvoices,
   remindOverdueInvoices,
@@ -94,7 +95,7 @@ describe('Stripe top-ups', () => {
   it('refuses amounts below the minimum, above the card maximum, and mismatched charges', async () => {
     const s = await advertiser(await staff());
     const gateway = fakeGateway();
-    expect(await startTopUp(db, s, { amountUsd: '499.99' }, gateway, LINKS, 'tr')).toEqual({ ok: false, message: 'en az 500 $ yüklenebilir' });
+    expect(await startTopUp(db, s, { amountUsd: '99.99' }, gateway, LINKS, 'tr')).toEqual({ ok: false, message: 'en az 100 $ yüklenebilir' });
     expect(await startTopUp(db, s, { amountUsd: '12.345' }, gateway, LINKS, 'en')).toMatchObject({ ok: false });
     expect(await startTopUp(db, s, { amountUsd: '60000' }, gateway, LINKS, 'en')).toMatchObject({ ok: false, message: expect.stringContaining('bank transfer') });
     expect(await startTopUp(db, s, { amountUsd: '500' }, null, LINKS, 'en')).toMatchObject({ ok: false });
@@ -106,6 +107,19 @@ describe('Stripe top-ups', () => {
     expect(await completeStripeCheckout(db, paidSession('cs_unknown', 50_000), LINKS.advertiseBaseUrl)).toBe('unknown_payment');
     await closeStripeCheckout(db, 'cs_test_1', 'expired');
     expect((await db.select().from(payments))[0]!.status).toBe('expired');
+  });
+
+  it('allows a smaller first top-up, then requires the regular minimum', async () => {
+    const s = await advertiser(await staff());
+    const gateway = fakeGateway();
+    expect(await minTopUpUsd(db, s.org.id)).toBe('100');
+    expect(await startTopUp(db, s, { amountUsd: '100' }, gateway, LINKS, 'en')).toMatchObject({ ok: true });
+    // An unpaid checkout does not use up the first-top-up allowance.
+    expect(await minTopUpUsd(db, s.org.id)).toBe('100');
+    expect(await completeStripeCheckout(db, paidSession('cs_test_1', 10_000), LINKS.advertiseBaseUrl)).toBe('credited');
+    expect(await minTopUpUsd(db, s.org.id)).toBe('500');
+    expect(await startTopUp(db, s, { amountUsd: '100' }, gateway, LINKS, 'tr')).toEqual({ ok: false, message: 'en az 500 $ yüklenebilir' });
+    expect(await startTopUp(db, s, { amountUsd: '500' }, gateway, LINKS, 'en')).toMatchObject({ ok: true });
   });
 
   it('takes Stripe refunds off the balance once, including partial refunds', async () => {

@@ -10,8 +10,16 @@ export type Payment = typeof payments.$inferSelect;
 
 /** Smallest self-serve top-up (spec decision K-9). Paying an invoice may be any amount. */
 export const MIN_TOPUP_USD = '500';
+/** Lower minimum for an advertiser's very first top-up, so pilots can start small. */
+export const FIRST_TOPUP_USD = '100';
 /** Larger amounts go by bank transfer: card fees grow with the amount and Stripe reviews big charges. */
 export const MAX_CARD_TOPUP_USD = '50000';
+
+/** The minimum card top-up for this advertiser: FIRST_TOPUP_USD until a payment has succeeded. */
+export async function minTopUpUsd(db: DbOrTx, orgId: string): Promise<string> {
+  const paid = await db.query.payments.findFirst({ where: and(eq(payments.orgId, orgId), eq(payments.status, 'succeeded')), columns: { id: true } });
+  return paid ? MIN_TOPUP_USD : FIRST_TOPUP_USD;
+}
 
 const money = (micros: bigint) => `$${formatMicros(micros)}`;
 
