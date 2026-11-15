@@ -7,48 +7,70 @@ import { AdminError, requirePermission } from './admin/errors.ts';
 const { siteSettings } = schema;
 
 /**
- * Recommended minimum prices for the campaign wizard's quick-add events, and the help text shown
- * next to the price field. Set by Kiqro in the admin panel; advertisers may still price lower.
+ * Recommended minimum prices for the campaign wizard's quick-add events, per app platform, and
+ * the help text shown next to the price field. Set by Kiqro in the admin panel; advertisers may
+ * still price lower.
  */
 export const PRICING_EVENTS = ['install', 'registration', 'level', 'deposit', 'kyc', 'purchase', 'subscription', 'trial'] as const;
 export type PricingEvent = (typeof PRICING_EVENTS)[number];
+/** Web apps use the Android prices. */
+export const PRICING_PLATFORMS = ['android', 'ios'] as const;
+export type PricingPlatform = (typeof PRICING_PLATFORMS)[number];
 
 export interface PricingGuide {
-  /** USD with up to two decimals, e.g. "0.60". */
-  prices: Record<PricingEvent, string>;
+  /** USD with two decimals, e.g. "0.60", per platform and event. */
+  prices: Record<PricingPlatform, Record<PricingEvent, string>>;
   help: { en: string; tr: string };
 }
 
 export const DEFAULT_PRICING_GUIDE: PricingGuide = {
-  prices: { install: '0.60', registration: '1.50', level: '2.50', deposit: '15.00', kyc: '5.00', purchase: '6.00', subscription: '8.00', trial: '3.00' },
+  prices: {
+    android: { install: '0.60', registration: '1.50', level: '2.50', deposit: '15.00', kyc: '5.00', purchase: '6.00', subscription: '8.00', trial: '3.00' },
+    ios: { install: '1.00', registration: '2.00', level: '3.50', deposit: '18.00', kyc: '6.00', purchase: '8.00', subscription: '10.00', trial: '4.00' },
+  },
   help: {
     en: 'The recommended price is what users find worth completing this step for on offerwalls. Pricing at or above it puts your offer higher in the list and gets your campaign completed faster. You can set a lower price; completions may then come in more slowly.',
     tr: 'Tavsiye edilen fiyat, kullanıcıların offerwall’larda bu adımı tamamlamaya değer bulduğu seviyedir. Bu fiyat ve üzeri teklifinizi listede öne çıkarır ve kampanyanızın daha hızlı tamamlanmasını sağlar. Daha düşük bir fiyat da belirleyebilirsiniz; bu durumda tamamlanmalar daha yavaş gelebilir.',
   },
 };
 
+/** The recommended prices for an app's platform (web uses Android's). */
+export const platformPrices = (guide: PricingGuide, platform: string): Record<PricingEvent, string> => guide.prices[platform === 'ios' ? 'ios' : 'android'];
+
 const KEY = 'pricing_guide';
 const PRICE = /^\d{1,4}(\.\d{1,2})?$/;
 const MAX_HELP = 600;
 
+type Saved = Partial<{ prices: Partial<Record<string, unknown>>; help: Partial<PricingGuide['help']> }>;
+
 /** The guide with Kiqro's saved values over the defaults (new events get their default price). */
 export async function loadPricingGuide(db: Db): Promise<PricingGuide> {
   const row = await db.query.siteSettings.findFirst({ where: eq(siteSettings.key, KEY) });
-  const saved = (row?.value ?? {}) as Partial<{ prices: Partial<Record<PricingEvent, string>>; help: Partial<PricingGuide['help']> }>;
+  const saved = (row?.value ?? {}) as Saved;
+  // The first version stored one price list for every platform; it now seeds both.
+  const legacy = saved.prices && typeof saved.prices.install === 'string' ? (saved.prices as Partial<Record<PricingEvent, string>>) : undefined;
+  const forPlatform = (p: PricingPlatform) => ({ ...DEFAULT_PRICING_GUIDE.prices[p], ...(legacy ?? (saved.prices?.[p] as Partial<Record<PricingEvent, string>> | undefined)) });
   return {
-    prices: { ...DEFAULT_PRICING_GUIDE.prices, ...saved.prices },
+    prices: { android: forPlatform('android'), ios: forPlatform('ios') },
     help: { en: saved.help?.en || DEFAULT_PRICING_GUIDE.help.en, tr: saved.help?.tr || DEFAULT_PRICING_GUIDE.help.tr },
   };
 }
 
 /** Saves the recommended prices and help text. An empty help text falls back to the default. */
-export async function savePricingGuide(db: Db, actor: AdminUser, input: { prices: Partial<Record<string, string>>; help: { en?: string; tr?: string } }): Promise<void> {
+export async function savePricingGuide(
+  db: Db,
+  actor: AdminUser,
+  input: { prices: Partial<Record<PricingPlatform, Partial<Record<string, string>>>>; help: { en?: string; tr?: string } },
+): Promise<void> {
   requirePermission(actor, 'manage_campaigns');
-  const prices = {} as Record<PricingEvent, string>;
-  for (const event of PRICING_EVENTS) {
-    const value = (input.prices[event] ?? '').trim().replace(',', '.');
-    if (!PRICE.test(value) || Number(value) <= 0) throw new AdminError(`${event}: geçerli bir USD tutarı girin (ör. 2.50).`);
-    prices[event] = Number(value).toFixed(2);
+  const label = { android: 'Android', ios: 'iOS' };
+  const prices = { android: {}, ios: {} } as PricingGuide['prices'];
+  for (const platform of PRICING_PLATFORMS) {
+    for (const event of PRICING_EVENTS) {
+      const value = (input.prices[platform]?.[event] ?? '').trim().replace(',', '.');
+      if (!PRICE.test(value) || Number(value) <= 0) throw new AdminError(`${label[platform]} · ${event}: geçerli bir USD tutarı girin (ör. 2.50).`);
+      prices[platform][event] = Number(value).toFixed(2);
+    }
   }
   const help = { en: (input.help.en ?? '').trim(), tr: (input.help.tr ?? '').trim() };
   if (help.en.length > MAX_HELP || help.tr.length > MAX_HELP) throw new AdminError(`Açıklama en fazla ${MAX_HELP} karakter olabilir.`);

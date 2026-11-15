@@ -18,8 +18,8 @@ interface Props {
   campaignId?: string;
   reviewNote?: string | null;
   returnedTitle: string;
-  /** Recommended price per quick-add preset (USD) and the price help text, set by Kiqro. */
-  pricing: { prices: Record<string, string>; help: string };
+  /** Recommended price per quick-add preset (USD) for each app platform, and the price help text, set by Kiqro. */
+  pricing: { prices: Record<'android' | 'ios', Record<string, string>>; help: string };
 }
 
 const POPULAR = ['FI', 'SE', 'NO', 'DK', 'DE', 'AT', 'CH', 'NL', 'GB', 'US', 'TR', 'PL'];
@@ -166,6 +166,8 @@ export function CampaignWizard({ t, lang, products: initialProducts, initial, ca
   }, [lang]);
 
   const product = products.find((p) => p.id === c.productId);
+  // Web apps use the Android recommendations.
+  const recommendedPrices = pricing.prices[product?.platform === 'ios' ? 'ios' : 'android'];
   const set = (patch: Partial<CampaignInput>) => setC((prev) => ({ ...prev, ...patch }));
   const setTask = (i: number, patch: Partial<Task>) => set({ tasks: c.tasks.map((task, j) => (j === i ? { ...task, ...patch } : task)) });
   const issueFor = (path: string) => issues.find((x) => x.path === path)?.message;
@@ -184,7 +186,7 @@ export function CampaignWizard({ t, lang, products: initialProducts, initial, ca
   function addPreset(key: string) {
     const preset = PRESETS.find((p) => p.key === key)!;
     const event = preset.events[product?.mmp ?? ''] ?? preset.events['*'] ?? '';
-    set({ tasks: [...c.tasks, { event, timeLimitDays: preset.days, nameEn: preset.en, nameTr: preset.tr, prices: [{ country: '*', priceUsd: pricing.prices[key] ?? '' }] }] });
+    set({ tasks: [...c.tasks, { event, timeLimitDays: preset.days, nameEn: preset.en, nameTr: preset.tr, prices: [{ country: '*', priceUsd: recommendedPrices[key] ?? '' }] }] });
     setTaskPresets((list) => [...list, key]);
   }
 
@@ -589,7 +591,7 @@ export function CampaignWizard({ t, lang, products: initialProducts, initial, ca
                     <div className="mt-4 grid gap-2">
                       <span className="text-sm text-muted">{t.events.price}</span>
                       {task.prices.map((price, k) => {
-                        const recommended = price.country === '*' && taskPresets[i] ? pricing.prices[taskPresets[i]!] : undefined;
+                        const recommended = price.country === '*' && taskPresets[i] ? recommendedPrices[taskPresets[i]!] : undefined;
                         const below = recommended !== undefined && price.priceUsd !== '' && Number(price.priceUsd) < Number(recommended);
                         return (
                         <div key={k} className="flex items-center gap-2">

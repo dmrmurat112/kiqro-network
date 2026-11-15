@@ -1,4 +1,4 @@
-import { DEFAULT_PRICING_GUIDE, loadPricingGuide, PRICING_EVENTS, type PricingEvent } from '@kiqro/network';
+import { DEFAULT_PRICING_GUIDE, loadPricingGuide, PRICING_EVENTS, PRICING_PLATFORMS, type PricingEvent } from '@kiqro/network';
 import { ActionForm } from '@/components/ActionForm';
 import { db } from '@/lib/db';
 import { savePricingGuideAction } from './actions';
@@ -24,19 +24,41 @@ export default async function PricingPage() {
       <h1>Tavsiye edilen fiyatlar</h1>
       <p className="muted">
         Reklamveren yeni kampanya ekranında &quot;Hızlı ekle&quot;den bir olay seçtiğinde fiyat alanı bu tutarla dolar. Reklamveren daha düşük bir fiyat da girebilir; bu tutarlar
-        yalnızca öneridir. Tüm tutarlar USD, &quot;Tüm ülkeler&quot; varsayılan fiyatı içindir.
+        yalnızca öneridir. Uygulamanın platformuna göre Android veya iOS tutarı kullanılır (web uygulamalarında Android). Tüm tutarlar USD, &quot;Tüm ülkeler&quot;
+        varsayılan fiyatı içindir.
       </p>
       <ActionForm action={savePricingGuideAction} submitLabel="Kaydet">
         <div className="card">
           <h2>Olay başına tavsiye edilen minimum fiyat</h2>
-          <div className="fields">
-            {PRICING_EVENTS.map((event) => (
-              <label key={event}>
-                {LABELS[event]}
-                <input name={`price:${event}`} defaultValue={guide.prices[event]} inputMode="decimal" placeholder={DEFAULT_PRICING_GUIDE.prices[event]} required />
-              </label>
-            ))}
-          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Olay</th>
+                <th>Android (USD)</th>
+                <th>iOS (USD)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {PRICING_EVENTS.map((event) => (
+                <tr key={event}>
+                  <td>{LABELS[event]}</td>
+                  {PRICING_PLATFORMS.map((platform) => (
+                    <td key={platform}>
+                      <input
+                        name={`price:${platform}:${event}`}
+                        aria-label={`${LABELS[event]} · ${platform === 'ios' ? 'iOS' : 'Android'}`}
+                        defaultValue={guide.prices[platform][event]}
+                        placeholder={DEFAULT_PRICING_GUIDE.prices[platform][event]}
+                        inputMode="decimal"
+                        required
+                        style={{ maxWidth: 140 }}
+                      />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
         <div className="card">
           <h2>Fiyat alanındaki bilgi kutusu</h2>
