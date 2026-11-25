@@ -29,7 +29,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ id: s
   const [product, advertiser, testClicks] = await Promise.all([
     db.query.products.findFirst({ where: (p, { eq }) => eq(p.id, campaign.productId), columns: { iconUrl: true, coverUrl: true } }),
     db.query.organizations.findFirst({ where: (o, { eq }) => eq(o.id, campaign.orgId), columns: { postbackKey: true, postbackSecret: true } }),
-    listTestClicks(db, id),
+    listTestClicks(db, { campaignId: id }),
   ]);
   const trackingBase = process.env.TRACKING_BASE_URL ?? 'https://track.kiqronetwork.com';
 
@@ -138,7 +138,7 @@ export default async function CampaignPage({ params }: { params: Promise<{ id: s
                       : c.events.map((e, i) => (
                           <div key={i}>
                             <code>{e.event}</code> · {e.status}
-                            {e.reasons.filter((r) => r !== 'test_click').length > 0 && <span className="muted"> ({e.reasons.filter((r) => r !== 'test_click').join(', ')})</span>}
+                            {e.reasons.length > 0 && <span className="muted"> ({e.reasons.join(', ')})</span>}
                           </div>
                         ))}
                   </td>

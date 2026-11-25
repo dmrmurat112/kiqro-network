@@ -4,7 +4,7 @@ import { sign } from '@kiqro/core';
 import { getAccountId, getBalance, schema, type Db } from '@kiqro/db';
 import { resetTestDb, setupTestDb } from '@kiqro/db/testing';
 import { createAdminUser, rotatePostbackSecret, type AdminUser } from '../src/admin/index.ts';
-import { createDemoSetup, createTestClick, handlePostback, listTestClicks, reverseConversion, TEST_PLACEMENT_ID } from '../src/index.ts';
+import { ADVERTISER_TEST_CLICKS_PER_DAY, createAdvertiserTestClick, createDemoSetup, createTestClick, handlePostback, listTestClicks, reverseConversion, TEST_PLACEMENT_ID } from '../src/index.ts';
 
 let db: Db;
 let close: () => Promise<void>;
@@ -44,7 +44,7 @@ describe('admin test clicks', () => {
     expect(await balance()).toBe(before);
     expect(await db.select().from(schema.publisherPostbacks)).toHaveLength(0);
 
-    const [listed] = await listTestClicks(db, s.campaignId);
+    const [listed] = await listTestClicks(db, { campaignId: s.campaignId });
     expect(listed!.events.map((e) => [e.event, e.status])).toEqual([
       ['install', 'approved'],
       ['af_level_achieved_10', 'approved'],
@@ -59,6 +59,29 @@ describe('admin test clicks', () => {
     const s = await createDemoSetup(db);
     await expect(createTestClick(db, await staff('viewer'), s.campaignId)).rejects.toThrow();
     await expect(createTestClick(db, await staff(), 'cmp_missing')).rejects.toThrow();
+  });
+});
+
+describe('advertiser test clicks (panel)', () => {
+  it('works only on the advertiser’s own, non-archived campaigns', async () => {
+    const own = await createDemoSetup(db);
+    const other = await createDemoSetup(db);
+    const ok = await createAdvertiserTestClick(db, own.advertiserId, own.campaignId, T0);
+    expect(ok).toMatchObject({ ok: true, ctitMinSeconds: 10 });
+    expect(await createAdvertiserTestClick(db, own.advertiserId, other.campaignId, T0)).toEqual({ ok: false, reason: 'not_found' });
+    await db.update(schema.campaigns).set({ status: 'archived' }).where(eq(schema.campaigns.id, own.campaignId));
+    expect(await createAdvertiserTestClick(db, own.advertiserId, own.campaignId, T0)).toEqual({ ok: false, reason: 'not_found' });
+
+    const listed = await listTestClicks(db, { orgId: own.advertiserId });
+    expect(listed.map((c) => c.id)).toEqual([(ok as { clickId: string }).clickId]);
+    expect(await listTestClicks(db, { orgId: other.advertiserId })).toEqual([]);
+  });
+
+  it('allows a limited number of test clicks per day', async () => {
+    const s = await createDemoSetup(db);
+    for (let i = 0; i < ADVERTISER_TEST_CLICKS_PER_DAY; i++) expect((await createAdvertiserTestClick(db, s.advertiserId, s.campaignId, at(i))).ok).toBe(true);
+    expect(await createAdvertiserTestClick(db, s.advertiserId, s.campaignId, at(100))).toEqual({ ok: false, reason: 'limit' });
+    expect((await createAdvertiserTestClick(db, s.advertiserId, s.campaignId, at(86_400 + 60))).ok).toBe(true);
   });
 });
 
