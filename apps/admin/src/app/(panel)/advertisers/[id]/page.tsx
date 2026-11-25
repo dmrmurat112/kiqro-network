@@ -7,7 +7,7 @@ import { ActionForm } from '@/components/ActionForm';
 import { Badge } from '@/components/Badge';
 import { db } from '@/lib/db';
 import { dateTime, PAYMENT_METHOD_LABELS, usd } from '@/lib/format';
-import { createAdvertiserUserAction, createProductAction, creditTermsAction, resendInviteAction, resetAdvertiserTotpAction, topUpAction } from '../actions';
+import { createAdvertiserUserAction, createProductAction, creditTermsAction, resendInviteAction, resetAdvertiserTotpAction, rotateSecretAction, topUpAction } from '../actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -47,12 +47,25 @@ export default async function AdvertiserPage({ params }: { params: Promise<{ id:
             <br />
             <code>{`${trackingBase}/v1/mmp/${org.postbackKey}/reversal?click_id={clickid}&event={event_name}&reason={reason}`}</code>
           </p>
-          {org.postbackSecret && (
+          {org.postbackSecret ? (
             <p className="notice info">
-              Postback'ler imzalı olmalı: <code>sig = HMAC-SHA256(gizli anahtar, click_id|event)</code>. Gizli anahtar:{' '}
-              <code>{org.postbackSecret}</code>
+              Postback'ler imzalı olmalı: <code>sig = HMAC-SHA256(gizli anahtar, click_id|event)</code>; geri almalarda <code>reversal|click_id|event</code>. Gizli
+              anahtar: <code>{org.postbackSecret}</code>
             </p>
+          ) : (
+            <p className="muted">Bu hesapta imza zorunlu değil: postback'ler imzasız da kabul edilir.</p>
           )}
+          <ActionForm
+            action={rotateSecretAction.bind(null, id)}
+            submitLabel={org.postbackSecret ? 'Gizli anahtarı yenile' : 'Gizli anahtar oluştur (imzayı zorunlu yap)'}
+            buttonClass="secondary small"
+            className="row"
+            confirm={
+              org.postbackSecret
+                ? 'Mevcut anahtar hemen geçersiz olur; reklamveren yeni anahtarı girene kadar postback’leri reddedilir. Emin misiniz?'
+                : 'Bundan sonra imzasız postback’ler reddedilir. Reklamveren imza göndermeye hazır mı?'
+            }
+          />
           <p className="muted">Geri alma süresi: {org.reversalWindowDays} gün · Fatura: {org.billingEntity === 'kiqro_inc' ? 'Kiqro Inc.' : 'Kiqro Oy'} / {org.invoiceCurrency}</p>
         </div>
 

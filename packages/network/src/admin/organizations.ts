@@ -58,6 +58,20 @@ export async function createAdvertiser(db: Db, actor: AdminUser, input: z.input<
   return id;
 }
 
+/**
+ * Gives the advertiser a new postback signing secret (also for accounts created without one).
+ * From then on every postback must carry a valid `sig`; a replaced secret stops working at once.
+ */
+export async function rotatePostbackSecret(db: Db, actor: AdminUser, orgId: string): Promise<void> {
+  requirePermission(actor, 'manage_campaigns');
+  await db.transaction(async (tx) => {
+    const org = await tx.query.organizations.findFirst({ where: eq(organizations.id, orgId) });
+    if (org?.type !== 'advertiser') throw new AdminError('Reklamveren bulunamadı.');
+    await tx.update(organizations).set({ postbackSecret: secret() }).where(eq(organizations.id, orgId));
+    await audit(tx, actor.id, org.postbackSecret ? 'advertiser.postback_secret_rotated' : 'advertiser.postback_secret_created', 'organization', orgId);
+  });
+}
+
 /** Organizations of one type with their ledger balance (advertiser balance or publisher payable). */
 export async function listOrganizations(db: Db, type: 'advertiser' | 'publisher') {
   const kind = type === 'advertiser' ? 'advertiser_balance' : 'publisher_payable';

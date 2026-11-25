@@ -2,6 +2,7 @@
 
 import { redirect } from 'next/navigation';
 import { AdminError, approveCampaign, createCampaign, getCampaignForm, returnCampaign, setCampaignStatus, updateCampaign, type CampaignInput } from '@kiqro/network/admin';
+import { createTestClick } from '@kiqro/network';
 import { field, runAction, type ActionState } from '@/lib/action';
 import { db } from '@/lib/db';
 
@@ -70,6 +71,13 @@ export async function setStatusAction(campaignId: string, _: ActionState, form: 
 }
 
 const reviewLinks = () => ({ advertiseBaseUrl: process.env.ADVERTISE_BASE_URL ?? 'http://localhost:4200' });
+
+export async function createTestClickAction(campaignId: string, _: ActionState): Promise<ActionState> {
+  return runAction(async (actor) => {
+    const clickId = await createTestClick(db, actor, campaignId);
+    return `Test tıklaması oluşturuldu: ${clickId}`;
+  }, `/campaigns/${campaignId}`);
+}
 
 export async function approveCampaignAction(campaignId: string, _: ActionState): Promise<ActionState> {
   return runAction(async (actor) => {

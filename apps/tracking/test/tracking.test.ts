@@ -34,7 +34,9 @@ beforeAll(async () => ({ db, close } = await setupDb()));
 afterAll(async () => close());
 beforeEach(async () => resetDb(db));
 
-const T0 = new Date('2026-11-02T10:00:00Z');
+// Yesterday 10:00 UTC: recent enough for the endpoints that read the real clock (an offer a user
+// started stays listed for a few weeks only), and the same time of day on every run.
+const T0 = new Date(Math.floor(Date.now() / 86_400_000) * 86_400_000 - 86_400_000 + 10 * 3_600_000);
 const at = (seconds: number) => new Date(T0.getTime() + seconds * 1000);
 const DAY = 86_400;
 

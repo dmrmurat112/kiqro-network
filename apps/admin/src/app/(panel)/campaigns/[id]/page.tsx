@@ -1,11 +1,12 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { listTestClicks } from '@kiqro/network';
 import { getCampaignForm } from '@kiqro/network/admin';
 import { ActionForm } from '@/components/ActionForm';
 import { Badge } from '@/components/Badge';
 import { db } from '@/lib/db';
 import { dateTime, usd } from '@/lib/format';
-import { approveCampaignAction, duplicateCampaignAction, returnCampaignAction, setStatusAction, updateCampaignAction } from '../actions';
+import { approveCampaignAction, createTestClickAction, duplicateCampaignAction, returnCampaignAction, setStatusAction, updateCampaignAction } from '../actions';
 import { CampaignForm } from '../CampaignForm';
 
 export const dynamic = 'force-dynamic';
@@ -25,7 +26,12 @@ export default async function CampaignPage({ params }: { params: Promise<{ id: s
   const data = await getCampaignForm(db, id);
   if (!data) notFound();
   const { campaign, form, hasClicks, spend } = data;
-  const product = await db.query.products.findFirst({ where: (p, { eq }) => eq(p.id, campaign.productId), columns: { iconUrl: true, coverUrl: true } });
+  const [product, advertiser, testClicks] = await Promise.all([
+    db.query.products.findFirst({ where: (p, { eq }) => eq(p.id, campaign.productId), columns: { iconUrl: true, coverUrl: true } }),
+    db.query.organizations.findFirst({ where: (o, { eq }) => eq(o.id, campaign.orgId), columns: { postbackKey: true, postbackSecret: true } }),
+    listTestClicks(db, id),
+  ]);
+  const trackingBase = process.env.TRACKING_BASE_URL ?? 'https://track.kiqronetwork.com';
 
   return (
     <>
@@ -93,6 +99,54 @@ export default async function CampaignPage({ params }: { params: Promise<{ id: s
           </div>
           <div className="label">Bu kampanyanın dönüşüm kayıtları</div>
         </div>
+      </div>
+      <div className="card">
+        <div className="row spread">
+          <h2>Test tıklaması</h2>
+          <ActionForm action={createTestClickAction.bind(null, id)} submitLabel="Test tıklaması oluştur" className="row" buttonClass="secondary small" />
+        </div>
+        <p className="muted">
+          Reklamverenin postback'lerini gerçek kullanıcı olmadan denemek için bir click_id üretir. Kampanya duraklatılmış olsa da çalışır. Test tıklamalarından gelen olaylar
+          onaylanır ama ücretlendirilmez, yayıncıya iletilmez. Kurulum (install) postback'i tıklamadan en az {campaign.ctitMinSeconds} saniye sonra gönderilmeli.
+        </p>
+        {advertiser?.postbackKey && (
+          <p>
+            Örnek istek:
+            <br />
+            <code>{`${trackingBase}/v1/mmp/${advertiser.postbackKey}?click_id=<CLICK_ID>&event=install${advertiser.postbackSecret ? '&sig=<HMAC>' : ''}`}</code>
+          </p>
+        )}
+        {testClicks.length > 0 && (
+          <table>
+            <thead>
+              <tr>
+                <th>click_id</th>
+                <th>Oluşturuldu</th>
+                <th>Gelen olaylar</th>
+              </tr>
+            </thead>
+            <tbody>
+              {testClicks.map((c) => (
+                <tr key={c.id}>
+                  <td>
+                    <code>{c.id}</code>
+                  </td>
+                  <td>{dateTime(c.createdAt)}</td>
+                  <td>
+                    {c.events.length === 0
+                      ? <span className="muted">Henüz yok</span>
+                      : c.events.map((e, i) => (
+                          <div key={i}>
+                            <code>{e.event}</code> · {e.status}
+                            {e.reasons.filter((r) => r !== 'test_click').length > 0 && <span className="muted"> ({e.reasons.filter((r) => r !== 'test_click').join(', ')})</span>}
+                          </div>
+                        ))}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
       <CampaignForm action={updateCampaignAction.bind(null, id)} submitLabel="Değişiklikleri kaydet" initial={form} tasksLocked={hasClicks} />
     </>

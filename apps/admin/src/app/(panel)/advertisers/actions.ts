@@ -1,6 +1,6 @@
 'use server';
 
-import { createAdvertiser, createProduct, recordTopUp, setCreditTerms } from '@kiqro/network/admin';
+import { createAdvertiser, createProduct, recordTopUp, rotatePostbackSecret, setCreditTerms } from '@kiqro/network/admin';
 import { createAdvertiserUser, resendAdvertiserInvite, resetAdvertiserTotp } from '@kiqro/network/advertiser';
 import { field, runAction, type ActionState } from '@/lib/action';
 import { db } from '@/lib/db';
@@ -40,6 +40,13 @@ export async function resetAdvertiserTotpAction(orgId: string, userId: string, _
   return runAction(async (actor) => {
     await resetAdvertiserTotp(db, actor, userId);
     return 'İki aşamalı doğrulama kapatıldı; kullanıcının oturumları sonlandırıldı.';
+  }, `/advertisers/${orgId}`);
+}
+
+export async function rotateSecretAction(orgId: string, _: ActionState): Promise<ActionState> {
+  return runAction(async (actor) => {
+    await rotatePostbackSecret(db, actor, orgId);
+    return 'Yeni gizli anahtar oluşturuldu; aşağıda görünüyor. Reklamverene ayrı ve güvenli bir kanaldan iletin.';
   }, `/advertisers/${orgId}`);
 }
 

@@ -7,6 +7,7 @@ import { parseRevenue, recordRevenue } from './revenue.ts';
 import { conversionHoldReasons, defaultFraudContext, type FraudContext } from './fraud/rules.ts';
 import { enqueuePublisherPostback } from './outbox.ts';
 import { rewardPoints } from './publisher/tools.ts';
+import { TEST_PLACEMENT_ID } from './test-clicks.ts';
 import { conversionEventData, emitWebhook } from './webhooks.ts';
 
 const { campaignTasks, campaigns, clicks, conversions, organizations, placements, postbacksRaw } = schema;
@@ -102,6 +103,8 @@ async function evaluatePostback(db: Db, input: PostbackInput, rawId: string, now
     if (existing) return { httpStatus: 200, outcome: 'duplicate', conversionId: existing.id } as const;
 
     const placement = (await tx.query.placements.findFirst({ where: eq(placements.id, click.placementId) }))!;
+    // Admin test clicks: checked like any other, but free and never passed on to a publisher.
+    const isTest = placement.id === TEST_PLACEMENT_ID;
     const rejectReasons: string[] = [];
     const holdReasons: string[] = [];
 
@@ -133,11 +136,11 @@ async function evaluatePostback(db: Db, input: PostbackInput, rawId: string, now
       holdReasons.push(...(await conversionHoldReasons(tx, input.fraud ?? defaultFraudContext, { click, isInstall: task.mmpEventName === INSTALL_EVENT, now })));
     }
 
-    const price = await priceFor(tx, task.id, click.country);
+    const price = isTest ? 0n : await priceFor(tx, task.id, click.country);
     if (price === null) rejectReasons.push('no_price');
 
     const advertiserAccount = await getAccountId(tx, 'advertiser_balance', advertiser.id);
-    if (rejectReasons.length === 0 && holdReasons.length === 0) {
+    if (!isTest && rejectReasons.length === 0 && holdReasons.length === 0) {
       await lockAccount(tx, advertiserAccount);
       if ((await creditPosition(tx, advertiser.id, now)).spendable < price!) holdReasons.push('insufficient_balance');
     }
@@ -154,7 +157,7 @@ async function evaluatePostback(db: Db, input: PostbackInput, rawId: string, now
       placementId: placement.id,
       publisherUserId: click.publisherUserId,
       status,
-      reasons: [...rejectReasons, ...holdReasons],
+      reasons: [...rejectReasons, ...holdReasons, ...(isTest ? ['test_click'] : [])],
       advertiserPrice,
       publisherPayout,
       userRewardPoints: await rewardPoints(tx, placement, publisherPayout, click.createdAt),
@@ -163,7 +166,7 @@ async function evaluatePostback(db: Db, input: PostbackInput, rawId: string, now
       createdAt: now,
     });
 
-    if (status === 'approved') {
+    if (status === 'approved' && !isTest) {
       await creditConversion(tx, { conversionId, advertiserAccount, publisherOrgId: placement.publisherOrgId, advertiserPrice, publisherPayout });
       await enqueuePublisherPostback(tx, conversionId, 'credit', now);
       await emitWebhook(tx, advertiser.id, 'conversion.approved', await conversionEventData(tx, conversionId), now);
@@ -245,7 +248,8 @@ export async function reverseConversion(db: Db, input: ReversalInput): Promise<R
     }
 
     const placement = (await tx.query.placements.findFirst({ where: eq(placements.id, conversion.placementId) }))!;
-    await postTransaction(tx, {
+    // Free conversions (admin test clicks) were never posted to the ledger.
+    if (conversion.advertiserPrice > 0n) await postTransaction(tx, {
       type: 'conversion_reversal',
       refType: 'conversion',
       refId: conversion.id,
@@ -260,8 +264,10 @@ export async function reverseConversion(db: Db, input: ReversalInput): Promise<R
       .update(conversions)
       .set({ status: 'reversed', reversedAt: now, reversalReason: input.reason.slice(0, 200) })
       .where(eq(conversions.id, conversion.id));
-    await enqueuePublisherPostback(tx, conversion.id, 'reversal', now);
-    await emitWebhook(tx, advertiser.id, 'conversion.reversed', await conversionEventData(tx, conversion.id), now);
+    if (placement.id !== TEST_PLACEMENT_ID) {
+      await enqueuePublisherPostback(tx, conversion.id, 'reversal', now);
+      await emitWebhook(tx, advertiser.id, 'conversion.reversed', await conversionEventData(tx, conversion.id), now);
+    }
     return { ok: true, conversionId: conversion.id } as const;
   });
 }
